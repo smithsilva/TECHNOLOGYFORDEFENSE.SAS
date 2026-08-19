@@ -12,12 +12,14 @@ class InventarioHeader extends StatelessWidget implements PreferredSizeWidget {
   final String titulo;
   final Map<String, dynamic>? usuario;
   final VoidCallback? onNotificaciones;
+  final VoidCallback? onLogout;
 
   const InventarioHeader({
     super.key,
     required this.titulo,
     this.usuario,
     this.onNotificaciones,
+    this.onLogout,
   });
 
   @override

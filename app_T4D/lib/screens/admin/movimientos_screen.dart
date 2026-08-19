@@ -300,20 +300,23 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               _chipTipo('Todos', 'todos'),
-                              const SizedBox(width: 8),
                               _chipTipo('Entrada', 'entrada'),
-                              const SizedBox(width: 8),
                               _chipTipo('Salida', 'salida'),
-                              const Spacer(),
                               TextButton.icon(
                                 onPressed: _limpiarFiltros,
                                 icon: const Icon(Icons.close, size: 14),
                                 label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
                                 style: TextButton.styleFrom(
                                   foregroundColor: AppColors.textoMuted,
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 ),
                               ),
                             ],

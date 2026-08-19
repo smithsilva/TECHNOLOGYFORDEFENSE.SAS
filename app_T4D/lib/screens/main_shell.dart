@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import './admin//inventario_screen.dart';
+import './admin/inventario_screen.dart';
 import './admin/movimientos_screen.dart';
 import './admin/historial_precios_screen.dart';
 import './admin/notificaciones_screen.dart';
@@ -21,7 +21,10 @@ class AppColors {
 class MainShell extends StatefulWidget {
   final Map<String, dynamic>? usuario;
 
-  const MainShell({super.key, this.usuario});
+  /// Se recibe desde main.dart: limpia SharedPreferences y navega al login.
+  final VoidCallback? onLogout;
+
+  const MainShell({super.key, this.usuario, this.onLogout});
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -40,7 +43,6 @@ class _MainShellState extends State<MainShell> {
     RegistroScreen(usuario: widget.usuario),
   ];
 
-  // Mapea cada "key" del drawer con su índice en _pantallas
   static const _claves = [
     'inventario',
     'movimientos',
@@ -75,13 +77,14 @@ class _MainShellState extends State<MainShell> {
         titulo: _titulos[_indiceActual],
         usuario: widget.usuario,
         onNotificaciones: () => setState(() => _indiceActual = 3),
+        onLogout: widget.onLogout,
       ),
       drawer: PanelDrawer(
         usuario: widget.usuario,
         seccionActiva: _claves[_indiceActual],
         onSeleccionar: _irASeccion,
+        onLogout: widget.onLogout,
       ),
-      // IndexedStack conserva el estado de cada pestaña al cambiar entre ellas.
       body: IndexedStack(
         index: _indiceActual,
         children: _pantallas,

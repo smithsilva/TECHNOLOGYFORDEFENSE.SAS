@@ -6,13 +6,13 @@ class AppColors {
   static const doradoClaro = Color(0xFFE7C98A);
 }
 
-class PanelDrawer extends StatelessWidget {
+class MecanicoDrawer extends StatelessWidget {
   final Map<String, dynamic>? usuario;
-  final String seccionActiva;
+  final String seccionActiva; // 'inventario' | 'categorias' | 'mantenimientos'
   final void Function(String seccion) onSeleccionar;
   final VoidCallback? onLogout;
 
-  const PanelDrawer({
+  const MecanicoDrawer({
     super.key,
     required this.seccionActiva,
     required this.onSeleccionar,
@@ -22,44 +22,13 @@ class PanelDrawer extends StatelessWidget {
 
   static const _items = [
     {'key': 'inventario', 'label': 'Inventario', 'icon': Icons.inventory_2_outlined},
-    {'key': 'movimientos', 'label': 'Movimientos', 'icon': Icons.swap_horiz},
-    {'key': 'historial', 'label': 'Historial de Precios', 'icon': Icons.history},
-    {'key': 'notificaciones', 'label': 'Notificaciones', 'icon': Icons.notifications_none},
-    {'key': 'reportes', 'label': 'Reportes', 'icon': Icons.bar_chart},
-    {'key': 'usuarios', 'label': 'Usuarios', 'icon': Icons.people_outline},
-    {'key': 'registro', 'label': 'Registro', 'icon': Icons.person_add_alt},
+    {'key': 'categorias', 'label': 'Categorías', 'icon': Icons.shield_outlined},
+    {'key': 'mantenimientos', 'label': 'Mantenimientos', 'icon': Icons.build_outlined},
   ];
-
-  Future<void> _confirmarCerrarSesion(BuildContext context) async {
-    final confirmar = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cerrar sesión'),
-        content: const Text('¿Seguro que quieres cerrar tu sesión?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
-              'Cerrar sesión',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmar == true) {
-      onLogout?.call();
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final nombre = (usuario?['nombre'] ?? 'Administrador').toString();
+    final nombre = (usuario?['nombre'] ?? 'Mecánico').toString();
     final correo = (usuario?['correo'] ?? usuario?['email'] ?? '').toString();
 
     return Drawer(
@@ -68,6 +37,7 @@ class PanelDrawer extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Encabezado: escudo + T4D
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Row(
@@ -94,13 +64,16 @@ class PanelDrawer extends StatelessWidget {
                 ],
               ),
             ),
+
+            // Tarjeta de usuario: "Camilo / Mecánico"
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.06),
+                  color: AppColors.dorado.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.dorado.withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   children: [
@@ -114,10 +87,10 @@ class PanelDrawer extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(nombre,
+                          Text('$nombre / Mecánico',
                               style: const TextStyle(
                                   color: Colors.white,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.bold,
                                   fontSize: 13)),
                           if (correo.isNotEmpty)
                             Text(correo,
@@ -130,6 +103,7 @@ class PanelDrawer extends StatelessWidget {
                 ),
               ),
             ),
+
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -141,6 +115,8 @@ class PanelDrawer extends StatelessWidget {
                       letterSpacing: 0.6)),
             ),
             const SizedBox(height: 4),
+
+            // Ítems del menú (solo los 3 permitidos para el mecánico)
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 4),
@@ -167,6 +143,16 @@ class PanelDrawer extends StatelessWidget {
                           fontSize: 13,
                         ),
                       ),
+                      trailing: activo
+                          ? Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: AppColors.navy,
+                                shape: BoxShape.circle,
+                              ),
+                            )
+                          : null,
                       onTap: () {
                         Navigator.of(context).pop();
                         onSeleccionar(item['key'] as String);
@@ -176,6 +162,8 @@ class PanelDrawer extends StatelessWidget {
                 }).toList(),
               ),
             ),
+
+            // Cerrar sesión
             Padding(
               padding: const EdgeInsets.all(16),
               child: ListTile(
@@ -184,7 +172,7 @@ class PanelDrawer extends StatelessWidget {
                     style: TextStyle(color: Colors.redAccent, fontSize: 13)),
                 onTap: () {
                   Navigator.of(context).pop();
-                  _confirmarCerrarSesion(context);
+                  onLogout?.call();
                 },
               ),
             ),
