@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  static const String apiUrl = 'http://192.168.2.14:5000';
+  static const String apiUrl = 'http://localhost:5000';
   static const String apiKey = 'pollo';
 
   Future<Map<String, dynamic>> login({
