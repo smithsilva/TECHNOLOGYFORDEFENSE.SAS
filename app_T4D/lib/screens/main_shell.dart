@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
-import 'inventario_screen.dart';
-import 'placeholder_screen.dart';
+import './admin/inventario_screen.dart';
+import './admin/movimientos_screen.dart';
+import './admin/historial_precios_screen.dart';
+import './admin/notificaciones_screen.dart';
+import './admin/reportes_screen.dart';
+import './admin/gestion_usuarios_screen.dart';
+import './admin/registro_usuarios_screen.dart';
 import '../widgets/inventario_header.dart';
+import '../widgets/panel_drawer.dart';
 
 class AppColors {
   static const dorado = Color(0xFFD4A743);
@@ -10,12 +16,15 @@ class AppColors {
   static const inactivo = Color(0xFF9AA5B1);
 }
 
-/// Contenedor principal con la barra de navegación inferior.
-/// Equivalente al SidebarAdmin de la web, pero como bottom nav para móvil.
+/// Contenedor principal con menú lateral (Drawer).
+/// Equivalente al SidebarAdmin de la web.
 class MainShell extends StatefulWidget {
   final Map<String, dynamic>? usuario;
 
-  const MainShell({super.key, this.usuario});
+  /// Se recibe desde main.dart: limpia SharedPreferences y navega al login.
+  final VoidCallback? onLogout;
+
+  const MainShell({super.key, this.usuario, this.onLogout});
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -26,22 +35,22 @@ class _MainShellState extends State<MainShell> {
 
   late final List<Widget> _pantallas = [
     InventarioScreen(usuario: widget.usuario),
-    const PlaceholderScreen(titulo: 'Movimientos', icono: Icons.swap_horiz),
-    const PlaceholderScreen(titulo: 'Historial de Precios', icono: Icons.history),
-    const PlaceholderScreen(titulo: 'Notificaciones', icono: Icons.notifications_none),
-    const PlaceholderScreen(titulo: 'Reportes', icono: Icons.bar_chart),
-    const PlaceholderScreen(titulo: 'Usuarios', icono: Icons.people_outline),
-    const PlaceholderScreen(titulo: 'Registro', icono: Icons.person_add_outlined),
+    MovimientosScreen(usuario: widget.usuario),
+    HistorialPreciosScreen(usuario: widget.usuario),
+    NotificacionesScreen(usuario: widget.usuario),
+    ReportesScreen(usuario: widget.usuario),
+    UsuariosScreen(usuario: widget.usuario),
+    RegistroScreen(usuario: widget.usuario),
   ];
 
-  static const _items = [
-    _ItemNav('Inventario', Icons.inventory_2_outlined),
-    _ItemNav('Movim.', Icons.swap_horiz),
-    _ItemNav('Historial', Icons.history),
-    _ItemNav('Notif.', Icons.notifications_none),
-    _ItemNav('Reportes', Icons.bar_chart),
-    _ItemNav('Usuarios', Icons.people_outline),
-    _ItemNav('Registro', Icons.person_add_outlined),
+  static const _claves = [
+    'inventario',
+    'movimientos',
+    'historial',
+    'notificaciones',
+    'reportes',
+    'usuarios',
+    'registro',
   ];
 
   static const _titulos = [
@@ -54,43 +63,32 @@ class _MainShellState extends State<MainShell> {
     'Registro',
   ];
 
+  void _irASeccion(String seccion) {
+    final indice = _claves.indexOf(seccion);
+    if (indice != -1) {
+      setState(() => _indiceActual = indice);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: InventarioHeader(
         titulo: _titulos[_indiceActual],
         usuario: widget.usuario,
-        onNotificaciones: () => setState(() => _indiceActual = 3), // salta a la pestaña Notificaciones
+        onNotificaciones: () => setState(() => _indiceActual = 3),
+        onLogout: widget.onLogout,
       ),
-      // IndexedStack conserva el estado de cada pestaña al cambiar entre ellas.
+      drawer: PanelDrawer(
+        usuario: widget.usuario,
+        seccionActiva: _claves[_indiceActual],
+        onSeleccionar: _irASeccion,
+        onLogout: widget.onLogout,
+      ),
       body: IndexedStack(
         index: _indiceActual,
         children: _pantallas,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.navy,
-        selectedItemColor: AppColors.dorado,
-        unselectedItemColor: AppColors.inactivo,
-        selectedFontSize: 10,
-        unselectedFontSize: 10,
-        currentIndex: _indiceActual,
-        onTap: (i) => setState(() => _indiceActual = i),
-        items: _items
-            .map(
-              (item) => BottomNavigationBarItem(
-                icon: Icon(item.icono, size: 20),
-                label: item.label,
-              ),
-            )
-            .toList(),
-      ),
     );
   }
-}
-
-class _ItemNav {
-  final String label;
-  final IconData icono;
-  const _ItemNav(this.label, this.icono);
 }

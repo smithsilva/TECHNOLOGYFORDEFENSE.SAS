@@ -12,12 +12,14 @@ class InventarioHeader extends StatelessWidget implements PreferredSizeWidget {
   final String titulo;
   final Map<String, dynamic>? usuario;
   final VoidCallback? onNotificaciones;
+  final VoidCallback? onLogout;
 
   const InventarioHeader({
     super.key,
     required this.titulo,
     this.usuario,
     this.onNotificaciones,
+    this.onLogout,
   });
 
   @override
@@ -41,6 +43,17 @@ class InventarioHeader extends StatelessWidget implements PreferredSizeWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Row(
               children: [
+                // Botón de menú (3 rayitas) que abre el Drawer
+                Builder(
+                  builder: (context) => IconButton(
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                    icon: const Icon(Icons.menu, color: Colors.white),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
                 // Escudo / logo
                 Image.asset(
                   'assets/escudo1.png',
