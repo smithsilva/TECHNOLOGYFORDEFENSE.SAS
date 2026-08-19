@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/producto.dart';
-import '../widgets/producto_card.dart';
+import 'package:app_t4d/models/producto.dart';
+import 'package:app_t4d/widgets/producto_card.dart';
 // import '../services/inventario_service.dart'; // ← lo conectas cuando pases de mock a datos reales
 
 class AppColors {
