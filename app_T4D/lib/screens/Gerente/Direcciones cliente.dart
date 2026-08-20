@@ -558,7 +558,12 @@ final List<ClientModel> clientsData = [
 
 // ==================== PANTALLA PRINCIPAL ====================
 class DireccionesClienteScreen extends StatefulWidget {
-  const DireccionesClienteScreen({super.key});
+  // Si embedded = true, no dibuja su propio Scaffold/AppBar (se usa
+  // así dentro de main_shell_gerente.dart, que ya los provee), igual
+  // que las demás pantallas de Gerente (Tareas, Clientes, etc.).
+  final bool embedded;
+
+  const DireccionesClienteScreen({super.key, this.embedded = false});
 
   @override
   State<DireccionesClienteScreen> createState() => _DireccionesClienteScreenState();
@@ -587,26 +592,34 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
     super.dispose();
   }
 
+  Widget _buildContent(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+      children: [
+        _buildHeaderCard(),
+        const SizedBox(height: 14),
+        _buildSearchBar(),
+        const SizedBox(height: 14),
+        _buildStatsRow(),
+        const SizedBox(height: 14),
+        ..._filteredClients.map((c) => Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: ClientCard(client: c),
+            )),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.embedded) {
+      return _buildContent(context);
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: _buildAppBar(),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
-        children: [
-          _buildHeaderCard(),
-          const SizedBox(height: 14),
-          _buildSearchBar(),
-          const SizedBox(height: 14),
-          _buildStatsRow(),
-          const SizedBox(height: 14),
-          ..._filteredClients.map((c) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: ClientCard(client: c),
-              )),
-        ],
-      ),
+      body: _buildContent(context),
     );
   }
 

@@ -2,20 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../screens/admin/inventario_screen.dart' hide AppColors;
 import '../../widgets/t4d_sidebar.dart';
-import '../../widgets/gerente_appbar.dart';
 
 import 'Asignacion tareas screen.dart';
 import 'Direcciones cliente.dart' hide AppColors;
 import 'Gestion clientes screen.dart';
 import 'Movimientos screen.dart';
 import 'Historial precios screen.dart';
-
-// Fondo crema/marfil que ya usan todas las pantallas de Gerente
-// (AppColors.background / MovColors.background / _TareasColors.fondo).
-// OJO: T4DColors.background (de t4d_sidebar.dart) NO sirve para esto:
-// es en realidad un alias del navy oscuro usado en el sidebar, por eso
-// antes el panel se veía casi negro.
-const Color _fondoGerente = Color(0xFFF7F1E3);
 
 class MainShellGerente extends StatefulWidget {
   final Map<String, dynamic>? usuario;
@@ -80,9 +72,7 @@ class _MainShellGerenteState extends State<MainShellGerente> {
     ),
     _SeccionGerente(
       item: const T4DMenuItem(icon: Icons.place_outlined, label: 'Direcciones'),
-      // embedded: true → ya no dibuja su propio Scaffold/AppBar (antes
-      // quedaba duplicado dentro del shell).
-      pantalla: const DireccionesClienteScreen(embedded: true),
+      pantalla: const DireccionesClienteScreen(),
       visibleEnPanelPrincipal: true,
     ),
   ];
@@ -123,18 +113,15 @@ class _MainShellGerenteState extends State<MainShellGerente> {
           );
         }
 
-        final contenido = Container(
-          color: _fondoGerente,
-          child: IndexedStack(
-            index: _indiceActual,
-            children: _pantallas,
-          ),
+        final contenido = IndexedStack(
+          index: _indiceActual,
+          children: _pantallas,
         );
 
         // -------- ESCRITORIO / TABLET: sidebar fijo al costado --------
         if (esEscritorio) {
           return Scaffold(
-            backgroundColor: _fondoGerente,
+            backgroundColor: T4DColors.background,
             body: Row(
               children: [
                 sidebar(),
@@ -143,40 +130,15 @@ class _MainShellGerenteState extends State<MainShellGerente> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
                         color: const Color(0xFF13202E),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text(
-                                    'BIENVENIDO',
-                                    style: TextStyle(
-                                      color: Color(0xFFE7C98A),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.6,
-                                    ),
-                                  ),
-                                  Text(
-                                    _menu[_indiceActual].label,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.notifications_none, color: Colors.white),
-                              onPressed: () {},
-                            ),
-                          ],
+                        child: Text(
+                          _menu[_indiceActual].label,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       Expanded(child: contenido),
@@ -190,10 +152,14 @@ class _MainShellGerenteState extends State<MainShellGerente> {
 
         // -------- MÓVIL: sidebar como drawer, contenido a todo el ancho --------
         return Scaffold(
-          backgroundColor: _fondoGerente,
-          appBar: GerenteAppBar(
-            titulo: _menu[_indiceActual].label,
-            nombreUsuario: nombre.toString(),
+          backgroundColor: T4DColors.background,
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF13202E),
+            iconTheme: const IconThemeData(color: Colors.white),
+            title: Text(
+              _menu[_indiceActual].label,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
           ),
           drawer: Drawer(
             backgroundColor: Colors.transparent,

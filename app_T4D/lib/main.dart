@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
+import 'screens/gerente/main_shell_gerente.dart';
+import 'screens/mecanico/mecanico_shell.dart';
+import 'screens/contadora/main_shell_contadora.dart';
 
 void main() {
   runApp(const MyApp());
@@ -97,6 +100,12 @@ class _RaizAppState extends State<RaizApp> {
 
   @override
   Widget build(BuildContext context) {
+    if (_cargandoSesion) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     switch (_vista) {
       case 'login':
         return LoginScreen(
@@ -104,16 +113,28 @@ class _RaizAppState extends State<RaizApp> {
           setUsuario: _setUsuario,
         );
 
-      // Por ahora todos los roles autenticados van al inventario.
-      // Cuando tengas pantallas propias por rol (admin, gerente, etc.)
-      // agregas más 'case' aquí, cada uno devolviendo su screen.
-      case 'admin':
-      case 'contadora':
       case 'gerente':
+        return MainShellGerente(
+          usuario: _usuario,
+          onLogout: _logout,
+        );
+
       case 'mecanico':
+        return MecanicoShell(
+          usuario: _usuario,
+          onLogout: _logout,
+        );
+
+      case 'contadora':
+        return MainShellContadora(
+          usuario: _usuario,
+          onLogout: _logout,
+        );
+
+      case 'admin':
       case 'home':
       default:
-        return MainShell(usuario: _usuario);
+        return MainShell(usuario: _usuario, onLogout: _logout);
     }
   }
 }

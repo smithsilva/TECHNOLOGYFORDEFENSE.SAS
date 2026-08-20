@@ -1,25 +1,5 @@
 import 'package:flutter/material.dart';
 
-
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Proveedores',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(fontFamily: 'Roboto', useMaterial3: true),
-      home: const ProveedoresScreen(),
-    );
-  }
-}
-
 // ==================== PALETA DE COLORES ====================
 class AppColors {
   static const background = Color(0xFFF1EEE6);
@@ -93,10 +73,9 @@ class ProveedoresScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: const _PanelContadoraAppBar(),
-      body: ListView(
+    return Container(
+      color: AppColors.background,
+      child: ListView(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
         children: [
           _buildHeaderCard(),
@@ -305,101 +284,6 @@ class _ProveedorCard extends StatelessWidget {
           _InfoRow(label: 'Correo', value: proveedor.correo),
           _InfoRow(label: 'Ciudad', value: proveedor.ciudad),
         ],
-      ),
-    );
-  }
-}
-
-// ==================== APPBAR COMPARTIDA ====================
-class _PanelContadoraAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _PanelContadoraAppBar();
-
-  @override
-  Size get preferredSize => const Size.fromHeight(64);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(color: AppColors.navy),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.menu, color: Colors.white),
-                onPressed: () {},
-              ),
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.gold,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                alignment: Alignment.center,
-                child: const Icon(Icons.badge, color: AppColors.navy, size: 18),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'BIENVENIDO',
-                      style: TextStyle(
-                        color: AppColors.gold,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const Text(
-                      'Panel de Contadora',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.notifications_none, color: Colors.white),
-                onPressed: () {},
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    CircleAvatar(
-                      radius: 10,
-                      backgroundColor: AppColors.gold,
-                      child: Icon(Icons.person, size: 12, color: AppColors.navy),
-                    ),
-                    SizedBox(width: 6),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('Usuario', style: TextStyle(color: Colors.white, fontSize: 11, height: 1)),
-                        Text('Contadora', style: TextStyle(color: AppColors.gold, fontSize: 9, height: 1)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

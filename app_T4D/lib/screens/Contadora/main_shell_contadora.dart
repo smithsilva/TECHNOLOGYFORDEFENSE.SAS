@@ -1,23 +1,26 @@
 import 'package:flutter/material.dart';
 
 import '../../widgets/t4d_sidebar.dart';
+import '../../widgets/contadora_appbar.dart';
+import 'inventario_contadora_screen.dart'; // -> class InventarioContadoraScreen
 
 import 'Empleados screen.dart'; // -> class EmpleadosScreen
 import 'Historial precios screen.dart'; // -> class HistorialPreciosScreen
+import 'Metodos pago screen.dart'; // -> class MetodosPagoScreen
 import 'Proveedores screen.dart'; // -> class ProveedoresScreen
 import 'Reportes screen.dart'; // -> class ReportesFinancierosScreen
 import 'Sucursales screen.dart'; // -> class SucursalesScreen
 
-// ⚠️ La pantalla de "Métodos de pago" todavía no está hecha,
-// así que por ahora se muestra un marcador de posición.
-import '../placeholder_screen.dart';
-
 class MainShellContadora extends StatefulWidget {
   final Map<String, dynamic>? usuario;
+
+  /// Se recibe desde main.dart: limpia SharedPreferences y navega al login.
+  final VoidCallback? onLogout;
 
   const MainShellContadora({
     super.key,
     this.usuario,
+    this.onLogout,
   });
 
   @override
@@ -32,6 +35,7 @@ class _MainShellContadoraState extends State<MainShellContadora> {
   static const double _breakpointEscritorio = 900;
 
   static const List<T4DMenuItem> _menu = [
+    T4DMenuItem(icon: Icons.inventory_2_outlined, label: 'Inventario'),
     T4DMenuItem(icon: Icons.badge_outlined, label: 'Empleados'),
     T4DMenuItem(icon: Icons.payments_outlined, label: 'Métodos de pago'),
     T4DMenuItem(icon: Icons.local_shipping_outlined, label: 'Proveedores'),
@@ -42,11 +46,9 @@ class _MainShellContadoraState extends State<MainShellContadora> {
 
   // El orden debe coincidir 1 a 1 con _menu de arriba.
   late final List<Widget> _pantallas = [
+    InventarioContadoraScreen(usuario: widget.usuario),
     const EmpleadosScreen(),
-    const PlaceholderScreen(
-      titulo: 'Métodos de pago',
-      icono: Icons.payments_outlined,
-    ),
+    const MetodosPagoScreen(),
     const ProveedoresScreen(),
     const ReportesFinancierosScreen(),
     const SucursalesScreen(),
@@ -54,8 +56,9 @@ class _MainShellContadoraState extends State<MainShellContadora> {
   ];
 
   void _cerrarSesion() {
-    // ⚠️ Ajusta esto a tu flujo real de logout / login.
-    Navigator.of(context).pop();
+    // Usa el callback centralizado en main.dart (limpia SharedPreferences
+    // y vuelve a la vista 'login'), igual que MainShell y MainShellGerente.
+    widget.onLogout?.call();
   }
 
   @override
@@ -105,16 +108,42 @@ class _MainShellContadoraState extends State<MainShellContadora> {
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
-                          vertical: 18,
+                          vertical: 16,
                         ),
-                        color: const Color(0xFF13202E),
-                        child: Text(
-                          _menu[_indiceActual].label,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        color: const Color(0xFF13161F),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'BIENVENIDO',
+                                    style: TextStyle(
+                                      color: Color(0xFFE0A93B),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.6,
+                                    ),
+                                  ),
+                                  Text(
+                                    _menu[_indiceActual].label,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.notifications_none,
+                                  color: Colors.white),
+                              onPressed: () {},
+                            ),
+                          ],
                         ),
                       ),
                       Expanded(child: contenido),
@@ -129,16 +158,9 @@ class _MainShellContadoraState extends State<MainShellContadora> {
         // -------- MÓVIL: sidebar como drawer, contenido a todo el ancho --------
         return Scaffold(
           backgroundColor: const Color(0xFFF7F0E1),
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF13202E),
-            iconTheme: const IconThemeData(color: Colors.white),
-            title: Text(
-              _menu[_indiceActual].label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          appBar: ContadoraAppBar(
+            titulo: _menu[_indiceActual].label,
+            nombreUsuario: nombre.toString(),
           ),
           drawer: Drawer(
             backgroundColor: Colors.transparent,
