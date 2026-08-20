@@ -9,7 +9,7 @@ class AuthService {
 static const String wifiApiUrl = 'http://192.168.2.9:5000';
 
   // Servidor mediante USB + adb reverse
-  static const String usbApiUrl = 'http://127.0.0.1:5000';
+  static const String usbApiUrl = 'http://localhost:5000';
 
   Future<Map<String, dynamic>> login({
     required String email,

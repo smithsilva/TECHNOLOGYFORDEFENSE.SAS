@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-
 void main() {
   runApp(const MyApp());
 }
@@ -15,7 +14,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        scaffoldBackgroundColor: AppColors.background,
+        scaffoldBackgroundColor: AppColors.fondo,
         fontFamily: 'Roboto',
       ),
       home: const HistorialPreciosScreen(),
@@ -24,35 +23,37 @@ class MyApp extends StatelessWidget {
 }
 
 // ==================== PALETA COMPARTIDA ====================
-// Paleta dorado/marfil de la vista de Gerente.
 class AppColors {
-  static const Color background = Color(0xFFF7F1E3); // fondo crema (FONDO)
-  static const Color white = Color(0xFFFFFFFF);
-  static const Color panelDark = Color(0xFF13202E); // ENCABEZADO
-  static const Color navy = Color(0xFF13202E); // ENCABEZADO
-  static const Color textDark = Color(0xFF20213B);
-  static const Color grayText = Color(0xFF8A8CA5);
-  static const Color cardWhiteSubtitle = Color(0xFF6B7280);
-  static const Color borderLight = Color(0xFFE7E5F3);
+  static const dorado = Color(0xFFD4A743);
+  static const doradoOscuro = Color(0xFF8C6B3F);
+  static const doradoClaro = Color(0xFFE7C98A);
+  static const fondo = Color(0xFFF7F1E3);
+  static const encabezado = Color(0xFF13202E);
 
-  // Dorado (paleta de referencia enviada)
-  static const Color gold = Color(0xFFD4A743); // DORADO
-  static const Color goldDark = Color(0xFF8C6B3F); // DORADO_OSCURO
-  static const Color goldLight = Color(0xFFE7C98A); // DORADO_CLARO / TEXTO_ENC
-  static const Color goldBg = Color(0xFFF3E7CC); // fondo suave dorado
+  static const white = Color(0xFFFFFFFF);
+  static const textDark = Color(0xFF20213B);
+  static const grayText = Color(0xFF6B7280);
 
-  static const Color green = Color(0xFF1FA35A);
-  static const Color greenBg = Color(0xFFE3F9EC);
+  static const green = Color(0xFF1FA35A);
+  static const greenBg = Color(0xFFE3F9EC);
 
-  static const Color red = Color(0xFFE04B4B);
-  static const Color redBg = Color(0xFFFCE7E7);
+  static const red = Color(0xFFE04B4B);
+  static const redBg = Color(0xFFFCE7E7);
 
-  static const Color orange = Color(0xFFF2994A);
-  static const Color orangeBg = Color(0xFFFCEEE1);
-
-  // Reemplaza el antiguo "blue": gris neutro, ya sin azul.
-  static const Color neutral = Color(0xFF6B7280);
-  static const Color neutralBg = Color(0xFFF3F4F6);
+  // Alias adicionales para que otras pantallas (Cliente, Tareas, etc.)
+  // que ya usaban estos nombres puedan reutilizar esta misma paleta.
+  static const navy = encabezado;
+  static const background = fondo;
+  static const panelDark = encabezado;
+  static const gold = dorado;
+  static const goldLight = doradoClaro;
+  static const goldDark = doradoOscuro;
+  static const goldBg = doradoClaro;
+  static const borderLight = dorado;
+  static const cardWhiteSubtitle = grayText;
+  static const neutral = grayText;
+  static const orange = doradoOscuro;
+  static const orangeBg = doradoClaro;
 }
 
 // ==================== MODELO ====================
@@ -188,13 +189,14 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   int get _totalDisminuciones =>
       mockPriceChanges.where((c) => c.tipo == CambioTipo.disminucion).length;
 
+  // NOTA: aquí ya NO se llama _TitleCard. Ese panel repetía el título
+  // "Historial de Precios" que ya aparece arriba junto al logo, así que
+  // se eliminó por completo para que el nombre solo salga una vez.
   Widget _buildContent(BuildContext context) {
     final filtrados = _filtrados;
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
       children: [
-        _TitleCard(total: mockPriceChanges.length),
-        const SizedBox(height: 14),
         Row(
           children: [
             Expanded(
@@ -265,7 +267,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
       return _buildContent(context);
     }
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.fondo,
       body: SafeArea(
         child: Column(
           children: [
@@ -278,7 +280,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   }
 }
 
-// ==================== HEADER SUPERIOR ====================
+// ==================== HEADER SUPERIOR (único lugar con el título) ====================
 class _TopHeader extends StatelessWidget {
   final String userName;
   const _TopHeader({required this.userName});
@@ -286,7 +288,7 @@ class _TopHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.navy,
+      color: AppColors.encabezado,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
         children: [
@@ -304,10 +306,19 @@ class _TopHeader extends StatelessWidget {
           Container(
             width: 34,
             height: 34,
-            decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(
+              color: AppColors.dorado,
+              borderRadius: BorderRadius.circular(8),
+            ),
             alignment: Alignment.center,
-            child: const Text('T4D',
-                style: TextStyle(color: AppColors.navy, fontWeight: FontWeight.w900, fontSize: 11)),
+            child: const Text(
+              'T4D',
+              style: TextStyle(
+                color: AppColors.encabezado,
+                fontWeight: FontWeight.w900,
+                fontSize: 11,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           const Expanded(
@@ -315,12 +326,20 @@ class _TopHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('BIENVENIDO',
-                    style: TextStyle(
-                        color: AppColors.goldLight, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
-                Text('Historial de Precios',
-                    style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
-                    overflow: TextOverflow.ellipsis),
+                Text(
+                  'BIENVENIDO',
+                  style: TextStyle(
+                    color: AppColors.doradoClaro,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  'Historial de Precios',
+                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
@@ -328,59 +347,20 @@ class _TopHeader extends StatelessWidget {
           const SizedBox(width: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 CircleAvatar(
                   radius: 9,
-                  backgroundColor: AppColors.gold,
-                  child: const Icon(Icons.person, size: 11, color: AppColors.navy),
+                  backgroundColor: AppColors.dorado,
+                  child: const Icon(Icons.person, size: 11, color: AppColors.encabezado),
                 ),
                 const SizedBox(width: 5),
                 Text(userName, style: const TextStyle(color: Colors.white, fontSize: 11.5)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ==================== TARJETA DE TÍTULO ====================
-class _TitleCard extends StatelessWidget {
-  final int total;
-  const _TitleCard({required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(color: AppColors.goldBg, borderRadius: BorderRadius.circular(12)),
-            alignment: Alignment.center,
-            child: const Icon(Icons.trending_up_rounded, color: AppColors.goldDark, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Historial de Precios',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.textDark)),
-                const SizedBox(height: 2),
-                Text('$total cambios registrados por el Gerente',
-                    style: const TextStyle(fontSize: 12, color: AppColors.grayText)),
               ],
             ),
           ),
@@ -411,7 +391,14 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: AppColors.dorado, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.doradoOscuro.withOpacity(0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,17 +437,19 @@ class _FiltersCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: AppColors.dorado, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: const [
-              Icon(Icons.filter_alt_outlined, size: 16, color: AppColors.gold),
+              Icon(Icons.filter_alt_outlined, size: 16, color: AppColors.dorado),
               SizedBox(width: 6),
-              Text('Filtros y Búsqueda',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+              Text(
+                'Filtros y Búsqueda',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -473,15 +462,19 @@ class _FiltersCard extends StatelessWidget {
               hintStyle: const TextStyle(fontSize: 11.5, color: AppColors.grayText),
               prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.grayText),
               filled: true,
-              fillColor: const Color(0xFFF9FAFB),
+              fillColor: AppColors.fondo,
               contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: AppColors.borderLight),
+                borderSide: const BorderSide(color: AppColors.doradoClaro),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: AppColors.borderLight),
+                borderSide: const BorderSide(color: AppColors.doradoClaro),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.dorado),
               ),
             ),
           ),
@@ -492,18 +485,20 @@ class _FiltersCard extends StatelessWidget {
             children: [
               _Chip(label: 'Todos', selected: filtroTipo == 'Todos', onTap: () => onFiltroTipoChanged('Todos')),
               _Chip(
-                  label: 'Incremento',
-                  selected: filtroTipo == 'Incremento',
-                  onTap: () => onFiltroTipoChanged('Incremento')),
+                label: 'Incremento',
+                selected: filtroTipo == 'Incremento',
+                onTap: () => onFiltroTipoChanged('Incremento'),
+              ),
               _Chip(
-                  label: 'Disminución',
-                  selected: filtroTipo == 'Disminución',
-                  onTap: () => onFiltroTipoChanged('Disminución')),
+                label: 'Disminución',
+                selected: filtroTipo == 'Disminución',
+                onTap: () => onFiltroTipoChanged('Disminución'),
+              ),
               OutlinedButton.icon(
                 onPressed: onLimpiar,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF6B7280),
-                  side: const BorderSide(color: AppColors.borderLight),
+                  foregroundColor: AppColors.encabezado,
+                  side: const BorderSide(color: AppColors.doradoClaro),
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 ),
@@ -528,7 +523,7 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? AppColors.gold : const Color(0xFFF9FAFB),
+      color: selected ? AppColors.dorado : AppColors.white,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -537,14 +532,14 @@ class _Chip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: selected ? AppColors.gold : AppColors.borderLight),
+            border: Border.all(color: selected ? AppColors.dorado : AppColors.doradoClaro),
           ),
           child: Text(
             label,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: selected ? AppColors.navy : AppColors.grayText,
+              color: selected ? AppColors.encabezado : AppColors.grayText,
             ),
           ),
         ),
@@ -570,7 +565,14 @@ class _PriceChangeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: AppColors.dorado, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.doradoOscuro.withOpacity(0.06),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,35 +589,43 @@ class _PriceChangeCard extends StatelessWidget {
                   children: [
                     Icon(esIncremento ? Icons.arrow_upward : Icons.arrow_downward, size: 11, color: color),
                     const SizedBox(width: 3),
-                    Text('$signo${cambio.porcentaje.toStringAsFixed(1)}%',
-                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: color)),
+                    Text(
+                      '$signo${cambio.porcentaje.toStringAsFixed(1)}%',
+                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: color),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(cambio.producto,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+          Text(
+            cambio.producto,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
+          ),
           const SizedBox(height: 3),
           Row(
             children: [
-              Text(_fmtPrecio(cambio.precioAnterior),
-                  style: const TextStyle(
-                      fontSize: 12.5,
-                      color: AppColors.grayText,
-                      decoration: TextDecoration.lineThrough)),
+              Text(
+                _fmtPrecio(cambio.precioAnterior),
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.grayText,
+                  decoration: TextDecoration.lineThrough,
+                ),
+              ),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 6),
                 child: Icon(Icons.arrow_forward, size: 12, color: AppColors.grayText),
               ),
-              Text(_fmtPrecio(cambio.precioNuevo),
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+              Text(
+                _fmtPrecio(cambio.precioNuevo),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textDark),
+              ),
             ],
           ),
           const SizedBox(height: 4),
-          Text('Modificado por ${cambio.usuario}',
-              style: const TextStyle(fontSize: 11, color: AppColors.grayText)),
+          Text('Modificado por ${cambio.usuario}', style: const TextStyle(fontSize: 11, color: AppColors.grayText)),
         ],
       ),
     );

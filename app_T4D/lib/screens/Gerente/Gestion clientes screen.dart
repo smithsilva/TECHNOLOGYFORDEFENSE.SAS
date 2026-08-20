@@ -1,5 +1,36 @@
 import 'package:flutter/material.dart';
-import 'Historial precios screen.dart' show AppColors;
+
+// ============================================================
+// PALETA DE COLORES (definida aquí mismo, sin depender de otro
+// archivo, para que esta pantalla compile de forma independiente)
+// ============================================================
+class AppColors {
+  AppColors._();
+
+  // Fondo general de la app
+  static const Color fondo = Color(0xFFF7F8FA);
+
+  // Header oscuro superior
+  static const Color encabezado = Color(0xFF0B1F3A);
+
+  // Dorado (marca / acentos)
+  static const Color dorado = Color(0xFFC9A227);
+  static const Color doradoClaro = Color(0xFFF0E6C8);
+  static const Color doradoOscuro = Color(0xFF8A6D1E);
+
+  // Básicos
+  static const Color white = Colors.white;
+  static const Color textDark = Color(0xFF111827);
+  static const Color grayText = Color(0xFF6B7280);
+  static const Color neutral = Color(0xFF4B5563);
+  static const Color orange = Color(0xFFF59E0B);
+
+  // Estados
+  static const Color green = Color(0xFF16A34A);
+  static const Color greenBg = Color(0xFFDCFCE7);
+  static const Color red = Color(0xFFDC2626);
+  static const Color redBg = Color(0xFFFEE2E2);
+}
 
 // ============================================================
 // TIPOS DE DOCUMENTO
@@ -58,6 +89,7 @@ class ClientRecord {
 
   String get initials {
     final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return '?';
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
     return (parts[0].substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();
   }
@@ -237,26 +269,66 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
   final int esteMes = 0;
   final int direcciones = 28;
 
+  // ------------------------------------------------------------
+  // FILTRADO: aplica búsqueda de texto + estado sobre mockClients.
+  // Antes esto no existía y la tabla siempre mostraba todo.
+  // ------------------------------------------------------------
+  List<ClientRecord> get _filteredClients {
+    final query = _searchController.text.trim().toLowerCase();
+    return mockClients.where((c) {
+      final matchesQuery = query.isEmpty ||
+          c.name.toLowerCase().contains(query) ||
+          c.docNumber.toLowerCase().contains(query) ||
+          c.email.toLowerCase().contains(query);
+
+      final matchesEstado = _estadoFiltro == 'Todos los estados' ||
+          (_estadoFiltro == 'Activo' && c.active) ||
+          (_estadoFiltro == 'Inactivo' && !c.active);
+
+      return matchesQuery && matchesEstado;
+    }).toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Redibuja la lista cada vez que el usuario escribe en el buscador.
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() => setState(() {});
+
+  void _clearFilters() {
+    setState(() {
+      _searchController.clear();
+      _estadoFiltro = 'Todos los estados';
+    });
+  }
+
   @override
   void dispose() {
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
 
+  // NOTA: aquí ya NO se llama el panel con el título "Gestión de Clientes".
+  // Ese título ya aparece una sola vez en el header oscuro junto al logo
+  // (como "Cliente"). Se conservan las estadísticas y el botón "Nuevo
+  // Cliente" dentro de _StatsAndActionCard, sin repetir el texto.
   Widget _buildContent(BuildContext context) {
+    final filtered = _filteredClients;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
       children: [
-        _TitleCard(total: total, activos: activos, esteMes: esteMes, direcciones: direcciones),
+        _StatsAndActionCard(total: total, activos: activos, esteMes: esteMes, direcciones: direcciones),
         const SizedBox(height: 14),
         _FiltersCard(
           controller: _searchController,
           estado: _estadoFiltro,
           onEstadoChanged: (v) => setState(() => _estadoFiltro = v),
-          onClear: () => setState(() {
-            _searchController.clear();
-            _estadoFiltro = 'Todos los estados';
-          }),
+          onClear: _clearFilters,
         ),
         const SizedBox(height: 16),
         Padding(
@@ -269,14 +341,17 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
                 style: TextStyle(color: AppColors.textDark, fontSize: 15, fontWeight: FontWeight.w700),
               ),
               Text(
-                '$total clientes',
+                '${filtered.length} clientes',
                 style: const TextStyle(color: AppColors.grayText, fontSize: 11.5),
               ),
             ],
           ),
         ),
         const SizedBox(height: 10),
-        _ClientsTable(clients: mockClients),
+        if (filtered.isEmpty)
+          _EmptyState(onClear: _clearFilters)
+        else
+          _ClientsTable(clients: filtered),
       ],
     );
   }
@@ -287,7 +362,7 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
       return _buildContent(context);
     }
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.fondo,
       body: SafeArea(
         child: Column(
           children: [
@@ -301,7 +376,7 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
 }
 
 // ============================================================
-// HEADER SUPERIOR
+// HEADER SUPERIOR (único lugar con el título)
 // ============================================================
 class _TopHeader extends StatelessWidget {
   const _TopHeader();
@@ -309,7 +384,7 @@ class _TopHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.navy,
+      color: AppColors.encabezado,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
         children: [
@@ -327,10 +402,12 @@ class _TopHeader extends StatelessWidget {
           Container(
             width: 34,
             height: 34,
-            decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(color: AppColors.dorado, borderRadius: BorderRadius.circular(8)),
             alignment: Alignment.center,
-            child: const Text('T4D',
-                style: TextStyle(color: AppColors.navy, fontWeight: FontWeight.w900, fontSize: 11)),
+            child: const Text(
+              'T4D',
+              style: TextStyle(color: AppColors.encabezado, fontWeight: FontWeight.w900, fontSize: 11),
+            ),
           ),
           const SizedBox(width: 8),
           const Expanded(
@@ -338,12 +415,20 @@ class _TopHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('BIENVENIDO',
-                    style: TextStyle(
-                        color: AppColors.goldLight, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
-                Text('Cliente',
-                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
-                    overflow: TextOverflow.ellipsis),
+                Text(
+                  'BIENVENIDO',
+                  style: TextStyle(
+                    color: AppColors.doradoClaro,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  'Cliente',
+                  style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
@@ -351,14 +436,14 @@ class _TopHeader extends StatelessWidget {
           const SizedBox(width: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            decoration: BoxDecoration(color: AppColors.panelDark, borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(20)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: const [
                 CircleAvatar(
                   radius: 9,
-                  backgroundColor: AppColors.gold,
-                  child: Icon(Icons.person, size: 11, color: AppColors.navy),
+                  backgroundColor: AppColors.dorado,
+                  child: Icon(Icons.person, size: 11, color: AppColors.encabezado),
                 ),
                 SizedBox(width: 5),
                 Text('Gerente', style: TextStyle(color: Colors.white, fontSize: 11.5)),
@@ -372,15 +457,16 @@ class _TopHeader extends StatelessWidget {
 }
 
 // ============================================================
-// TARJETA BLANCA SUPERIOR (título + botón + estadísticas)
+// TARJETA DE ESTADÍSTICAS + BOTÓN "NUEVO CLIENTE"
+// (sin título, para no repetir "Gestión de Clientes" / "Cliente")
 // ============================================================
-class _TitleCard extends StatelessWidget {
+class _StatsAndActionCard extends StatelessWidget {
   final int total;
   final int activos;
   final int esteMes;
   final int direcciones;
 
-  const _TitleCard({
+  const _StatsAndActionCard({
     required this.total,
     required this.activos,
     required this.esteMes,
@@ -394,44 +480,36 @@ class _TitleCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: AppColors.dorado, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.doradoOscuro.withOpacity(0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Gestión de Clientes',
-                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF111827))),
-                    SizedBox(height: 4),
-                    Text('Administración de base de datos',
-                        style: TextStyle(fontSize: 12, color: AppColors.cardWhiteSubtitle)),
-                  ],
-                ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                // TODO: navegar a formulario de nuevo cliente
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.dorado,
+                foregroundColor: AppColors.encabezado,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              const SizedBox(width: 10),
-              ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: navegar a formulario de nuevo cliente
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.gold,
-                  foregroundColor: AppColors.navy,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Nuevo Cliente', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
-              ),
-            ],
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Nuevo Cliente', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
@@ -477,8 +555,8 @@ class _TitleCard extends StatelessWidget {
                   title: 'Direcciones',
                   value: '$direcciones',
                   icon: Icons.location_on_outlined,
-                  iconColor: AppColors.goldDark,
-                  iconBg: AppColors.goldBg,
+                  iconColor: AppColors.doradoOscuro,
+                  iconBg: AppColors.doradoClaro,
                 ),
               ),
             ],
@@ -511,9 +589,9 @@ class _StatBox extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        color: AppColors.fondo,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: AppColors.dorado, width: 1),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -572,39 +650,56 @@ class _FiltersCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: AppColors.dorado, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: const [
-              Icon(Icons.filter_alt_outlined, size: 16, color: AppColors.gold),
+              Icon(Icons.filter_alt_outlined, size: 16, color: AppColors.dorado),
               SizedBox(width: 6),
               Text('Filtros y Búsqueda',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF111827))),
             ],
           ),
           const SizedBox(height: 10),
-          TextField(
-            controller: controller,
-            style: const TextStyle(fontSize: 13),
-            decoration: InputDecoration(
-              hintText: 'Buscar por nombre, documento, teléfono o correo',
-              hintStyle: const TextStyle(fontSize: 11.5, color: AppColors.grayText),
-              prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.grayText),
-              filled: true,
-              fillColor: const Color(0xFFF9FAFB),
-              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: AppColors.borderLight),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: AppColors.borderLight),
-              ),
-            ),
+          // AnimatedBuilder asegura que el ícono de "borrar" (X) del campo
+          // aparezca/desaparezca según haya texto o no.
+          AnimatedBuilder(
+            animation: controller,
+            builder: (context, _) {
+              return TextField(
+                controller: controller,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por nombre, documento o correo',
+                  hintStyle: const TextStyle(fontSize: 11.5, color: AppColors.grayText),
+                  prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.grayText),
+                  suffixIcon: controller.text.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.clear, size: 16, color: AppColors.grayText),
+                          onPressed: controller.clear,
+                        ),
+                  filled: true,
+                  fillColor: AppColors.fondo,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.doradoClaro),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.doradoClaro),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.dorado),
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 10),
           Row(
@@ -613,9 +708,9 @@ class _FiltersCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
+                    color: AppColors.fondo,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.borderLight),
+                    border: Border.all(color: AppColors.doradoClaro),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
@@ -635,8 +730,8 @@ class _FiltersCard extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onClear,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF6B7280),
-                  side: const BorderSide(color: AppColors.borderLight),
+                  foregroundColor: AppColors.encabezado,
+                  side: const BorderSide(color: AppColors.doradoClaro),
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
@@ -644,6 +739,54 @@ class _FiltersCard extends StatelessWidget {
                 label: const Text('Limpiar Filtros', style: TextStyle(fontSize: 11.5)),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================
+// ESTADO VACÍO (cuando la búsqueda/filtro no encuentra resultados)
+// ============================================================
+class _EmptyState extends StatelessWidget {
+  final VoidCallback onClear;
+  const _EmptyState({required this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.doradoClaro, width: 1.2),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.search_off, size: 34, color: AppColors.grayText),
+          const SizedBox(height: 10),
+          const Text(
+            'No se encontraron clientes',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF111827)),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Intenta con otro término de búsqueda o cambia el filtro de estado.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11.5, color: AppColors.grayText),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: onClear,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.encabezado,
+              side: const BorderSide(color: AppColors.doradoClaro),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.close, size: 14),
+            label: const Text('Limpiar Filtros', style: TextStyle(fontSize: 11.5)),
           ),
         ],
       ),
@@ -665,12 +808,12 @@ class _ClientsTable extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.white,
-          border: Border.all(color: AppColors.borderLight),
+          border: Border.all(color: AppColors.dorado, width: 1.2),
         ),
         child: Column(
           children: [
             Container(
-              color: AppColors.navy,
+              color: AppColors.encabezado,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: const Row(
                 children: [
@@ -678,22 +821,26 @@ class _ClientsTable extends StatelessWidget {
                     width: 62,
                     child: Text('TIPO DOC.',
                         style: TextStyle(
-                            fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.grayText, letterSpacing: 0.4)),
+                            fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.doradoClaro, letterSpacing: 0.4)),
                   ),
                   Expanded(
                     child: Text('CLIENTE',
                         style: TextStyle(
                             fontSize: 9.5, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.4)),
                   ),
-                  Text('ACCIONES',
-                      style: TextStyle(
-                          fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.goldLight, letterSpacing: 0.4)),
+                  SizedBox(
+                    width: 32,
+                    child: Text('ACCIONES',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                            fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.doradoClaro, letterSpacing: 0.4)),
+                  ),
                 ],
               ),
             ),
             for (int i = 0; i < clients.length; i++) ...[
               _ClientRow(client: clients[i]),
-              if (i != clients.length - 1) const Divider(height: 1, color: AppColors.borderLight),
+              if (i != clients.length - 1) const Divider(height: 1, color: AppColors.doradoClaro),
             ],
           ],
         ),
@@ -773,9 +920,9 @@ class _ClientRow extends StatelessWidget {
           const SizedBox(width: 4),
           Column(
             children: [
-              _ActionIcon(icon: Icons.remove_red_eye_outlined, bg: AppColors.orangeBg, fg: AppColors.orange, onTap: () {}),
+              _ActionIcon(icon: Icons.remove_red_eye_outlined, bg: AppColors.doradoClaro, fg: AppColors.doradoOscuro, onTap: () {}),
               const SizedBox(height: 4),
-              _ActionIcon(icon: Icons.edit_outlined, bg: AppColors.orangeBg, fg: AppColors.orange, onTap: () {}),
+              _ActionIcon(icon: Icons.edit_outlined, bg: AppColors.doradoClaro, fg: AppColors.doradoOscuro, onTap: () {}),
               const SizedBox(height: 4),
               _ActionIcon(icon: Icons.delete_outline, bg: AppColors.redBg, fg: AppColors.red, onTap: () {}),
             ],
