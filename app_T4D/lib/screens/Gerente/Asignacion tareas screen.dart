@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 
-
 class _TareasColors {
   static const dorado = Color(0xFFD4A743);
   static const doradoOscuro = Color(0xFF8C6B3F);
   static const doradoClaro = Color(0xFFE7C98A);
   static const fondo = Color(0xFFF7F1E3);
   static const encabezado = Color(0xFF13202E);
-  
+
   // Alias usados en el resto del archivo (no cambian nombres para
   // no tener que tocar cada referencia)
   static const background = encabezado;
-  static const white = fondo;
+  static const white = Color(0xFFFFFFFF); // tarjetas en blanco puro
   static const gold = dorado;
   static const panelDark = encabezado;
   static const grayText = Color(0xFF6B7280);
-  static const borderLight = Color(0xFFE3D9BE);
+  static const borderLight = dorado; // todas las tarjetas usan borde dorado
   static const cardWhiteSubtitle = Color(0xFF6B7280);
 
   static const blue = Color(0xFF2563EB);
@@ -190,7 +189,7 @@ final List<TaskAssignment> mockAssignments = [
     paymentMethod: 'Efectivo',
     modality: PaymentModality.presencial,
     priority: TaskPriority.media,
-    date: '', // no visible en la captura, ajústalo si lo necesitas
+    date: '',
     status: TaskStatus.pendiente,
   ),
   const TaskAssignment(
@@ -448,11 +447,15 @@ class _AsignacionTareasScreenState extends State<AsignacionTareasScreen> {
     super.dispose();
   }
 
+  // NOTA: aquí ya NO se llama el panel con el título "Asignación de Tareas".
+  // Ese título ya aparece una sola vez en el header oscuro junto al logo.
+  // Se conservan las estadísticas (Pendientes/En proceso/etc.) y el botón
+  // "Nueva Asignación" dentro de _StatsAndActionCard, sin repetir el texto.
   Widget _buildContent(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
       children: [
-        _TitleCard(
+        _StatsAndActionCard(
           pendientes: pendientes,
           enProceso: enProceso,
           finalizadas: finalizadas,
@@ -484,7 +487,7 @@ class _AsignacionTareasScreenState extends State<AsignacionTareasScreen> {
     }
 
     return Scaffold(
-      backgroundColor: _TareasColors.background,
+      backgroundColor: _TareasColors.fondo,
       body: SafeArea(
         child: Builder(
           builder: (context) => Column(
@@ -503,7 +506,7 @@ class _AsignacionTareasScreenState extends State<AsignacionTareasScreen> {
 }
 
 // ============================================================
-// HEADER SUPERIOR (mismo patrón que las otras pantallas)
+// HEADER SUPERIOR (único lugar con el título "Asignación de Tareas")
 // ============================================================
 class _TopHeader extends StatelessWidget {
   final VoidCallback onMenuTap;
@@ -512,7 +515,7 @@ class _TopHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: _TareasColors.background,
+      color: _TareasColors.encabezado,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
         children: [
@@ -521,7 +524,7 @@ class _TopHeader extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             child: const Padding(
               padding: EdgeInsets.all(6),
-              child: Icon(Icons.menu, color: _TareasColors.white, size: 22),
+              child: Icon(Icons.menu, color: Colors.white, size: 22),
             ),
           ),
           const SizedBox(width: 8),
@@ -529,13 +532,13 @@ class _TopHeader extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: _TareasColors.gold,
+              color: _TareasColors.dorado,
               borderRadius: BorderRadius.circular(8),
             ),
             alignment: Alignment.center,
             child: const Text('T4D',
                 style: TextStyle(
-                    color: _TareasColors.background,
+                    color: _TareasColors.encabezado,
                     fontWeight: FontWeight.w900,
                     fontSize: 11)),
           ),
@@ -547,25 +550,25 @@ class _TopHeader extends StatelessWidget {
               children: [
                 Text('BIENVENIDO',
                     style: TextStyle(
-                        color: _TareasColors.gold,
+                        color: _TareasColors.doradoClaro,
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.5)),
                 Text('Asignación de Tareas',
                     style: TextStyle(
-                        color: _TareasColors.white,
+                        color: Colors.white,
                         fontSize: 13,
                         fontWeight: FontWeight.w700),
                     overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
-          const Icon(Icons.notifications_none, color: _TareasColors.white, size: 20),
+          const Icon(Icons.notifications_none, color: Colors.white, size: 20),
           const SizedBox(width: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
             decoration: BoxDecoration(
-              color: _TareasColors.panelDark,
+              color: Colors.white.withOpacity(0.08),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -573,11 +576,11 @@ class _TopHeader extends StatelessWidget {
               children: const [
                 CircleAvatar(
                   radius: 9,
-                  backgroundColor: _TareasColors.gold,
-                  child: Icon(Icons.person, size: 11, color: _TareasColors.background),
+                  backgroundColor: _TareasColors.dorado,
+                  child: Icon(Icons.person, size: 11, color: _TareasColors.encabezado),
                 ),
                 SizedBox(width: 5),
-                Text('Gerente', style: TextStyle(color: _TareasColors.white, fontSize: 11.5)),
+                Text('Gerente', style: TextStyle(color: Colors.white, fontSize: 11.5)),
               ],
             ),
           ),
@@ -588,15 +591,16 @@ class _TopHeader extends StatelessWidget {
 }
 
 // ============================================================
-// TARJETA BLANCA SUPERIOR (título + botón + estadísticas)
+// TARJETA DE ESTADÍSTICAS + BOTÓN "NUEVA ASIGNACIÓN"
+// (sin título, para no repetir "Asignación de Tareas")
 // ============================================================
-class _TitleCard extends StatelessWidget {
+class _StatsAndActionCard extends StatelessWidget {
   final int pendientes;
   final int enProceso;
   final int finalizadas;
   final int altaPrioridad;
 
-  const _TitleCard({
+  const _StatsAndActionCard({
     required this.pendientes,
     required this.enProceso,
     required this.finalizadas,
@@ -610,56 +614,41 @@ class _TitleCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: _TareasColors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _TareasColors.dorado, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: _TareasColors.doradoOscuro.withOpacity(0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Asignación de Tareas',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF111827),
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Gestiona el trabajo de los mecánicos',
-                      style: TextStyle(fontSize: 12, color: _TareasColors.cardWhiteSubtitle),
-                    ),
-                  ],
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                // TODO: navegar a formulario de nueva asignación
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _TareasColors.gold,
+                foregroundColor: _TareasColors.encabezado,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              const SizedBox(width: 10),
-              ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: navegar a formulario de nueva asignación
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _TareasColors.gold,
-                  foregroundColor: _TareasColors.background,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text(
-                  'Nueva Asignación',
-                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
-                ),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text(
+                'Nueva Asignación',
+                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
@@ -733,9 +722,9 @@ class _StatBox extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        color: _TareasColors.fondo,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _TareasColors.borderLight),
+        border: Border.all(color: _TareasColors.dorado, width: 1),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -785,6 +774,7 @@ class _FiltersCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: _TareasColors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _TareasColors.dorado, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -808,15 +798,19 @@ class _FiltersCard extends StatelessWidget {
               hintStyle: const TextStyle(fontSize: 12, color: _TareasColors.grayText),
               prefixIcon: const Icon(Icons.search, size: 18, color: _TareasColors.grayText),
               filled: true,
-              fillColor: const Color(0xFFF9FAFB),
+              fillColor: _TareasColors.fondo,
               contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: _TareasColors.borderLight),
+                borderSide: const BorderSide(color: _TareasColors.doradoClaro),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: _TareasColors.borderLight),
+                borderSide: const BorderSide(color: _TareasColors.doradoClaro),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: _TareasColors.dorado),
               ),
             ),
           ),
@@ -844,6 +838,14 @@ class _AssignmentCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: _TareasColors.white,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _TareasColors.dorado, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: _TareasColors.doradoOscuro.withOpacity(0.06),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -974,7 +976,7 @@ class _StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: status.color.withValues(alpha: 0.5)),
+        border: Border.all(color: status.color.withOpacity(0.5)),
       ),
       child: Text(
         status.label,

@@ -10,11 +10,7 @@ import 'Gestion clientes screen.dart';
 import 'Movimientos screen.dart';
 import 'Historial precios screen.dart';
 
-// Fondo crema/marfil que ya usan todas las pantallas de Gerente
-// (AppColors.background / MovColors.background / _TareasColors.fondo).
-// OJO: T4DColors.background (de t4d_sidebar.dart) NO sirve para esto:
-// es en realidad un alias del navy oscuro usado en el sidebar, por eso
-// antes el panel se veía casi negro.
+
 const Color _fondoGerente = Color(0xFFF7F1E3);
 
 class MainShellGerente extends StatefulWidget {
