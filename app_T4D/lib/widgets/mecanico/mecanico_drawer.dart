@@ -26,6 +26,33 @@ class MecanicoDrawer extends StatelessWidget {
     {'key': 'mantenimientos', 'label': 'Mantenimientos', 'icon': Icons.build_outlined},
   ];
 
+  Future<void> _confirmarCerrarSesion(BuildContext context) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cerrar sesión'),
+        content: const Text('¿Seguro que quieres cerrar tu sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Cerrar sesión',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      onLogout?.call();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final nombre = (usuario?['nombre'] ?? 'Mecánico').toString();
@@ -65,15 +92,14 @@ class MecanicoDrawer extends StatelessWidget {
               ),
             ),
 
-            // Tarjeta de usuario: "Camilo / Mecánico"
+            // Tarjeta de usuario: "Nombre / Mecánico"
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.dorado.withValues(alpha: 0.12),
+                  color: Colors.white.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.dorado.withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   children: [
@@ -90,7 +116,7 @@ class MecanicoDrawer extends StatelessWidget {
                           Text('$nombre / Mecánico',
                               style: const TextStyle(
                                   color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w600,
                                   fontSize: 13)),
                           if (correo.isNotEmpty)
                             Text(correo,
@@ -143,16 +169,6 @@ class MecanicoDrawer extends StatelessWidget {
                           fontSize: 13,
                         ),
                       ),
-                      trailing: activo
-                          ? Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                color: AppColors.navy,
-                                shape: BoxShape.circle,
-                              ),
-                            )
-                          : null,
                       onTap: () {
                         Navigator.of(context).pop();
                         onSeleccionar(item['key'] as String);
@@ -163,7 +179,7 @@ class MecanicoDrawer extends StatelessWidget {
               ),
             ),
 
-            // Cerrar sesión
+            // Cerrar sesión (ahora con confirmación, igual que admin)
             Padding(
               padding: const EdgeInsets.all(16),
               child: ListTile(
@@ -172,7 +188,7 @@ class MecanicoDrawer extends StatelessWidget {
                     style: TextStyle(color: Colors.redAccent, fontSize: 13)),
                 onTap: () {
                   Navigator.of(context).pop();
-                  onLogout?.call();
+                  _confirmarCerrarSesion(context);
                 },
               ),
             ),

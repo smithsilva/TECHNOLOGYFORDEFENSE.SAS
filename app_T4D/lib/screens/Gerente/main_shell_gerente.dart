@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../screens/admin/inventario_screen.dart' hide AppColors;
 import '../../widgets/t4d_sidebar.dart';
-import '../../widgets/gerente_appbar.dart';
+import '../../widgets/gerente/gerente_appbar.dart';
 
 import 'Asignacion tareas screen.dart';
 import 'Direcciones cliente.dart' hide AppColors;

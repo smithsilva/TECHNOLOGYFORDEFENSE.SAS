@@ -6,8 +6,8 @@ import './admin/notificaciones_screen.dart';
 import './admin/reportes_screen.dart';
 import './admin/gestion_usuarios_screen.dart';
 import './admin/registro_usuarios_screen.dart';
-import '../widgets/inventario_header.dart';
-import '../widgets/panel_drawer.dart';
+import '../widgets/compartido/inventario_header.dart';
+import '../widgets/admin/admin_panel_drawer.dart';
 
 class AppColors {
   static const dorado = Color(0xFFD4A743);

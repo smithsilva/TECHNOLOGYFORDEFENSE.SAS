@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../admin/inventario_screen.dart';
 import 'categorias_screen.dart';
 import 'mantenimientos_screen.dart';
-import 'mecanico_drawer.dart';
-import '../../widgets/inventario_header.dart';
+import '../../widgets/mecanico/mecanico_drawer.dart';
+import '../../widgets/compartido/inventario_header.dart';
 
 class MecanicoShell extends StatefulWidget {
   final Map<String, dynamic>? usuario;

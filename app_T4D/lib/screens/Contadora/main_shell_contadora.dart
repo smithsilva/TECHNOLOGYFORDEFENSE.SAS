@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../widgets/t4d_sidebar.dart';
-import '../../widgets/contadora_appbar.dart';
+import '../../widgets/contadora/contadora_appbar.dart';
 import 'inventario_contadora_screen.dart'; // -> class InventarioContadoraScreen
 
 import 'Empleados screen.dart'; // -> class EmpleadosScreen

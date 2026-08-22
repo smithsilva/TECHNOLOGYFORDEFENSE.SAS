@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/movimiento.dart';
-// import '../services/movimientos_service.dart'; // ← lo conectas cuando pases de mock a datos reales
+import '../../services/movimientos_service.dart'; // ajusta el path real en tu proyecto
 
 class AppColors {
   static const dorado = Color(0xFFD4A743);
@@ -25,19 +26,21 @@ class MovimientosScreen extends StatefulWidget {
 
 class _MovimientosScreenState extends State<MovimientosScreen> {
   final TextEditingController _busquedaCtrl = TextEditingController();
+  final MovimientosService _service = MovimientosService();
 
   String _filtroTipo = 'todos'; // todos | entrada | salida
   bool _cargando = false;
+  bool _cargandoInicial = true;
   bool _filtrosAbiertos = true;
+  String? _error;
+  String? _token;
 
   List<Movimiento> _movimientos = [];
-  int _totalEntradas = 0;
-  int _totalSalidas = 0;
 
   @override
   void initState() {
     super.initState();
-    _cargarMovimientos();
+    _inicializar();
   }
 
   @override
@@ -46,50 +49,34 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     super.dispose();
   }
 
-  /// Por ahora carga datos de ejemplo (mock) para la parte visual.
-  /// Cuando conectes el backend, reemplaza el contenido de este método
-  /// por una llamada a tu MovimientosService, por ejemplo:
-  ///
-  /// final data = await MovimientosService().obtenerMovimientos();
-  /// setState(() => _movimientos = data);
-  Future<void> _cargarMovimientos() async {
-    setState(() => _cargando = true);
-    await Future.delayed(const Duration(milliseconds: 300));
+  Future<void> _inicializar() async {
+    final prefs = await SharedPreferences.getInstance();
+    _token = prefs.getString('token');
+    setState(() => _cargandoInicial = false);
+    await _cargarMovimientos();
+  }
 
+  Future<void> _cargarMovimientos() async {
+    if (_token == null) {
+      setState(() => _error = 'No hay sesión activa (token no encontrado).');
+      return;
+    }
     setState(() {
-      _movimientos = [
-        Movimiento(
-          id: 16,
-          fecha: DateTime(2028, 7, 2, 14, 50),
-          tipo: 'salida',
-          producto: 'Llantaa',
-          usuario: 'Juan',
-          motivo: 'Ajuste de stock desde edición de producto',
-          cantidad: -3,
-        ),
-        Movimiento(
-          id: 15,
-          fecha: DateTime(2028, 7, 2, 14, 49),
-          tipo: 'entrada',
-          producto: 'Llantaa',
-          usuario: 'Juan',
-          motivo: 'Ajuste de stock desde edición de producto',
-          cantidad: 2,
-        ),
-        Movimiento(
-          id: 14,
-          fecha: DateTime(2028, 7, 2, 14, 47),
-          tipo: 'salida',
-          producto: 'Llantaa',
-          usuario: 'Juan',
-          motivo: 'Ajuste de stock desde edición de producto',
-          cantidad: -23,
-        ),
-      ];
-      _totalEntradas = 780267;
-      _totalSalidas = 33;
-      _cargando = false;
+      _cargando = true;
+      _error = null;
     });
+    try {
+      final data = await _service.obtenerMovimientos(_token!);
+      setState(() {
+        _movimientos = data.map((json) => Movimiento.fromJson(json)).toList();
+        _cargando = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString().replaceFirst('Exception: ', '');
+        _cargando = false;
+      });
+    }
   }
 
   String _normalizar(String texto) {
@@ -112,6 +99,14 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
       return matchTexto && matchTipo;
     }).toList();
   }
+
+  int get _totalEntradas => _filtrados
+      .where((m) => m.tipo == 'entrada')
+      .fold(0, (a, m) => a + m.cantidad.abs());
+
+  int get _totalSalidas => _filtrados
+      .where((m) => m.tipo == 'salida')
+      .fold(0, (a, m) => a + m.cantidad.abs());
 
   void _limpiarFiltros() {
     setState(() {
@@ -148,6 +143,10 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_cargandoInicial) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Container(
       color: AppColors.fondo,
       child: RefreshIndicator(
@@ -336,7 +335,27 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
             ),
             const SizedBox(height: 10),
 
-            if (_cargando)
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  children: [
+                    Icon(Icons.error_outline, size: 40, color: Colors.red.shade400),
+                    const SizedBox(height: 8),
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _cargarMovimientos,
+                      child: const Text('Reintentar'),
+                    ),
+                  ],
+                ),
+              )
+            else if (_cargando)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 40),
                 child: Center(child: CircularProgressIndicator()),
