@@ -22,6 +22,7 @@ class PanelDrawer extends StatelessWidget {
 
   static const _items = [
     {'key': 'inventario', 'label': 'Inventario', 'icon': Icons.inventory_2_outlined},
+    {'key': 'categorias', 'label': 'Categorías', 'icon': Icons.shield_outlined},
     {'key': 'movimientos', 'label': 'Movimientos', 'icon': Icons.swap_horiz},
     {'key': 'historial', 'label': 'Historial de Precios', 'icon': Icons.history},
     {'key': 'notificaciones', 'label': 'Notificaciones', 'icon': Icons.notifications_none},
