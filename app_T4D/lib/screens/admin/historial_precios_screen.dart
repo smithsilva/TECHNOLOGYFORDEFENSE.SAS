@@ -14,6 +14,10 @@ class AppColors {
   static const gris = Color(0xFF6B7280);
   static const grisFondo = Color(0xFFF0F0F0);
   static const textoMuted = Color(0xFF6B7280);
+
+  // Nuevos colores para el header oscuro tipo mockup
+  static const navyOscuro = Color(0xFF101F3C);
+  static const navyClaro = Color(0xFF1B2B4E);
 }
 
 class HistorialPreciosScreen extends StatefulWidget {
@@ -30,7 +34,6 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
 
   DateTime? _fechaFiltro;
   bool _cargando = false;
-  bool _filtrosAbiertos = true;
 
   List<HistorialPrecio> _registros = [];
 
@@ -125,8 +128,9 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
       _registros.where((r) => r.tipoVariacion == 'aumento').length;
   int get _totalReducciones =>
       _registros.where((r) => r.tipoVariacion == 'reduccion').length;
-  int get _totalSinCambio =>
-      _registros.where((r) => r.tipoVariacion == 'sin_cambio').length;
+  int get _totalIniciales => _registros
+      .where((r) => _normalizar(r.motivo).contains('inicial'))
+      .length;
 
   void _limpiarFiltros() {
     setState(() {
@@ -184,212 +188,52 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Encabezado / título de la sección
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.doradoClaro),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Historial de Precios',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Rastrea y analiza cambios de precios',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                  if (rolCrudo.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.doradoClaro.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        rolCrudo.toUpperCase() +
-                            (esSoloLectura ? '  ·  Solo lectura' : ''),
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.doradoOscuro,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+            _encabezado(rolCrudo, esSoloLectura),
             const SizedBox(height: 14),
 
-            // Tarjetas de resumen
+            // Tarjetas de resumen (4 en fila, como el mockup)
             Row(
               children: [
                 Expanded(
                   child: _tarjetaResumen(
-                      'Total Registros', '${_registros.length}',
-                      'cambios registrados', AppColors.doradoOscuro),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _tarjetaResumen('Aumentos', '$_totalAumentos',
-                      'precios incrementados', AppColors.rojo),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _tarjetaResumen('Reducciones', '$_totalReducciones',
-                      'precios reducidos', AppColors.dorado),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _tarjetaResumen('Sin Cambio', '$_totalSinCambio',
-                      'sin variación', AppColors.gris),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-
-            // Búsqueda y filtros
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.doradoClaro),
-              ),
-              child: Column(
-                children: [
-                  InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.filter_alt_outlined,
-                              size: 18, color: AppColors.doradoOscuro),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Búsqueda y Filtros',
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                          ),
-                          const Spacer(),
-                          Icon(
-                            _filtrosAbiertos
-                                ? Icons.keyboard_arrow_up
-                                : Icons.keyboard_arrow_down,
-                            color: Colors.grey.shade600,
-                          ),
-                        ],
-                      ),
-                    ),
+                    'Total',
+                    '${_registros.length}',
+                    AppColors.dorado,
                   ),
-                  if (_filtrosAbiertos)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                      child: Column(
-                        children: [
-                          TextField(
-                            controller: _busquedaCtrl,
-                            onChanged: (_) => setState(() {}),
-                            decoration: InputDecoration(
-                              hintText: 'Buscar por producto, ID o motivo...',
-                              prefixIcon: const Icon(Icons.search, size: 20),
-                              filled: true,
-                              fillColor: AppColors.fondo,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          InkWell(
-                            onTap: _elegirFecha,
-                            borderRadius: BorderRadius.circular(30),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: AppColors.fondo,
-                                borderRadius: BorderRadius.circular(30),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.calendar_today_outlined,
-                                      size: 16, color: AppColors.textoMuted),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _fechaFiltro == null
-                                        ? 'dd/mm/aaaa'
-                                        : _formatoFechaLarga(_fechaFiltro!),
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: _fechaFiltro == null
-                                          ? Colors.grey.shade500
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  if (_fechaFiltro != null)
-                                    InkWell(
-                                      onTap: () => setState(() => _fechaFiltro = null),
-                                      child: const Icon(Icons.close,
-                                          size: 16, color: AppColors.textoMuted),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: _limpiarFiltros,
-                              icon: const Icon(Icons.close, size: 14),
-                              label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.textoMuted,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // Registro histórico
-            Row(
-              children: [
-                const Text(
-                  'Registro Histórico de Precios',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
-                const Spacer(),
-                Text(
-                  '${_filtrados.length} registros encontrados',
-                  style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _tarjetaResumen(
+                    'Aumentos',
+                    '$_totalAumentos',
+                    AppColors.rojo,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _tarjetaResumen(
+                    'Reduc.',
+                    '$_totalReducciones',
+                    AppColors.verde,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _tarjetaResumen(
+                    'Iniciales',
+                    '$_totalIniciales',
+                    AppColors.gris,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
+
+            _buscador(),
+            const SizedBox(height: 18),
+
+            _separadorConteo(_filtrados.length),
+            const SizedBox(height: 12),
 
             if (_cargando)
               const Padding(
@@ -418,33 +262,193 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     );
   }
 
-  Widget _tarjetaResumen(String titulo, String valor, String subtitulo, Color color) {
+  // ---------------------------------------------------------------------
+  // ENCABEZADO OSCURO
+  // ---------------------------------------------------------------------
+  Widget _encabezado(String rolCrudo, bool esSoloLectura) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.navyOscuro, AppColors.navyClaro],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Stack(
+          children: [
+            // Círculo decorativo
+            Positioned(
+              top: -30,
+              right: -20,
+              child: Container(
+                width: 110,
+                height: 110,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.04),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (rolCrudo.isNotEmpty)
+                    Text(
+                      rolCrudo.toUpperCase() +
+                          (esSoloLectura ? ' · SOLO LECTURA' : ' · PRECIOS'),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.dorado,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Historial de Precios',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Rastrea y analiza cada cambio de precio',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.65),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // TARJETA DE RESUMEN CON BARRA SUPERIOR DE COLOR
+  // ---------------------------------------------------------------------
+  Widget _tarjetaResumen(String titulo, String valor, Color color) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          children: [
+            Container(height: 4, color: color),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+              child: Column(
+                children: [
+                  Text(
+                    valor,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    titulo,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 10, color: AppColors.textoMuted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // BUSCADOR SIMPLIFICADO (con filtro de fecha accesible por icono)
+  // ---------------------------------------------------------------------
+  Widget _buscador() {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.doradoClaro.withValues(alpha: 0.6)),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(titulo, style: const TextStyle(fontSize: 11, color: AppColors.textoMuted)),
-          const SizedBox(height: 4),
-          Text(
-            valor,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+          const SizedBox(width: 10),
+          const Icon(Icons.search, size: 20, color: AppColors.textoMuted),
+          const SizedBox(width: 6),
+          Expanded(
+            child: TextField(
+              controller: _busquedaCtrl,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                hintText: 'Buscar por producto, ID o motivo...',
+                border: InputBorder.none,
+                isDense: true,
+              ),
+            ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            subtitulo,
-            style: const TextStyle(fontSize: 10, color: AppColors.textoMuted),
+          IconButton(
+            tooltip: 'Filtrar por fecha',
+            onPressed: _elegirFecha,
+            icon: Icon(
+              Icons.calendar_today_outlined,
+              size: 18,
+              color: _fechaFiltro != null ? AppColors.doradoOscuro : AppColors.textoMuted,
+            ),
           ),
+          if (_fechaFiltro != null)
+            IconButton(
+              tooltip: 'Limpiar filtros',
+              onPressed: _limpiarFiltros,
+              icon: const Icon(Icons.close, size: 18, color: AppColors.textoMuted),
+            ),
+          const SizedBox(width: 4),
         ],
       ),
     );
   }
 
+  // ---------------------------------------------------------------------
+  // SEPARADOR "X REGISTROS" CON LÍNEAS VERDES
+  // ---------------------------------------------------------------------
+  Widget _separadorConteo(int cantidad) {
+    return Row(
+      children: [
+        Expanded(child: Divider(color: AppColors.verde.withValues(alpha: 0.4), thickness: 1.2)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Text(
+            '$cantidad ${cantidad == 1 ? 'REGISTRO' : 'REGISTROS'}',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textoMuted,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: AppColors.verde.withValues(alpha: 0.4), thickness: 1.2)),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // TARJETA DE REGISTRO CON BORDE LATERAL DE COLOR
+  // ---------------------------------------------------------------------
   Widget _tarjetaRegistro(HistorialPrecio r) {
     final tipo = r.tipoVariacion;
     Color colorVariacion;
@@ -456,12 +460,12 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
       colorVariacion = AppColors.rojo;
       fondoVariacion = AppColors.rojoFondo;
       iconoVariacion = Icons.arrow_upward;
-      textoVariacion = '+${r.variacionPorcentaje!.toStringAsFixed(2)}%';
+      textoVariacion = '+${r.variacionPorcentaje!.toStringAsFixed(1)}%';
     } else if (tipo == 'reduccion') {
       colorVariacion = AppColors.verde;
       fondoVariacion = AppColors.verdeFondo;
       iconoVariacion = Icons.arrow_downward;
-      textoVariacion = '${r.variacionPorcentaje!.toStringAsFixed(2)}%';
+      textoVariacion = '${r.variacionPorcentaje!.toStringAsFixed(1)}%';
     } else {
       colorVariacion = AppColors.gris;
       fondoVariacion = AppColors.grisFondo;
@@ -470,12 +474,16 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.doradoClaro.withValues(alpha: 0.6)),
+        border: Border(
+          left: BorderSide(color: colorVariacion, width: 4),
+          top: BorderSide(color: Colors.grey.shade200),
+          right: BorderSide(color: Colors.grey.shade200),
+          bottom: BorderSide(color: Colors.grey.shade200),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -484,174 +492,182 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Fila superior: #id + nombre --- ojo
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: RichText(
-                  text: TextSpan(
-                    style: const TextStyle(fontSize: 14, color: Colors.black),
-                    children: [
-                      TextSpan(
-                        text: '#${r.id}  ',
-                        style: const TextStyle(
-                          color: AppColors.doradoOscuro,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                      TextSpan(
-                        text: r.nombreProducto,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () => _mostrarProximamente('Ver "${r.nombreProducto}"'),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: AppColors.fondo,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.doradoClaro),
-                  ),
-                  child: const Icon(Icons.remove_red_eye_outlined,
-                      size: 16, color: AppColors.doradoOscuro),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-
-          // Subtítulo: ID + Actual + Activo
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(
-                'ID: ${r.idProducto} · Actual: \$${_formatoMiles(r.precioActual)}  ',
-                style: const TextStyle(fontSize: 12, color: AppColors.textoMuted),
-              ),
-              if (r.activo)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.verdeFondo,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Activo',
-                    style: TextStyle(
-                        color: AppColors.verde, fontWeight: FontWeight.w600, fontSize: 10),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const Divider(height: 1),
-          const SizedBox(height: 10),
-
-          // Precio anterior --- flecha --- precio nuevo --- variación
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Precio Anterior',
-                        style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
-                    Text(
-                      '\$${_formatoMiles(r.precioAnterior)}',
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.dorado),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.arrow_forward, size: 16, color: AppColors.textoMuted),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Precio Nuevo',
-                        style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
-                    Text(
-                      '\$${_formatoMiles(r.precioNuevo)}',
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.verde),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const Text('Variación',
-                      style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
-                  const SizedBox(height: 2),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: fondoVariacion,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Fila superior: #id + nombre --- ojo
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(fontSize: 14, color: Colors.black),
                       children: [
-                        if (iconoVariacion != null)
-                          Icon(iconoVariacion, size: 11, color: colorVariacion),
-                        if (iconoVariacion != null) const SizedBox(width: 2),
-                        Text(
-                          textoVariacion,
-                          style: TextStyle(
-                              color: colorVariacion,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11),
+                        TextSpan(
+                          text: '#${r.id}  ',
+                          style: const TextStyle(
+                            color: AppColors.doradoOscuro,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                        TextSpan(
+                          text: r.nombreProducto,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            color: Colors.black,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  if (tipo != 'sin_cambio')
-                    Text(
-                      '${r.variacionAbsoluta > 0 ? '+' : ''}\$${_formatoMiles(r.variacionAbsoluta)}',
-                      style: const TextStyle(fontSize: 10, color: AppColors.textoMuted),
+                ),
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => _mostrarProximamente('Ver "${r.nombreProducto}"'),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.fondo,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.doradoClaro),
                     ),
+                    child: const Icon(Icons.remove_red_eye_outlined,
+                        size: 16, color: AppColors.doradoOscuro),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+
+            // Subtítulo: ID Prod + Activo
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  'ID Prod: ${r.idProducto}  ',
+                  style: const TextStyle(fontSize: 12, color: AppColors.textoMuted),
+                ),
+                if (r.activo)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.verdeFondo,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Activo',
+                      style: TextStyle(
+                          color: AppColors.verde, fontWeight: FontWeight.w600, fontSize: 10),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Caja: Anterior --- flecha --- Nuevo --- Variación
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.fondo.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Anterior',
+                            style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
+                        Text(
+                          '\$${_formatoMiles(r.precioAnterior)}',
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.dorado),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward, size: 16, color: AppColors.textoMuted),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Nuevo',
+                            style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
+                        Text(
+                          '\$${_formatoMiles(r.precioNuevo)}',
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.verde),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text('Variación',
+                          style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: fondoVariacion,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (iconoVariacion != null)
+                              Icon(iconoVariacion, size: 11, color: colorVariacion),
+                            if (iconoVariacion != null) const SizedBox(width: 2),
+                            Text(
+                              textoVariacion,
+                              style: TextStyle(
+                                  color: colorVariacion,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
+            ),
+            const SizedBox(height: 10),
 
-          // Fecha --- motivo
-          Row(
-            children: [
-              Text(
-                _formatoFechaLarga(r.fecha),
-                style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
-              ),
-              const Spacer(),
-              Flexible(
-                child: Text(
-                  r.motivo,
-                  textAlign: TextAlign.right,
+            // Fecha --- motivo
+            Row(
+              children: [
+                Text(
+                  _formatoFechaLarga(r.fecha),
                   style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const Spacer(),
+                Flexible(
+                  child: Text(
+                    r.motivo,
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textoMuted,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
