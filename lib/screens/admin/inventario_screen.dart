@@ -4,18 +4,38 @@ import 'package:app_t4d/models/producto.dart';
 import 'package:app_t4d/widgets/compartido/producto_card.dart';
 import '../../services/inventario_service.dart';
 
+/// Paleta ajustada para calzar con el panel web (Gestión de Inventario T4D).
 class AppColors {
-  static const dorado = Color(0xFFD4A743);
-  static const doradoOscuro = Color(0xFF8C6B3F);
-  static const doradoClaro = Color(0xFFE7C98A);
-  static const fondo = Color(0xFFF4F1EA);
+  // Dorado / ámbar — logo, botón "Agregar Producto", acentos e ítem activo
+  static const dorado = Color(0xFFC9962E);
+  static const doradoOscuro = Color(0xFF8C6B2E);
+  static const doradoClaro = Color(0xFFE8C97A);
+
+  // Fondo general (crema/beige claro de la página)
+  static const fondo = Color(0xFFFAF3E4);
+
+  // Azul marino oscuro — sidebar, headers, textos de títulos
   static const navyOscuro = Color(0xFF0F1B2E);
   static const navyClaro = Color(0xFF16233A);
   static const subtitulo = Color(0xFF8FA3C4);
-  static const verde = Color(0xFF1F9D55);
-  static const naranja = Color(0xFFC98A1B);
-  static const rojo = Color(0xFFD64545);
-  static const textoMuted = Color(0xFF8A93A3);
+
+  // Estado: Stock Alto (verde)
+  static const verde = Color(0xFF2E9E5B);
+  static const verdeFondo = Color(0xFFDDF2E1);
+
+  // Estado: Stock Medio (dorado/marrón, como el badge tan del panel)
+  static const naranja = Color(0xFFA17A2E);
+  static const naranjaFondo = Color(0xFFF5E3C3);
+
+  // Estado: Stock Bajo (rojo/rosado)
+  static const rojo = Color(0xFFC0293B);
+  static const rojoFondo = Color(0xFFFADCE0);
+
+  // Texto secundario / labels
+  static const textoMuted = Color(0xFF6B7280);
+
+  // Enlaces (p. ej. categorías clicables, como en la tabla web)
+  static const enlace = Color(0xFF2563EB);
 }
 
 class InventarioScreen extends StatefulWidget {
@@ -120,11 +140,39 @@ class _InventarioScreenState extends State<InventarioScreen> {
     }).toList();
   }
 
+  Color _colorEstado(String estado) {
+    switch (estado) {
+      case 'alto':
+        return AppColors.verde;
+      case 'medio':
+        return AppColors.naranja;
+      case 'bajo':
+        return AppColors.rojo;
+      default:
+        return AppColors.textoMuted;
+    }
+  }
+
+  Color _fondoEstado(String estado) {
+    switch (estado) {
+      case 'alto':
+        return AppColors.verdeFondo;
+      case 'medio':
+        return AppColors.naranjaFondo;
+      case 'bajo':
+        return AppColors.rojoFondo;
+      default:
+        return Colors.grey.shade100;
+    }
+  }
+
   void _mostrarSnack(String mensaje, {bool esError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensaje),
-        backgroundColor: esError ? Colors.red.shade600 : null,
+        backgroundColor: esError ? AppColors.rojo : AppColors.verde,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -153,25 +201,96 @@ class _InventarioScreenState extends State<InventarioScreen> {
     }
   }
 
+  // =======================================================================
+  // ACTUALIZAR STOCK — diálogo compacto con stepper +/-
+  // =======================================================================
   Future<void> _abrirEdicionStock(Producto p) async {
-    final ctrl = TextEditingController(text: p.stockActual.toString());
+    int valor = p.stockActual;
+
     final nuevoStock = await showDialog<int>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Actualizar stock — ${p.nombreProducto}'),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Stock actual'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, int.tryParse(ctrl.text)),
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.doradoClaro.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.inventory_2_outlined, color: AppColors.doradoOscuro, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      p.nombreProducto,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 4),
+                  const Text('Actualizar stock', style: TextStyle(fontSize: 12, color: AppColors.textoMuted)),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _botonStepper(
+                        icono: Icons.remove,
+                        onTap: () => setDialogState(() => valor = (valor - 1).clamp(0, 999999)),
+                      ),
+                      Container(
+                        width: 90,
+                        margin: const EdgeInsets.symmetric(horizontal: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.fondo,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.doradoClaro),
+                        ),
+                        child: Text(
+                          '$valor',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.doradoOscuro),
+                        ),
+                      ),
+                      _botonStepper(
+                        icono: Icons.add,
+                        onTap: () => setDialogState(() => valor = valor + 1),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.dorado,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () => Navigator.pop(ctx, valor),
+                  child: const Text('Guardar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
     if (nuevoStock == null || _token == null) return;
     try {
@@ -183,7 +302,27 @@ class _InventarioScreenState extends State<InventarioScreen> {
     }
   }
 
+  Widget _botonStepper({required IconData icono, required VoidCallback onTap}) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.navyOscuro,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icono, color: Colors.white, size: 20),
+      ),
+    );
+  }
+
+  // =======================================================================
+  // FORMULARIO CREAR / EDITAR — diseño con secciones y campos redondeados
+  // =======================================================================
   Future<Map<String, dynamic>?> _mostrarFormularioProducto({Producto? producto}) {
+    final esEdicion = producto != null;
     final nombreCtrl = TextEditingController(text: producto?.nombreProducto ?? '');
     final descCtrl = TextEditingController(text: producto?.descripcion ?? '');
     final codigoCtrl = TextEditingController(text: producto?.codigoBarras ?? '');
@@ -193,63 +332,285 @@ class _InventarioScreenState extends State<InventarioScreen> {
 
     return showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(producto == null ? 'Agregar producto' : 'Editar producto'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nombreCtrl, decoration: const InputDecoration(labelText: 'Nombre')),
-              TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Descripción')),
-              TextField(controller: codigoCtrl, decoration: const InputDecoration(labelText: 'Código de barras')),
-              TextField(controller: precioCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Precio')),
-              TextField(controller: stockCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stock')),
-              TextField(controller: unidadCtrl, decoration: const InputDecoration(labelText: 'Unidad de medida')),
-            ],
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header oscuro con icono, igual estilo que el resto de la app
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.navyOscuro, AppColors.navyClaro],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          esEdicion ? Icons.edit_outlined : Icons.add_box_outlined,
+                          color: AppColors.dorado,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              esEdicion ? 'Editar producto' : 'Nuevo producto',
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              esEdicion ? 'Actualiza los datos del producto' : 'Agrega un producto al inventario',
+                              style: const TextStyle(color: AppColors.subtitulo, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _campoFormulario(
+                        controller: nombreCtrl,
+                        label: 'Nombre del producto',
+                        icono: Icons.inventory_2_outlined,
+                      ),
+                      const SizedBox(height: 14),
+                      _campoFormulario(
+                        controller: descCtrl,
+                        label: 'Descripción',
+                        icono: Icons.notes_outlined,
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 14),
+                      _campoFormulario(
+                        controller: codigoCtrl,
+                        label: 'Código de barras',
+                        icono: Icons.qr_code_2_outlined,
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _campoFormulario(
+                              controller: precioCtrl,
+                              label: 'Precio',
+                              icono: Icons.attach_money,
+                              teclado: TextInputType.number,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _campoFormulario(
+                              controller: stockCtrl,
+                              label: 'Stock',
+                              icono: Icons.numbers,
+                              teclado: TextInputType.number,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _campoFormulario(
+                        controller: unidadCtrl,
+                        label: 'Unidad de medida',
+                        icono: Icons.straighten_outlined,
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            side: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Cancelar', style: TextStyle(color: AppColors.textoMuted)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.dorado,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                          onPressed: () {
+                            if (nombreCtrl.text.trim().isEmpty) {
+                              _mostrarSnack('El nombre es obligatorio', esError: true);
+                              return;
+                            }
+                            Navigator.pop(ctx, {
+                              'nombre_producto': nombreCtrl.text.trim(),
+                              'descripcion': descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
+                              'codigo_barras': codigoCtrl.text.trim().isEmpty ? null : codigoCtrl.text.trim(),
+                              'precio_actual': double.tryParse(precioCtrl.text),
+                              'stock_actual': int.tryParse(stockCtrl.text) ?? 0,
+                              'unidad_medida': unidadCtrl.text.trim().isEmpty ? null : unidadCtrl.text.trim(),
+                            });
+                          },
+                          child: Text(esEdicion ? 'Guardar cambios' : 'Crear producto',
+                              style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          ElevatedButton(
-            onPressed: () {
-              if (nombreCtrl.text.trim().isEmpty) return;
-              Navigator.pop(ctx, {
-                'nombre_producto': nombreCtrl.text.trim(),
-                'descripcion': descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
-                'codigo_barras': codigoCtrl.text.trim().isEmpty ? null : codigoCtrl.text.trim(),
-                'precio_actual': double.tryParse(precioCtrl.text),
-                'stock_actual': int.tryParse(stockCtrl.text) ?? 0,
-                'unidad_medida': unidadCtrl.text.trim().isEmpty ? null : unidadCtrl.text.trim(),
-              });
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
       ),
     );
   }
 
+  Widget _campoFormulario({
+    required TextEditingController controller,
+    required String label,
+    required IconData icono,
+    TextInputType? teclado,
+    int maxLines = 1,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: teclado,
+      maxLines: maxLines,
+      style: const TextStyle(fontSize: 14),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(fontSize: 13, color: AppColors.textoMuted),
+        prefixIcon: Icon(icono, size: 19, color: AppColors.doradoOscuro),
+        filled: true,
+        fillColor: AppColors.fondo.withValues(alpha: 0.6),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.dorado, width: 1.4),
+        ),
+      ),
+    );
+  }
+
+  // =======================================================================
+  // CONFIRMAR ELIMINAR — tarjeta de advertencia en rojo
+  // =======================================================================
   void _confirmarEliminar(Producto p) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar producto'),
-        content: Text('¿Seguro que deseas eliminar "${p.nombreProducto}"? Esta acción no se puede deshacer.'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.rojoFondo,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_outline, color: AppColors.rojo, size: 28),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              '¿Eliminar producto?',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text.rich(
+              TextSpan(
+                style: const TextStyle(fontSize: 13, color: AppColors.textoMuted),
+                children: [
+                  const TextSpan(text: 'Vas a eliminar '),
+                  TextSpan(
+                    text: '"${p.nombreProducto}"',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                  ),
+                  const TextSpan(text: '. Esta acción no se puede deshacer.'),
+                ],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancelar')),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              if (_token == null) return;
-              try {
-                await _service.eliminarProducto(_token!, p.idProducto);
-                setState(() => _productos.removeWhere((x) => x.idProducto == p.idProducto));
-                _mostrarSnack('Producto eliminado');
-              } catch (e) {
-                _mostrarSnack(e.toString().replaceFirst('Exception: ', ''), esError: true);
-              }
-            },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+          Expanded(
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                side: BorderSide(color: Colors.grey.shade300),
+              ),
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancelar', style: TextStyle(color: AppColors.textoMuted)),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.rojo,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
+              ),
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                if (_token == null) return;
+                try {
+                  await _service.eliminarProducto(_token!, p.idProducto);
+                  setState(() => _productos.removeWhere((x) => x.idProducto == p.idProducto));
+                  _mostrarSnack('Producto eliminado');
+                } catch (e) {
+                  _mostrarSnack(e.toString().replaceFirst('Exception: ', ''), esError: true);
+                }
+              },
+              child: const Text('Eliminar', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
           ),
         ],
       ),
@@ -505,29 +866,212 @@ class _InventarioScreenState extends State<InventarioScreen> {
     );
   }
 
+  // =======================================================================
+  // VER DETALLE — tarjeta con header oscuro + filas de datos con icono
+  // =======================================================================
   void _mostrarDetalle(Producto p) {
+    final colorEstado = _colorEstado(p.estado);
+    final fondoEstado = _fondoEstado(p.estado);
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(p.nombreProducto),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('ID: #${p.idProducto}'),
-              Text('Descripción: ${p.descripcion ?? "—"}'),
-              Text('Categoría: ${p.nombreCategoria ?? "Sin categoría"}'),
-              Text('Proveedor: ${p.nombreProveedor ?? "Sin proveedor"}'),
-              Text('Unidad: ${p.unidadMedida ?? "—"}'),
-              Text('Precio: ${p.precioActual != null ? "\$${p.precioActual}" : "—"}'),
-              Text('Stock actual: ${p.stockActual}'),
-              Text('Estado: ${p.estado}'),
-            ],
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header oscuro
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.navyOscuro, AppColors.navyClaro],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.inventory_2_outlined, color: AppColors.dorado, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              p.nombreProducto,
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            Text('ID #${p.idProducto}',
+                                style: const TextStyle(color: AppColors.subtitulo, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: fondoEstado,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          p.estado.toUpperCase(),
+                          style: TextStyle(
+                              color: colorEstado, fontWeight: FontWeight.bold, fontSize: 10),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _filaDetalle(Icons.notes_outlined, 'Descripción', p.descripcion ?? '—'),
+                      _filaDetalle(Icons.category_outlined, 'Categoría', p.nombreCategoria ?? 'Sin categoría'),
+                      _filaDetalle(Icons.local_shipping_outlined, 'Proveedor', p.nombreProveedor ?? 'Sin proveedor'),
+                      _filaDetalle(Icons.qr_code_2_outlined, 'Código de barras', p.codigoBarras ?? '—'),
+                      _filaDetalle(Icons.straighten_outlined, 'Unidad de medida', p.unidadMedida ?? '—'),
+                      const Divider(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _cajaDato(
+                              titulo: 'Precio',
+                              valor: p.precioActual != null ? '\$${p.precioActual}' : '—',
+                              color: AppColors.doradoOscuro,
+                              icono: Icons.attach_money,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _cajaDato(
+                              titulo: 'Stock actual',
+                              valor: '${p.stockActual}',
+                              color: colorEstado,
+                              icono: Icons.inventory_outlined,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            side: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Cerrar', style: TextStyle(color: AppColors.textoMuted)),
+                        ),
+                      ),
+                      if (_esAdmin || _puedeEditarStock) ...[
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.dorado,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              if (_esAdmin) {
+                                _abrirEdicion(p);
+                              } else {
+                                _abrirEdicionStock(p);
+                              }
+                            },
+                            child: const Text('Editar', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar')),
+      ),
+    );
+  }
+
+  Widget _filaDetalle(IconData icono, String titulo, String valor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icono, size: 17, color: AppColors.doradoOscuro),
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 4,
+            child: Text(titulo, style: const TextStyle(fontSize: 12, color: AppColors.textoMuted)),
+          ),
+          Expanded(
+            flex: 5,
+            child: Text(
+              valor,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cajaDato({
+    required String titulo,
+    required String valor,
+    required Color color,
+    required IconData icono,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.fondo.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icono, size: 14, color: color),
+              const SizedBox(width: 4),
+              Text(titulo, style: const TextStyle(fontSize: 10, color: AppColors.textoMuted)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(valor, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
         ],
       ),
     );

@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
-import '../../models/producto_contadora.dart';
-// import '../../services/inventario_service.dart'; // ← lo conectas cuando pases de mock a Supabase/API real
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_t4d/models/producto.dart';
+import 'package:app_t4d/widgets/compartido/producto_card.dart';
+import '../../services/inventario_service.dart';
 
 class AppColors {
   static const dorado = Color(0xFFD4A743);
   static const doradoOscuro = Color(0xFF8C6B3F);
   static const doradoClaro = Color(0xFFE7C98A);
-  static const fondo = Color(0xFFF7F1E3);
-  static const encabezado = Color(0xFF13202E);
+  static const fondo = Color(0xFFF4F1EA);
+  static const navyOscuro = Color(0xFF0F1B2E);
+  static const navyClaro = Color(0xFF16233A);
+  static const subtitulo = Color(0xFF8FA3C4);
   static const verde = Color(0xFF1F9D55);
   static const verdeFondo = Color(0xFFE3F7E9);
-  static const amarillo = Color(0xFFB8860B);
-  static const amarilloFondo = Color(0xFFFDF3DA);
-  static const rojo = Color(0xFFC0392B);
+  static const naranja = Color(0xFFC98A1B);
+  static const naranjaFondo = Color(0xFFFDF3DA);
+  static const rojo = Color(0xFFD64545);
   static const rojoFondo = Color(0xFFFBE2DF);
-  static const textoMuted = Color(0xFF6B7280);
+  static const textoMuted = Color(0xFF8A93A3);
 }
 
 class InventarioContadoraScreen extends StatefulWidget {
@@ -23,117 +27,41 @@ class InventarioContadoraScreen extends StatefulWidget {
   const InventarioContadoraScreen({super.key, this.usuario});
 
   @override
-  State<InventarioContadoraScreen> createState() => _InventarioContadoraScreenState();
+  State<InventarioContadoraScreen> createState() =>
+      _InventarioContadoraScreenState();
 }
 
 class _InventarioContadoraScreenState extends State<InventarioContadoraScreen> {
   final TextEditingController _busquedaCtrl = TextEditingController();
+  final InventarioService _service = InventarioService();
 
+  // Filtro rápido (chips) + filtros avanzados (panel colapsable),
+  // igual que en la pantalla del Admin.
+  String _filtroEstado = 'todos'; // todos | alto | medio | bajo
   String _filtroCategoria = 'todas';
   String _filtroProveedor = 'todos';
-  String _filtroEstado = 'todos';
   String _filtroUnidad = 'todas';
-  String _filtroRol = 'todos';
   bool _filtrosAbiertos = false;
+
   bool _cargando = false;
+  bool _cargandoInicial = true;
+  String? _error;
 
-  List<ProductoContadora> _productos = [];
+  List<Producto> _productos = [];
 
-  @override
-  void initState() {
-    super.initState();
-    _cargarProductos();
-  }
+  String? _token;
 
-  @override
-  void dispose() {
-    _busquedaCtrl.dispose();
-    super.dispose();
-  }
+  int get _total => _productos.length;
+  int get _totalAlto => _productos.where((p) => p.estado == 'alto').length;
+  int get _totalMedio => _productos.where((p) => p.estado == 'medio').length;
+  int get _totalBajo => _productos.where((p) => p.estado == 'bajo').length;
 
-  /// Mock. Cuando conectes Supabase, reemplaza por la consulta real
-  /// (equivalente a `recargar()` en el componente React de referencia).
-  Future<void> _cargarProductos() async {
-    setState(() => _cargando = true);
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    setState(() {
-      _productos = [
-        ProductoContadora(
-          id: 13,
-          codigoBarras: '7501234560013',
-          nombre: 'Llantaa',
-          descripcion: 'Llanta reforzada 4x4',
-          categoria: 'Blindaje Nivel 1',
-          nombreProveedor: 'Ferretería Industrial SAS',
-          nitProveedor: '900.123.456-7',
-          usuario: 'Camilo',
-          rolUsuario: 'mecanico',
-          unidadMedida: 'Unidad',
-          precio: 45000,
-          stockActual: 3,
-          stockMinimo: 10,
-        ),
-        ProductoContadora(
-          id: 12,
-          codigoBarras: '7501234560012',
-          nombre: 'Espejo blindado',
-          descripcion: 'Espejo lateral con vidrio blindado nivel 2',
-          categoria: 'Blindaje Nivel 2',
-          nombreProveedor: 'Distribuidora La Costa EU',
-          nitProveedor: '901.222.333-1',
-          usuario: 'Juan',
-          rolUsuario: 'admin',
-          unidadMedida: 'Par',
-          precio: 70000,
-          stockActual: 15,
-          stockMinimo: 10,
-        ),
-        ProductoContadora(
-          id: 11,
-          codigoBarras: '7501234560011',
-          nombre: 'Correa de Distribución',
-          categoria: 'Blindaje Nivel 2',
-          nombreProveedor: 'Distribuidora La Costa EU',
-          nitProveedor: '901.222.333-1',
-          usuario: 'Camilo',
-          rolUsuario: 'mecanico',
-          unidadMedida: 'Unidad',
-          precio: 210000,
-          stockActual: 15,
-          stockMinimo: 10,
-        ),
-        ProductoContadora(
-          id: 10,
-          codigoBarras: '7501234560010',
-          nombre: 'Kit de Embrague Toyota',
-          categoria: 'Blindaje Nivel 1',
-          nombreProveedor: 'Comercializadora Andina CA',
-          nitProveedor: '890.555.222-9',
-          usuario: 'Gisel',
-          rolUsuario: 'gerente',
-          unidadMedida: 'Kit',
-          precio: 780000,
-          stockActual: 40,
-          stockMinimo: 10,
-        ),
-      ];
-      _cargando = false;
-    });
-  }
-
-  String _normalizar(String texto) {
-    const conTilde = 'áàäâéèëêíìïîóòöôúùüû';
-    const sinTilde = 'aaaaeeeeiiiioooouuuu';
-    var resultado = texto.toLowerCase();
-    for (var i = 0; i < conTilde.length; i++) {
-      resultado = resultado.replaceAll(conTilde[i], sinTilde[i]);
-    }
-    return resultado;
-  }
-
-  List<String> get _categoriasDisponibles =>
-      _productos.map((p) => p.categoria).toSet().toList()..sort();
+  List<String> get _categoriasDisponibles => _productos
+      .map((p) => p.nombreCategoria)
+      .whereType<String>()
+      .toSet()
+      .toList()
+    ..sort();
 
   List<String> get _proveedoresDisponibles => _productos
       .map((p) => p.nombreProveedor)
@@ -149,33 +77,84 @@ class _InventarioContadoraScreenState extends State<InventarioContadoraScreen> {
       .toList()
     ..sort();
 
-  List<ProductoContadora> get _filtrados {
+  @override
+  void initState() {
+    super.initState();
+    _inicializar();
+  }
+
+  Future<void> _inicializar() async {
+    final prefs = await SharedPreferences.getInstance();
+    _token = prefs.getString('token');
+    setState(() => _cargandoInicial = false);
+    await _cargarProductos();
+  }
+
+  @override
+  void dispose() {
+    _busquedaCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _cargarProductos() async {
+    if (_token == null) {
+      setState(() => _error = 'No hay sesión activa (token no encontrado).');
+      return;
+    }
+    setState(() {
+      _cargando = true;
+      _error = null;
+    });
+    try {
+      final data = await _service.obtenerProductos(_token!);
+      setState(() {
+        _productos = data.map((json) => Producto.fromJson(json)).toList();
+        _cargando = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString().replaceFirst('Exception: ', '');
+        _cargando = false;
+      });
+    }
+  }
+
+  String _normalizar(String texto) {
+    const conTilde = 'áàäâéèëêíìïîóòöôúùüû';
+    const sinTilde = 'aaaaeeeeiiiioooouuuu';
+    var resultado = texto.toLowerCase();
+    for (var i = 0; i < conTilde.length; i++) {
+      resultado = resultado.replaceAll(conTilde[i], sinTilde[i]);
+    }
+    return resultado;
+  }
+
+  List<Producto> get _filtrados {
     final texto = _normalizar(_busquedaCtrl.text);
     return _productos.where((p) {
       final matchTexto = texto.isEmpty ||
-          _normalizar(p.nombre).contains(texto) ||
-          _normalizar(p.id.toString()).contains(texto) ||
-          _normalizar(p.descripcion ?? '').contains(texto) ||
+          _normalizar(p.nombreProducto).contains(texto) ||
+          _normalizar(p.idProducto.toString()).contains(texto) ||
           _normalizar(p.codigoBarras ?? '').contains(texto);
 
-      final matchCategoria = _filtroCategoria == 'todas' || p.categoria == _filtroCategoria;
-      final matchProveedor = _filtroProveedor == 'todos' || p.nombreProveedor == _filtroProveedor;
       final matchEstado = _filtroEstado == 'todos' || p.estado == _filtroEstado;
+      final matchCategoria =
+          _filtroCategoria == 'todas' || p.nombreCategoria == _filtroCategoria;
+      final matchProveedor =
+          _filtroProveedor == 'todos' || p.nombreProveedor == _filtroProveedor;
       final matchUnidad = _filtroUnidad == 'todas' || p.unidadMedida == _filtroUnidad;
-      final matchRol = _filtroRol == 'todos' || (p.rolUsuario ?? '') == _filtroRol;
 
-      return matchTexto && matchCategoria && matchProveedor && matchEstado && matchUnidad && matchRol;
+      return matchTexto && matchEstado && matchCategoria && matchProveedor && matchUnidad;
     }).toList();
   }
 
   void _limpiarFiltros() {
     setState(() {
       _busquedaCtrl.clear();
+      _filtroEstado = 'todos';
       _filtroCategoria = 'todas';
       _filtroProveedor = 'todos';
-      _filtroEstado = 'todos';
       _filtroUnidad = 'todas';
-      _filtroRol = 'todos';
     });
   }
 
@@ -184,7 +163,7 @@ class _InventarioContadoraScreenState extends State<InventarioContadoraScreen> {
       case 'alto':
         return {'texto': AppColors.verde, 'fondo': AppColors.verdeFondo};
       case 'medio':
-        return {'texto': AppColors.amarillo, 'fondo': AppColors.amarilloFondo};
+        return {'texto': AppColors.naranja, 'fondo': AppColors.naranjaFondo};
       default:
         return {'texto': AppColors.rojo, 'fondo': AppColors.rojoFondo};
     }
@@ -213,7 +192,10 @@ class _InventarioContadoraScreenState extends State<InventarioContadoraScreen> {
     return '\$${buffer.toString()}';
   }
 
-  void _verDetalle(ProductoContadora p) {
+  // Detalle en bottom sheet, igual estilo que Admin pero de solo lectura:
+  // sin botones de editar/eliminar/stock, solo "Cerrar".
+  void _mostrarDetalle(Producto p) {
+    final colores = _coloresEstado(p.estado);
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -221,17 +203,104 @@ class _InventarioContadoraScreenState extends State<InventarioContadoraScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => _DetalleProductoSheet(
-        producto: p,
-        colores: _coloresEstado(p.estado),
-        textoEstado: _textoEstado(p.estado),
-        formatoMiles: _formatoMiles,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('Detalle del Producto',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              Container(
+                width: double.infinity,
+                height: 100,
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0ECE4),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.inventory_2_outlined, size: 36, color: AppColors.doradoOscuro),
+              ),
+              _filaDetalle('ID', '#${p.idProducto}'),
+              _filaDetalle('Cód. Barras', p.codigoBarras ?? '—'),
+              _filaDetalle('Nombre', p.nombreProducto),
+              _filaDetalle('Descripción', p.descripcion ?? '—'),
+              _filaDetalle('Categoría', p.nombreCategoria ?? 'Sin categoría'),
+              _filaDetalle('Proveedor', p.nombreProveedor ?? 'Sin proveedor'),
+              _filaDetalle('Unidad', p.unidadMedida ?? '—'),
+              _filaDetalle('Precio', _formatoMiles(p.precioActual)),
+              _filaDetalle('Stock actual', '${p.stockActual}'),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    const Text('Estado: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration:
+                          BoxDecoration(color: colores['fondo'], borderRadius: BorderRadius.circular(20)),
+                      child: Text(_textoEstado(p.estado),
+                          style: TextStyle(color: colores['texto'], fontWeight: FontWeight.w600, fontSize: 11)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey.shade300,
+                    foregroundColor: Colors.black87,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Cerrar'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _filaDetalle(String label, String valor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(fontSize: 13, color: Colors.black87),
+          children: [
+            TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+            TextSpan(text: valor),
+          ],
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_cargandoInicial) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Container(
       color: AppColors.fondo,
       child: RefreshIndicator(
@@ -239,150 +308,38 @@ class _InventarioContadoraScreenState extends State<InventarioContadoraScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Encabezado (sin botón "Agregar": la contadora solo consulta)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.doradoClaro),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Gestión de Inventario',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 4),
-                  Text('Administra productos de vehículos blindados',
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.doradoClaro.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'CONTADORA · Solo consulta',
-                      style: TextStyle(
-                          fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.doradoOscuro),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildHeader(),
             const SizedBox(height: 14),
-
-            // Filtros y búsqueda (colapsable)
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.doradoClaro),
-              ),
-              child: Column(
-                children: [
-                  InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.doradoOscuro),
-                          const SizedBox(width: 8),
-                          const Text('Filtros y Búsqueda',
-                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                          const Spacer(),
-                          Icon(
-                            _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                            color: Colors.grey.shade600,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                    child: TextField(
-                      controller: _busquedaCtrl,
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        hintText: 'Buscar por producto, código o descripción...',
-                        prefixIcon: const Icon(Icons.search, size: 20),
-                        filled: true,
-                        fillColor: AppColors.fondo,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (_filtrosAbiertos)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _dropdownFiltro('Categoría', _filtroCategoria, ['todas', ..._categoriasDisponibles],
-                              (v) => setState(() => _filtroCategoria = v!)),
-                          const SizedBox(height: 10),
-                          _dropdownFiltro('Proveedor', _filtroProveedor, ['todos', ..._proveedoresDisponibles],
-                              (v) => setState(() => _filtroProveedor = v!)),
-                          const SizedBox(height: 10),
-                          _dropdownFiltro(
-                              'Estado', _filtroEstado, ['todos', 'alto', 'medio', 'bajo'],
-                              (v) => setState(() => _filtroEstado = v!),
-                              etiquetas: {
-                                'todos': 'Todos',
-                                'alto': 'Stock Alto',
-                                'medio': 'Stock Medio',
-                                'bajo': 'Stock Bajo',
-                              }),
-                          const SizedBox(height: 10),
-                          _dropdownFiltro('Unidad', _filtroUnidad, ['todas', ..._unidadesDisponibles],
-                              (v) => setState(() => _filtroUnidad = v!)),
-                          const SizedBox(height: 10),
-                          _dropdownFiltro(
-                              'Usuario (rol)', _filtroRol,
-                              ['todos', 'mecanico', 'admin', 'gerente', 'contadora'],
-                              (v) => setState(() => _filtroRol = v!),
-                              etiquetas: {
-                                'todos': 'Todos',
-                                'mecanico': 'Mecánico',
-                                'admin': 'Admin',
-                                'gerente': 'Gerente',
-                                'contadora': 'Contadora',
-                              }),
-                          const SizedBox(height: 12),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: _limpiarFiltros,
-                              icon: const Icon(Icons.close, size: 14),
-                              label: const Text('Limpiar filtros', style: TextStyle(fontSize: 12)),
-                              style: TextButton.styleFrom(foregroundColor: AppColors.doradoOscuro),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
+            _buildStats(),
             const SizedBox(height: 14),
-
-            Text('${_filtrados.length} productos',
-                style: const TextStyle(fontSize: 12, color: AppColors.doradoOscuro, fontWeight: FontWeight.w600)),
+            _buildPanelFiltros(),
             const SizedBox(height: 10),
+            Text(
+              '$_total ${_total == 1 ? "PRODUCTO" : "PRODUCTOS"}',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.0,
+                color: Colors.grey.shade500,
+              ),
+            ),
+            const SizedBox(height: 12),
 
-            if (_cargando)
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  children: [
+                    Icon(Icons.error_outline, size: 40, color: Colors.red.shade400),
+                    const SizedBox(height: 8),
+                    Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: Colors.red.shade700)),
+                    const SizedBox(height: 8),
+                    TextButton(onPressed: _cargarProductos, child: const Text('Reintentar')),
+                  ],
+                ),
+              )
+            else if (_cargando)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 40),
                 child: Center(child: CircularProgressIndicator()),
@@ -401,9 +358,224 @@ class _InventarioContadoraScreenState extends State<InventarioContadoraScreen> {
                 ),
               )
             else
-              ..._filtrados.map((p) => _tarjetaProducto(p)),
+              // Contadora: solo puede ver el detalle. onEditar y onEliminar
+              // van en null para que ProductoCard no muestre esos botones.
+              ..._filtrados.map(
+                (p) => ProductoCard(
+                  producto: p,
+                  onVer: () => _mostrarDetalle(p),
+                  onEditar: null,
+                  onEliminar: null,
+                ),
+              ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.navyOscuro, AppColors.navyClaro],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'CONTADORA · INVENTARIO',
+                  style: TextStyle(
+                    color: AppColors.dorado,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Gestión de Inventario',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Productos de vehículos blindados',
+                  style: TextStyle(color: AppColors.subtitulo, fontSize: 12),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'Solo consulta',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.doradoClaro),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Nota: a propósito NO hay botón "Agregar" aquí — Contadora
+          // solo puede consultar el inventario, nunca crear ni editar.
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStats() {
+    return Row(
+      children: [
+        Expanded(child: _statCard('$_total', 'Total', AppColors.dorado)),
+        const SizedBox(width: 8),
+        Expanded(child: _statCard('$_totalAlto', 'Alto', AppColors.verde)),
+        const SizedBox(width: 8),
+        Expanded(child: _statCard('$_totalMedio', 'Medio', AppColors.naranja)),
+        const SizedBox(width: 8),
+        Expanded(child: _statCard('$_totalBajo', 'Bajo', AppColors.rojo)),
+      ],
+    );
+  }
+
+  Widget _statCard(String valor, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border(top: BorderSide(color: color, width: 3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(valor, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+          const SizedBox(height: 2),
+          Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textoMuted)),
+        ],
+      ),
+    );
+  }
+
+  // Panel de filtros colapsable, igual que en Admin.
+  Widget _buildPanelFiltros() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.doradoClaro),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.doradoOscuro),
+                  const SizedBox(width: 8),
+                  const Text('Filtros y Búsqueda',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const Spacer(),
+                  Icon(
+                    _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: Colors.grey.shade600,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: TextField(
+              controller: _busquedaCtrl,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                hintText: 'Buscar producto o código de barras...',
+                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                filled: true,
+                fillColor: AppColors.fondo,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: const BorderSide(color: AppColors.dorado),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: SizedBox(
+              height: 36,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _chipFiltro('Todos', 'todos', AppColors.dorado),
+                  _chipFiltro('Alto', 'alto', AppColors.verde),
+                  _chipFiltro('Medio', 'medio', AppColors.naranja),
+                  _chipFiltro('Bajo', 'bajo', AppColors.rojo),
+                ],
+              ),
+            ),
+          ),
+          if (_filtrosAbiertos)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _dropdownFiltro('Categoría', _filtroCategoria, ['todas', ..._categoriasDisponibles],
+                      (v) => setState(() => _filtroCategoria = v!)),
+                  const SizedBox(height: 10),
+                  _dropdownFiltro('Proveedor', _filtroProveedor, ['todos', ..._proveedoresDisponibles],
+                      (v) => setState(() => _filtroProveedor = v!)),
+                  const SizedBox(height: 10),
+                  _dropdownFiltro('Unidad', _filtroUnidad, ['todas', ..._unidadesDisponibles],
+                      (v) => setState(() => _filtroUnidad = v!)),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: _limpiarFiltros,
+                      icon: const Icon(Icons.close, size: 14),
+                      label: const Text('Limpiar filtros', style: TextStyle(fontSize: 12)),
+                      style: TextButton.styleFrom(foregroundColor: AppColors.doradoOscuro),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -412,9 +584,8 @@ class _InventarioContadoraScreenState extends State<InventarioContadoraScreen> {
     String label,
     String valor,
     List<String> opciones,
-    ValueChanged<String?> onChanged, {
-    Map<String, String>? etiquetas,
-  }) {
+    ValueChanged<String?> onChanged,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -438,10 +609,7 @@ class _InventarioContadoraScreenState extends State<InventarioContadoraScreen> {
             ),
           ),
           items: opciones
-              .map((o) => DropdownMenuItem(
-                    value: o,
-                    child: Text(etiquetas?[o] ?? o, style: const TextStyle(fontSize: 13)),
-                  ))
+              .map((o) => DropdownMenuItem(value: o, child: Text(o, style: const TextStyle(fontSize: 13))))
               .toList(),
           onChanged: onChanged,
         ),
@@ -449,200 +617,24 @@ class _InventarioContadoraScreenState extends State<InventarioContadoraScreen> {
     );
   }
 
-  Widget _tarjetaProducto(ProductoContadora p) {
-    final colores = _coloresEstado(p.estado);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.doradoClaro.withValues(alpha: 0.6)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () => _verDetalle(p),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: RichText(
-                    text: TextSpan(
-                      style: const TextStyle(fontSize: 14, color: Colors.black),
-                      children: [
-                        TextSpan(
-                          text: '#${p.id}  ',
-                          style: const TextStyle(
-                              color: AppColors.doradoOscuro, fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                        TextSpan(
-                          text: p.nombre,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Colors.black),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: colores['fondo'], borderRadius: BorderRadius.circular(20)),
-                  child: Text(_textoEstado(p.estado),
-                      style: TextStyle(color: colores['texto'], fontWeight: FontWeight.w600, fontSize: 11)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${p.categoria} · ${p.nombreProveedor ?? "Sin proveedor"}',
-              style: const TextStyle(fontSize: 12, color: AppColors.textoMuted),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Stock', style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
-                    Text('${p.stockActual}',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: colores['texto'])),
-                  ],
-                ),
-                const SizedBox(width: 18),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Precio', style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
-                    Text(_formatoMiles(p.precio),
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87)),
-                  ],
-                ),
-                const Spacer(),
-                Icon(Icons.remove_red_eye_outlined, size: 19, color: Colors.grey.shade700),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Hoja inferior con el detalle completo del producto (equivalente al
-/// modal "Detalle del Producto" del componente React).
-class _DetalleProductoSheet extends StatelessWidget {
-  final ProductoContadora producto;
-  final Map<String, Color> colores;
-  final String textoEstado;
-  final String Function(num?) formatoMiles;
-
-  const _DetalleProductoSheet({
-    required this.producto,
-    required this.colores,
-    required this.textoEstado,
-    required this.formatoMiles,
-  });
-
-  Widget _fila(String label, String valor) {
+  Widget _chipFiltro(String label, String valor, Color color) {
+    final activo = _filtroEstado == valor;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: RichText(
-        text: TextSpan(
-          style: const TextStyle(fontSize: 13, color: Colors.black87),
-          children: [
-            TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-            TextSpan(text: valor),
-          ],
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: activo,
+        onSelected: (_) => setState(() => _filtroEstado = valor),
+        selectedColor: Colors.white,
+        backgroundColor: Colors.white,
+        showCheckmark: false,
+        labelStyle: TextStyle(
+          color: activo ? color : Colors.grey.shade500,
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
         ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final p = producto;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text('Detalle del Producto',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            Container(
-              width: double.infinity,
-              height: 100,
-              margin: const EdgeInsets.only(bottom: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0ECE4),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.inventory_2_outlined, size: 36, color: Color(0xFF8C6B3F)),
-            ),
-            _fila('ID', '#${p.id}'),
-            _fila('Cód. Barras', p.codigoBarras ?? '—'),
-            _fila('Nombre', p.nombre),
-            _fila('Descripción', p.descripcion ?? '—'),
-            _fila('Categoría', p.categoria),
-            _fila('Proveedor', p.nombreProveedor ?? 'Sin proveedor'),
-            _fila('NIT', p.nitProveedor ?? '—'),
-            _fila('Usuario', p.usuario ?? '—'),
-            _fila('Rol', p.rolUsuario ?? '—'),
-            _fila('Unidad', p.unidadMedida ?? '—'),
-            _fila('Precio', formatoMiles(p.precio)),
-            _fila('Stock actual', '${p.stockActual}'),
-            _fila('Activo', p.activo ? 'Sí' : 'No'),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  const Text('Estado: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: colores['fondo'], borderRadius: BorderRadius.circular(20)),
-                    child: Text(textoEstado,
-                        style: TextStyle(color: colores['texto'], fontWeight: FontWeight.w600, fontSize: 11)),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey.shade300,
-                  foregroundColor: Colors.black87,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text('Cerrar'),
-              ),
-            ),
-          ],
+        shape: StadiumBorder(
+          side: BorderSide(color: activo ? color : Colors.grey.shade200, width: activo ? 1.4 : 1),
         ),
       ),
     );

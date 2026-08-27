@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import './admin/inventario_screen.dart';
 import './admin/movimientos_screen.dart';
+import './admin/categorias_screen.dart';
 import './admin/historial_precios_screen.dart';
 import './admin/notificaciones_screen.dart';
 import './admin/reportes_screen.dart';
@@ -33,8 +34,13 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _indiceActual = 0;
 
+  // ⚠️ El orden de _pantallas, _claves y _titulos debe coincidir
+  // exactamente entre sí, e idealmente con el orden del Drawer
+  // (PanelDrawer._items), aunque no es obligatorio que sea idéntico
+  // siempre y cuando las 3 listas de aquí abajo estén sincronizadas.
   late final List<Widget> _pantallas = [
     InventarioScreen(usuario: widget.usuario),
+    CategoriasScreen(usuario: widget.usuario),
     MovimientosScreen(usuario: widget.usuario),
     HistorialPreciosScreen(usuario: widget.usuario),
     NotificacionesScreen(usuario: widget.usuario),
@@ -45,6 +51,7 @@ class _MainShellState extends State<MainShell> {
 
   static const _claves = [
     'inventario',
+    'categorias',
     'movimientos',
     'historial',
     'notificaciones',
@@ -55,6 +62,7 @@ class _MainShellState extends State<MainShell> {
 
   static const _titulos = [
     'Inventario',
+    'Categorías',
     'Movimientos',
     'Historial de Precios',
     'Notificaciones',
@@ -76,7 +84,10 @@ class _MainShellState extends State<MainShell> {
       appBar: InventarioHeader(
         titulo: _titulos[_indiceActual],
         usuario: widget.usuario,
-        onNotificaciones: () => setState(() => _indiceActual = 3),
+        // Antes tenía el índice 3 fijo ("hardcodeado"), lo que se
+        // desincroniza cada vez que agregas/quitas una sección.
+        // Ahora reutiliza _irASeccion() con la clave, igual que el Drawer.
+        onNotificaciones: () => _irASeccion('notificaciones'),
         onLogout: widget.onLogout,
       ),
       drawer: PanelDrawer(

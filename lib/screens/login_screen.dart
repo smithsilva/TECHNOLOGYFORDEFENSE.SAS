@@ -188,6 +188,8 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       final usuarioBD = data['usuario'] as Map<String, dynamic>;
+      debugPrint('>>> id_rol: ${usuarioBD['id_rol']} (tipo: ${usuarioBD['id_rol'].runtimeType})');
+debugPrint('>>> rol crudo: ${usuarioBD['rol']}');
       final token = data['token'] as String;
       String rolReal;
       switch (usuarioBD['id_rol']) {

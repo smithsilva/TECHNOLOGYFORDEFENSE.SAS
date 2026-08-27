@@ -97,7 +97,8 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
   List<Movimiento> get _filtrados {
     final texto = _normalizar(_busquedaCtrl.text);
     return _movimientos.where((m) {
-      final matchTexto = texto.isEmpty ||
+      final matchTexto =
+          texto.isEmpty ||
           _normalizar(m.producto).contains(texto) ||
           _normalizar(m.usuario).contains(texto);
       final matchTipo = _filtroTipo == 'todos' || m.tipo == _filtroTipo;
@@ -121,9 +122,9 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
   }
 
   void _mostrarProximamente(String accion) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$accion: próximamente')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$accion: próximamente')));
   }
 
   String _formatoMiles(int numero) {
@@ -203,7 +204,11 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Column(
                   children: [
-                    Icon(Icons.error_outline, size: 40, color: Colors.red.shade400),
+                    Icon(
+                      Icons.error_outline,
+                      size: 40,
+                      color: Colors.red.shade400,
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       _error!,
@@ -229,10 +234,16 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(Icons.swap_horiz, size: 40, color: Colors.grey.shade400),
+                      Icon(
+                        Icons.swap_horiz,
+                        size: 40,
+                        color: Colors.grey.shade400,
+                      ),
                       const SizedBox(height: 8),
-                      Text('No se encontraron movimientos',
-                          style: TextStyle(color: Colors.grey.shade600)),
+                      Text(
+                        'No se encontraron movimientos',
+                        style: TextStyle(color: Colors.grey.shade600),
+                      ),
                     ],
                   ),
                 ),
@@ -317,10 +328,16 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                             borderRadius: BorderRadius.circular(24),
                           ),
                         ),
-                        icon: const Icon(Icons.file_download_outlined, size: 17),
+                        icon: const Icon(
+                          Icons.file_download_outlined,
+                          size: 17,
+                        ),
                         label: const Text(
                           'Exportar',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ),
@@ -340,7 +357,10 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                         icon: const Icon(Icons.refresh, size: 17),
                         label: const Text(
                           'Actualizar',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ),
@@ -355,70 +375,93 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
   }
 
   // ---------- TARJETA DE TOTAL ----------
-  Widget _tarjetaTotal(String titulo, String valor, String subtitulo,
-      Color color, Color colorFondoIcono, IconData icono) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border(
-          top: BorderSide(color: AppColors.doradoClaro.withValues(alpha: 0.5)),
-          right: BorderSide(color: AppColors.doradoClaro.withValues(alpha: 0.5)),
-          bottom: BorderSide(color: AppColors.doradoClaro.withValues(alpha: 0.5)),
-          left: BorderSide(color: color, width: 4),
+  // FIX: se separó la barra de color (izquierda) del borde general para
+  // evitar el error de Flutter "A borderRadius can only be given on
+  // borders with uniform colors", que hacía que la tarjeta no se pintara.
+  Widget _tarjetaTotal(
+    String titulo,
+    String valor,
+    String subtitulo,
+    Color color,
+    Color colorFondoIcono,
+    IconData icono,
+  ) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(
+            color: AppColors.doradoClaro.withValues(alpha: 0.5),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  titulo,
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    color: AppColors.textoMuted,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.4,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 4, color: color), // barra de color izquierda
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 14, 12, 14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              titulo,
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                color: AppColors.textoMuted,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              valor,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: color,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitulo,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: AppColors.textoMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: colorFondoIcono,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(icono, size: 15, color: color),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  valor,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitulo,
-                  style: const TextStyle(fontSize: 10, color: AppColors.textoMuted),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: colorFondoIcono,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icono, size: 15, color: color),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -440,8 +483,11 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
               padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
-                  const Icon(Icons.filter_alt_outlined,
-                      size: 18, color: AppColors.doradoOscuro),
+                  const Icon(
+                    Icons.filter_alt_outlined,
+                    size: 18,
+                    color: AppColors.doradoOscuro,
+                  ),
                   const SizedBox(width: 8),
                   const Text(
                     'Filtros y búsqueda',
@@ -494,7 +540,10 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                       TextButton.icon(
                         onPressed: _limpiarFiltros,
                         icon: const Icon(Icons.close, size: 14),
-                        label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+                        label: const Text(
+                          'Limpiar',
+                          style: TextStyle(fontSize: 12),
+                        ),
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.textoMuted,
                           padding: EdgeInsets.zero,
@@ -538,7 +587,9 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
   Widget _separadorRegistros(int cantidad) {
     return Row(
       children: [
-        Expanded(child: Divider(color: AppColors.doradoClaro.withValues(alpha: 0.6))),
+        Expanded(
+          child: Divider(color: AppColors.doradoClaro.withValues(alpha: 0.6)),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: Text(
@@ -551,12 +602,17 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
             ),
           ),
         ),
-        Expanded(child: Divider(color: AppColors.doradoClaro.withValues(alpha: 0.6))),
+        Expanded(
+          child: Divider(color: AppColors.doradoClaro.withValues(alpha: 0.6)),
+        ),
       ],
     );
   }
 
   // ---------- TARJETA DE MOVIMIENTO ----------
+  // FIX: se separó la barra de color (arriba) del borde general para
+  // evitar el error de Flutter "A borderRadius can only be given on
+  // borders with uniform colors", que hacía que la tarjeta no se pintara.
   Widget _tarjetaMovimiento(Movimiento m) {
     final esEntrada = m.tipo == 'entrada';
     final color = esEntrada ? AppColors.verde : AppColors.rojo;
@@ -565,90 +621,126 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        border: Border(
-          left: BorderSide(color: AppColors.doradoClaro.withValues(alpha: 0.5)),
-          right: BorderSide(color: AppColors.doradoClaro.withValues(alpha: 0.5)),
-          bottom: BorderSide(color: AppColors.doradoClaro.withValues(alpha: 0.5)),
-          top: BorderSide(color: color, width: 3),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(color: fondo, shape: BoxShape.circle),
-                  child: Icon(
-                    esEntrada ? Icons.arrow_upward : Icons.arrow_downward,
-                    size: 14,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: fondo,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    esEntrada ? 'Entrada' : 'Salida',
-                    style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 11),
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '$signo${m.cantidad}',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: color),
-                ),
-              ],
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(
+              color: AppColors.doradoClaro.withValues(alpha: 0.5),
             ),
-            const SizedBox(height: 10),
-            Text(
-              m.producto,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.person_outline, size: 13, color: Colors.grey.shade500),
-                const SizedBox(width: 4),
-                Text(
-                  m.usuario,
-                  style: const TextStyle(fontSize: 12, color: AppColors.textoMuted),
-                ),
-                const Spacer(),
-                Text(
-                  _formatoFecha(m.fecha),
-                  style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              m.motivo,
-              style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey.shade600,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-            ),
-          ],
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(height: 3, color: color), // barra de color arriba
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: fondo,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            esEntrada
+                                ? Icons.arrow_upward
+                                : Icons.arrow_downward,
+                            size: 14,
+                            color: color,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: fondo,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            esEntrada ? 'Entrada' : 'Salida',
+                            style: TextStyle(
+                              color: color,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '$signo${m.cantidad}',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      m.producto,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline,
+                          size: 13,
+                          color: Colors.grey.shade500,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          m.usuario,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textoMuted,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          _formatoFecha(m.fecha),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textoMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      m.motivo,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

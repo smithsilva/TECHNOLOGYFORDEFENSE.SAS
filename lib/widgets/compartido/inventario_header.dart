@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../screens/admin/perfil_screen.dart.dart';
 
 class AppColors {
   static const navy = Color(0xFF13202E);
@@ -24,6 +25,25 @@ class InventarioHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => const Size.fromHeight(64);
+
+  void _abrirPerfil(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(
+            backgroundColor: AppColors.navy,
+            foregroundColor: Colors.white,
+            title: const Text('Mi Perfil'),
+          ),
+          body: PerfilScreen(
+            usuario: usuario,
+            onCerrarSesion: onLogout,
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,41 +118,45 @@ class InventarioHeader extends StatelessWidget implements PreferredSizeWidget {
                   icon: const Icon(Icons.notifications_none, color: Colors.white70),
                 ),
 
-                // Badge del rol / usuario
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                      color: AppColors.doradoClaro.withValues(alpha: 0.4),
+                // Badge del rol / usuario — ahora navega al Perfil al tocarlo
+                InkWell(
+                  borderRadius: BorderRadius.circular(30),
+                  onTap: () => _abrirPerfil(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: AppColors.doradoClaro.withValues(alpha: 0.4),
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircleAvatar(
-                        radius: 10,
-                        backgroundColor: AppColors.dorado,
-                        child: Text(
-                          rol.isNotEmpty ? rol[0] : '?',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.navy,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircleAvatar(
+                          radius: 10,
+                          backgroundColor: AppColors.dorado,
+                          child: Text(
+                            rol.isNotEmpty ? rol[0] : '?',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.navy,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        rol,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                        const SizedBox(width: 6),
+                        Text(
+                          rol,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
