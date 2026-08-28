@@ -163,12 +163,15 @@ class ProductoCard extends StatelessWidget {
                             Colors.black87,
                           ),
                           const Spacer(),
-                          _accionBoton(Icons.remove_red_eye_outlined, const Color(0xFF2F6FED),
-                              const Color(0xFFE8F0FE), onVer),
+                          // Ver — mismo estilo dorado claro que "Editar" (igual al Historial de Precios)
+                          _accionBoton(Icons.remove_red_eye_outlined, AppColors.doradoOscuro,
+                              const Color(0xFFFBF1DD), onVer),
                           const SizedBox(width: 8),
+                          // Editar — dorado claro
                           _accionBoton(Icons.edit_outlined, AppColors.doradoOscuro,
                               const Color(0xFFFBF1DD), onEditar),
                           const SizedBox(width: 8),
+                          // Eliminar — rojo
                           _accionBoton(Icons.delete_outline, const Color(0xFFD64545),
                               const Color(0xFFFBE3E3), onEliminar),
                         ],

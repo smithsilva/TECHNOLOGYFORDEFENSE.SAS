@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../widgets/t4d_sidebar.dart';
 import '../../widgets/contadora/contadora_appbar.dart';
-import 'inventario_contadora_screen.dart'; // -> class InventarioContadoraScreen
+import 'inventario_contadora_screen.dart' hide AppColors; // -> class InventarioContadoraScreen
 
-import 'Empleados screen.dart'; // -> class EmpleadosScreen
-import 'Historial precios screen.dart'; // -> class HistorialPreciosScreen
-import 'Metodos pago screen.dart'; // -> class MetodosPagoScreen
-import 'Proveedores screen.dart'; // -> class ProveedoresScreen
-import 'Reportes screen.dart'; // -> class ReportesFinancierosScreen
-import 'Sucursales screen.dart'; // -> class SucursalesScreen
+import 'Empleados screen.dart' hide AppColors; // -> class EmpleadosScreen
+import 'Historial precios screen.dart' hide AppColors; // -> class HistorialPreciosScreen
+import 'Metodos pago screen.dart' hide AppColors; // -> class MetodosPagoScreen
+import 'Proveedores screen.dart' hide AppColors; // -> class ProveedoresScreen
+import 'Reportes screen.dart' hide AppColors; // -> class ReportesFinancierosScreen
+import 'Sucursales screen.dart' hide AppColors; // -> class SucursalesScreen
 
 class MainShellContadora extends StatefulWidget {
   final Map<String, dynamic>? usuario;

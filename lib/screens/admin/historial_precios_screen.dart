@@ -128,17 +128,31 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   int get _totalSinCambio =>
       _registros.where((r) => r.tipoVariacion == 'sin_cambio').length;
 
+  /// Catálogo derivado de los registros: último precio conocido por producto.
+  /// Se usa para autocompletar "precio anterior" al crear un registro nuevo.
+  List<Map<String, dynamic>> get _catalogoProductos {
+    final mapa = <int, Map<String, dynamic>>{};
+    for (final r in _registros) {
+      final actual = mapa[r.idProducto];
+      if (actual == null || r.fecha.isAfter(actual['fecha'] as DateTime)) {
+        mapa[r.idProducto] = {
+          'id': r.idProducto,
+          'nombre': r.nombreProducto,
+          'precioActual': r.precioNuevo,
+          'fecha': r.fecha,
+        };
+      }
+    }
+    final lista = mapa.values.toList()
+      ..sort((a, b) => (a['nombre'] as String).compareTo(b['nombre'] as String));
+    return lista;
+  }
+
   void _limpiarFiltros() {
     setState(() {
       _busquedaCtrl.clear();
       _fechaFiltro = null;
     });
-  }
-
-  void _mostrarProximamente(String accion) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$accion: próximamente')),
-    );
   }
 
   Future<void> _elegirFecha() async {
@@ -172,6 +186,376 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     return '${f.day} de ${meses[f.month - 1]} de ${f.year}';
   }
 
+  void _mostrarSnack(String texto, {Color? color}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(texto),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // =======================================================================
+  // CRUD (mock, solo en memoria — reemplazar por llamadas reales al backend)
+  // =======================================================================
+
+  void _crear(HistorialPrecio nuevo) {
+    setState(() => _registros.insert(0, nuevo));
+    _mostrarSnack('Registro creado (mock)', color: AppColors.verde);
+  }
+
+  void _actualizar(HistorialPrecio editado) {
+    setState(() {
+      final idx = _registros.indexWhere((r) => r.id == editado.id);
+      if (idx != -1) _registros[idx] = editado;
+    });
+    _mostrarSnack('Registro actualizado (mock)', color: AppColors.dorado);
+  }
+
+  void _eliminar(HistorialPrecio r) {
+    setState(() => _registros.removeWhere((x) => x.id == r.id));
+    _mostrarSnack('Registro eliminado (mock)', color: AppColors.rojo);
+  }
+
+  // =======================================================================
+  // DIÁLOGO: VER DETALLE
+  // =======================================================================
+  void _verDetalle(HistorialPrecio r, bool esSoloLectura) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  r.nombreProducto,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.fondo,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text('#${r.id}',
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.doradoOscuro, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _filaDetalle('ID Producto', '${r.idProducto}'),
+              _filaDetalle('Precio anterior', '\$${_formatoMiles(r.precioAnterior)}'),
+              _filaDetalle('Precio nuevo', '\$${_formatoMiles(r.precioNuevo)}'),
+              _filaDetalle('Variación',
+                  r.variacionPorcentaje == null ? 'Sin cambio' : '${r.variacionPorcentaje!.toStringAsFixed(1)}%'),
+              _filaDetalle('Fecha', _formatoFechaLarga(r.fecha)),
+              _filaDetalle('Estado', r.activo ? 'Activo' : 'Inactivo'),
+              const SizedBox(height: 6),
+              const Text('Motivo', style: TextStyle(fontSize: 11, color: AppColors.textoMuted)),
+              const SizedBox(height: 2),
+              Text(r.motivo, style: const TextStyle(fontSize: 13)),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar')),
+            if (!esSoloLectura)
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.dorado),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _mostrarFormulario(editar: r);
+                },
+                child: const Text('Editar'),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _filaDetalle(String titulo, String valor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 4,
+            child: Text(titulo, style: const TextStyle(fontSize: 12, color: AppColors.textoMuted)),
+          ),
+          Expanded(
+            flex: 5,
+            child: Text(valor,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.right),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =======================================================================
+  // DIÁLOGO: ELIMINAR (confirmación)
+  // =======================================================================
+  void _confirmarEliminar(HistorialPrecio r) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('¿Eliminar registro?'),
+        content: Text(
+          'Se eliminará el registro #${r.id} de "${r.nombreProducto}". Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.rojo),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _eliminar(r);
+            },
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =======================================================================
+  // DIÁLOGO: CREAR / EDITAR
+  // =======================================================================
+  void _mostrarFormulario({HistorialPrecio? editar}) {
+    final esEdicion = editar != null;
+
+    // Estado local del formulario
+    int? idProductoSeleccionado = editar?.idProducto;
+    String nombreProductoSeleccionado = editar?.nombreProducto ?? '';
+    double precioAnterior = (editar?.precioAnterior ?? 0).toDouble();
+    bool productoNuevo = false;
+
+    final nombreNuevoCtrl = TextEditingController();
+    final precioNuevoCtrl =
+        TextEditingController(text: editar != null ? editar.precioNuevo.toStringAsFixed(0) : '');
+    final motivoCtrl = TextEditingController(text: editar?.motivo ?? '');
+    DateTime fecha = editar?.fecha ?? DateTime.now();
+    bool activo = editar?.activo ?? true;
+
+    final catalogo = _catalogoProductos;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(esEdicion ? 'Editar registro' : 'Nuevo registro de precio'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!esEdicion) ...[
+                      // Selección de producto (solo al crear)
+                      DropdownButtonFormField<int>(
+                        value: productoNuevo ? null : idProductoSeleccionado,
+                        decoration: const InputDecoration(
+                          labelText: 'Producto',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        items: [
+                          ...catalogo.map(
+                            (p) => DropdownMenuItem<int>(
+                              value: p['id'] as int,
+                              child: Text('${p['nombre']} (#${p['id']})'),
+                            ),
+                          ),
+                          const DropdownMenuItem<int>(
+                            value: -1,
+                            child: Text('+ Producto nuevo'),
+                          ),
+                        ],
+                        onChanged: (valor) {
+                          setDialogState(() {
+                            if (valor == -1) {
+                              productoNuevo = true;
+                              idProductoSeleccionado = null;
+                              nombreProductoSeleccionado = '';
+                              precioAnterior = 0;
+                            } else {
+                              productoNuevo = false;
+                              idProductoSeleccionado = valor;
+                              final p = catalogo.firstWhere((e) => e['id'] == valor);
+                              nombreProductoSeleccionado = p['nombre'] as String;
+                              precioAnterior = (p['precioActual'] as num).toDouble();
+                            }
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      if (productoNuevo)
+                        TextField(
+                          controller: nombreNuevoCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Nombre del producto nuevo',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                        ),
+                      if (productoNuevo) const SizedBox(height: 12),
+                      if (!productoNuevo && idProductoSeleccionado != null)
+                        Text(
+                          'Precio anterior (automático): \$${_formatoMiles(precioAnterior)}',
+                          style: const TextStyle(fontSize: 12, color: AppColors.textoMuted),
+                        ),
+                      if (!productoNuevo && idProductoSeleccionado != null)
+                        const SizedBox(height: 12),
+                    ] else ...[
+                      // En edición se muestran los datos del producto fijos
+                      Text(nombreProductoSeleccionado,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      const SizedBox(height: 4),
+                      Text('Precio anterior: \$${_formatoMiles(precioAnterior)}',
+                          style: const TextStyle(fontSize: 12, color: AppColors.textoMuted)),
+                      const SizedBox(height: 12),
+                    ],
+                    TextField(
+                      controller: precioNuevoCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Precio nuevo',
+                        prefixText: '\$ ',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: motivoCtrl,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Motivo',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.calendar_today_outlined, size: 16),
+                            label: Text(_formatoFechaLarga(fecha)),
+                            onPressed: () async {
+                              final seleccionada = await showDatePicker(
+                                context: ctx,
+                                initialDate: fecha,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2100),
+                              );
+                              if (seleccionada != null) {
+                                setDialogState(() => fecha = seleccionada);
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      title: const Text('Producto activo', style: TextStyle(fontSize: 13)),
+                      value: activo,
+                      activeColor: AppColors.verde,
+                      onChanged: (v) => setDialogState(() => activo = v),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.dorado),
+                  onPressed: () {
+                    final precioNuevo = double.tryParse(precioNuevoCtrl.text.trim());
+                    if (precioNuevo == null) {
+                      _mostrarSnack('Ingresa un precio nuevo válido', color: AppColors.rojo);
+                      return;
+                    }
+                    if (!esEdicion) {
+                      if (productoNuevo && nombreNuevoCtrl.text.trim().isEmpty) {
+                        _mostrarSnack('Ingresa el nombre del producto nuevo', color: AppColors.rojo);
+                        return;
+                      }
+                      if (!productoNuevo && idProductoSeleccionado == null) {
+                        _mostrarSnack('Selecciona un producto', color: AppColors.rojo);
+                        return;
+                      }
+                    }
+
+                    final nuevoIdRegistro = _registros.isEmpty
+                        ? 1
+                        : (_registros.map((r) => r.id).reduce((a, b) => a > b ? a : b) + 1);
+
+                    if (esEdicion) {
+                      final actualizado = HistorialPrecio(
+                        id: editar.id,
+                        idProducto: editar.idProducto,
+                        nombreProducto: editar.nombreProducto,
+                        precioActual: precioNuevo.toDouble(),
+                        activo: activo,
+                        precioAnterior: editar.precioAnterior.toDouble(),
+                        precioNuevo: precioNuevo.toDouble(),
+                        fecha: fecha,
+                        motivo: motivoCtrl.text.trim().isEmpty ? 'Sin motivo' : motivoCtrl.text.trim(),
+                      );
+                      Navigator.pop(ctx);
+                      _actualizar(actualizado);
+                    } else {
+                      final idProductoFinal = productoNuevo
+                          ? (catalogo.isEmpty
+                              ? 1
+                              : (catalogo.map((p) => p['id'] as int).reduce((a, b) => a > b ? a : b) + 1))
+                          : idProductoSeleccionado!;
+                      final nombreFinal =
+                          productoNuevo ? nombreNuevoCtrl.text.trim() : nombreProductoSeleccionado;
+
+                      final creado = HistorialPrecio(
+                        id: nuevoIdRegistro,
+                        idProducto: idProductoFinal,
+                        nombreProducto: nombreFinal,
+                        precioActual: precioNuevo.toDouble(),
+                        activo: activo,
+                        precioAnterior: (productoNuevo ? 0.0 : precioAnterior).toDouble(),
+                        precioNuevo: precioNuevo.toDouble(),
+                        fecha: fecha,
+                        motivo: motivoCtrl.text.trim().isEmpty
+                            ? (productoNuevo ? 'Precio inicial al crear producto' : 'Sin motivo')
+                            : motivoCtrl.text.trim(),
+                      );
+                      Navigator.pop(ctx);
+                      _crear(creado);
+                    }
+                  },
+                  child: Text(esEdicion ? 'Guardar cambios' : 'Crear registro'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final rolCrudo = (widget.usuario?['rol'] ?? '').toString().toLowerCase();
@@ -184,235 +568,76 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Encabezado / título de la sección
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.doradoClaro),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Historial de Precios',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Rastrea y analiza cambios de precios',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                  if (rolCrudo.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.doradoClaro.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        rolCrudo.toUpperCase() +
-                            (esSoloLectura ? '  ·  Solo lectura' : ''),
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.doradoOscuro,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+            _encabezado(rolCrudo, esSoloLectura),
             const SizedBox(height: 14),
 
-            // Tarjetas de resumen
+            // Tarjetas de resumen (4 en fila, como el mockup)
             Row(
               children: [
                 Expanded(
                   child: _tarjetaResumen(
-                      'Total Registros', '${_registros.length}',
-                      'cambios registrados', AppColors.doradoOscuro),
+                    'Total',
+                    '${_registros.length}',
+                    AppColors.dorado,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: _tarjetaResumen('Aumentos', '$_totalAumentos',
-                      'precios incrementados', AppColors.rojo),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _tarjetaResumen('Reducciones', '$_totalReducciones',
-                      'precios reducidos', AppColors.dorado),
+                  child: _tarjetaResumen(
+                    'Aumentos',
+                    '$_totalAumentos',
+                    AppColors.rojo,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: _tarjetaResumen('Sin Cambio', '$_totalSinCambio',
-                      'sin variación', AppColors.gris),
+                  child: _tarjetaResumen(
+                    'Reduc.',
+                    '$_totalReducciones',
+                    AppColors.verde,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _tarjetaResumen(
+                    'Iniciales',
+                    '$_totalIniciales',
+                    AppColors.gris,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 14),
 
-            // Búsqueda y filtros
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.doradoClaro),
-              ),
-              child: Column(
-                children: [
-                  InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.filter_alt_outlined,
-                              size: 18, color: AppColors.doradoOscuro),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Búsqueda y Filtros',
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                          ),
-                          const Spacer(),
-                          Icon(
-                            _filtrosAbiertos
-                                ? Icons.keyboard_arrow_up
-                                : Icons.keyboard_arrow_down,
-                            color: Colors.grey.shade600,
-                          ),
-                        ],
-                      ),
+            _buscador(),
+            const SizedBox(height: 18),
+
+            _separadorConteo(_filtrados.length),
+            const SizedBox(height: 12),
+
+              if (_cargando)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_filtrados.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.history, size: 40, color: Colors.grey.shade400),
+                        const SizedBox(height: 8),
+                        Text('No se encontraron registros',
+                            style: TextStyle(color: Colors.grey.shade600)),
+                      ],
                     ),
                   ),
-                  if (_filtrosAbiertos)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                      child: Column(
-                        children: [
-                          TextField(
-                            controller: _busquedaCtrl,
-                            onChanged: (_) => setState(() {}),
-                            decoration: InputDecoration(
-                              hintText: 'Buscar por producto, ID o motivo...',
-                              prefixIcon: const Icon(Icons.search, size: 20),
-                              filled: true,
-                              fillColor: AppColors.fondo,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          InkWell(
-                            onTap: _elegirFecha,
-                            borderRadius: BorderRadius.circular(30),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: AppColors.fondo,
-                                borderRadius: BorderRadius.circular(30),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.calendar_today_outlined,
-                                      size: 16, color: AppColors.textoMuted),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _fechaFiltro == null
-                                        ? 'dd/mm/aaaa'
-                                        : _formatoFechaLarga(_fechaFiltro!),
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: _fechaFiltro == null
-                                          ? Colors.grey.shade500
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  if (_fechaFiltro != null)
-                                    InkWell(
-                                      onTap: () => setState(() => _fechaFiltro = null),
-                                      child: const Icon(Icons.close,
-                                          size: 16, color: AppColors.textoMuted),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: _limpiarFiltros,
-                              icon: const Icon(Icons.close, size: 14),
-                              label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.textoMuted,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // Registro histórico
-            Row(
-              children: [
-                const Text(
-                  'Registro Histórico de Precios',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-                const Spacer(),
-                Text(
-                  '${_filtrados.length} registros encontrados',
-                  style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            if (_cargando)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (_filtrados.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(Icons.history, size: 40, color: Colors.grey.shade400),
-                      const SizedBox(height: 8),
-                      Text('No se encontraron registros',
-                          style: TextStyle(color: Colors.grey.shade600)),
-                    ],
-                  ),
-                ),
-              )
-            else
-              ..._filtrados.map((r) => _tarjetaRegistro(r)),
-          ],
+                )
+              else
+                ..._filtrados.map((r) => _tarjetaRegistro(r, esSoloLectura)),
+            ],
+          ),
         ),
       ),
     );
@@ -445,6 +670,33 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     );
   }
 
+  // ---------------------------------------------------------------------
+  // SEPARADOR "X REGISTROS" CON LÍNEAS VERDES
+  // ---------------------------------------------------------------------
+  Widget _separadorConteo(int cantidad) {
+    return Row(
+      children: [
+        Expanded(child: Divider(color: AppColors.verde.withValues(alpha: 0.4), thickness: 1.2)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Text(
+            '$cantidad ${cantidad == 1 ? 'REGISTRO' : 'REGISTROS'}',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textoMuted,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: AppColors.verde.withValues(alpha: 0.4), thickness: 1.2)),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // TARJETA DE REGISTRO CON BORDE LATERAL DE COLOR
+  // ---------------------------------------------------------------------
   Widget _tarjetaRegistro(HistorialPrecio r) {
     final tipo = r.tipoVariacion;
     Color colorVariacion;
@@ -473,9 +725,13 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.doradoClaro.withValues(alpha: 0.6)),
+        border: Border(
+          left: BorderSide(color: colorVariacion, width: 4),
+          top: BorderSide(color: Colors.grey.shade200),
+          right: BorderSide(color: Colors.grey.shade200),
+          bottom: BorderSide(color: Colors.grey.shade200),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -484,55 +740,57 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Fila superior: #id + nombre --- ojo
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: RichText(
-                  text: TextSpan(
-                    style: const TextStyle(fontSize: 14, color: Colors.black),
-                    children: [
-                      TextSpan(
-                        text: '#${r.id}  ',
-                        style: const TextStyle(
-                          color: AppColors.doradoOscuro,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Fila superior: #id + nombre --- ojo
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(fontSize: 14, color: Colors.black),
+                      children: [
+                        TextSpan(
+                          text: '#${r.id}  ',
+                          style: const TextStyle(
+                            color: AppColors.doradoOscuro,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
-                      ),
-                      TextSpan(
-                        text: r.nombreProducto,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: Colors.black,
+                        TextSpan(
+                          text: r.nombreProducto,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            color: Colors.black,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () => _mostrarProximamente('Ver "${r.nombreProducto}"'),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: AppColors.fondo,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.doradoClaro),
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => _mostrarProximamente('Ver "${r.nombreProducto}"'),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.fondo,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.doradoClaro),
+                    ),
+                    child: const Icon(Icons.remove_red_eye_outlined,
+                        size: 16, color: AppColors.doradoOscuro),
                   ),
-                  child: const Icon(Icons.remove_red_eye_outlined,
-                      size: 16, color: AppColors.doradoOscuro),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
+              ],
+            ),
+            const SizedBox(height: 4),
 
           // Subtítulo: ID + Actual + Activo
           Wrap(
@@ -634,24 +892,46 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
           ),
           const SizedBox(height: 10),
 
-          // Fecha --- motivo
-          Row(
-            children: [
-              Text(
-                _formatoFechaLarga(r.fecha),
-                style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
-              ),
-              const Spacer(),
-              Flexible(
-                child: Text(
-                  r.motivo,
-                  textAlign: TextAlign.right,
+            // Fecha --- motivo
+            Row(
+              children: [
+                Text(
+                  _formatoFechaLarga(r.fecha),
                   style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const Spacer(),
+                Flexible(
+                  child: Text(
+                    r.motivo,
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textoMuted,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _botonAccion({required IconData icono, required VoidCallback onTap, Color? color}) {
+    final colorFinal = color ?? AppColors.doradoOscuro;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: AppColors.fondo,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color != null ? color.withValues(alpha: 0.35) : AppColors.doradoClaro),
+        ),
+        child: Icon(icono, size: 16, color: colorFinal),
       ),
     );
   }

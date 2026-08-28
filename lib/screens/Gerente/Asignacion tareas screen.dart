@@ -9,13 +9,9 @@ class _TareasColors {
 
   // Alias usados en el resto del archivo (no cambian nombres para
   // no tener que tocar cada referencia)
-  static const background = encabezado;
   static const white = Color(0xFFFFFFFF); // tarjetas en blanco puro
   static const gold = dorado;
-  static const panelDark = encabezado;
   static const grayText = Color(0xFF6B7280);
-  static const borderLight = dorado; // todas las tarjetas usan borde dorado
-  static const cardWhiteSubtitle = Color(0xFF6B7280);
 
   static const blue = Color(0xFF2563EB);
   static const blueBg = Color(0xFFE1EEFE);

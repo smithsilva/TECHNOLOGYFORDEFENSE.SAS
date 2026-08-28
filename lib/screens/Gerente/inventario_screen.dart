@@ -1,173 +1,703 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_t4d/models/producto.dart';
+import 'package:app_t4d/widgets/compartido/producto_card.dart';
+import '../../services/inventario_service.dart';
 
-import '../../screens/admin/inventario_screen.dart' hide AppColors;
-import '../../widgets/t4d_sidebar.dart';
+class AppColors {
+  static const dorado = Color(0xFFD4A743);
+  static const doradoOscuro = Color(0xFF8C6B3F);
+  static const doradoClaro = Color(0xFFE7C98A);
+  static const fondo = Color(0xFFF4F1EA);
+  static const navyOscuro = Color(0xFF0F1B2E);
+  static const navyClaro = Color(0xFF16233A);
+  static const subtitulo = Color(0xFF8FA3C4);
+  static const verde = Color(0xFF1F9D55);
+  static const verdeFondo = Color(0xFFE3F7E9);
+  static const naranja = Color(0xFFC98A1B);
+  static const naranjaFondo = Color(0xFFFDF3DA);
+  static const rojo = Color(0xFFD64545);
+  static const rojoFondo = Color(0xFFFBE2DF);
+  static const textoMuted = Color(0xFF8A93A3);
+}
 
-import 'Asignacion tareas screen.dart';
-import 'Direcciones cliente.dart' hide AppColors;
-import 'Gestion clientes screen.dart';
-import 'Movimientos screen.dart';
-import 'Historial precios screen.dart';
-
-class MainShellGerente extends StatefulWidget {
+class InventarioGerenteScreen extends StatefulWidget {
   final Map<String, dynamic>? usuario;
 
-  /// Se recibe desde main.dart: limpia SharedPreferences y navega al login.
-  final VoidCallback? onLogout;
-
-  const MainShellGerente({
-    super.key,
-    this.usuario,
-    this.onLogout,
-  });
+  const InventarioGerenteScreen({super.key, this.usuario});
 
   @override
-  State<MainShellGerente> createState() => _MainShellGerenteState();
+  State<InventarioGerenteScreen> createState() => _InventarioGerenteScreenState();
 }
 
-class _SeccionGerente {
-  final T4DMenuItem item;
-  final Widget pantalla;
-  final bool visibleEnPanelPrincipal;
+class _InventarioGerenteScreenState extends State<InventarioGerenteScreen> {
+  final TextEditingController _busquedaCtrl = TextEditingController();
+  final InventarioService _service = InventarioService();
 
-  const _SeccionGerente({
-    required this.item,
-    required this.pantalla,
-    this.visibleEnPanelPrincipal = true,
-  });
-}
+  // Filtro rápido (chips) + filtros avanzados (panel colapsable), igual que
+  // en la pantalla del Admin.
+  String _filtroEstado = 'todos'; // todos | alto | medio | bajo
+  String _filtroCategoria = 'todas';
+  String _filtroProveedor = 'todos';
+  String _filtroUnidad = 'todas';
+  bool _filtrosAbiertos = false;
 
-class _MainShellGerenteState extends State<MainShellGerente> {
-  int _indiceActual = 0;
+  bool _cargando = false;
+  bool _cargandoInicial = true;
+  String? _error;
 
-  // Por debajo de este ancho (en píxeles lógicos) el sidebar se
-  // convierte en un drawer deslizable en vez de quedar fijo.
-  static const double _breakpointEscritorio = 900;
+  List<Producto> _productos = [];
 
-  late final List<_SeccionGerente> _todasLasSecciones = [
-    _SeccionGerente(
-      item: const T4DMenuItem(icon: Icons.inventory_2_outlined, label: 'Inventario'),
-      pantalla: InventarioScreen(usuario: widget.usuario),
-      visibleEnPanelPrincipal: true, // ← Gerente ya puede ver, crear y editar inventario
-    ),
-    _SeccionGerente(
-      item: const T4DMenuItem(icon: Icons.swap_horiz_rounded, label: 'Movimientos'),
-      pantalla: const MovimientosScreen(embedded: true),
-      visibleEnPanelPrincipal: true,
-    ),
-    _SeccionGerente(
-      item: const T4DMenuItem(icon: Icons.history_rounded, label: 'Historial de Precios'),
-      pantalla: const HistorialPreciosScreen(embedded: true),
-      visibleEnPanelPrincipal: true,
-    ),
-    _SeccionGerente(
-      item: const T4DMenuItem(icon: Icons.fact_check_outlined, label: 'Tareas'),
-      pantalla: const AsignacionTareasScreen(embedded: true),
-      visibleEnPanelPrincipal: true,
-    ),
-    _SeccionGerente(
-      item: const T4DMenuItem(icon: Icons.person_outline_rounded, label: 'Cliente'),
-      pantalla: const GestionClientesScreen(embedded: true),
-      visibleEnPanelPrincipal: true,
-    ),
-    _SeccionGerente(
-      item: const T4DMenuItem(icon: Icons.place_outlined, label: 'Direcciones'),
-      pantalla: const DireccionesClienteScreen(),
-      visibleEnPanelPrincipal: true,
-    ),
-  ];
+  String? _token;
 
-  // Solo las secciones visibles llegan al sidebar y al IndexedStack.
-  late final List<_SeccionGerente> _seccionesVisibles =
-      _todasLasSecciones.where((s) => s.visibleEnPanelPrincipal).toList();
+  // Esta pantalla es exclusiva del rol Gerente: siempre puede ver y editar
+  // por completo, pero nunca crear ni eliminar productos.
+  static const bool _puedeCrear = false;
+  static const bool _puedeEditarCompleto = true;
+  static const bool _puedeEliminar = false;
 
-  late final List<T4DMenuItem> _menu = _seccionesVisibles.map((s) => s.item).toList();
-  late final List<Widget> _pantallas = _seccionesVisibles.map((s) => s.pantalla).toList();
+  int get _total => _productos.length;
+  int get _totalAlto => _productos.where((p) => p.estado == 'alto').length;
+  int get _totalMedio => _productos.where((p) => p.estado == 'medio').length;
+  int get _totalBajo => _productos.where((p) => p.estado == 'bajo').length;
 
-  void _cerrarSesion() {
-    widget.onLogout?.call();
+  List<String> get _categoriasDisponibles => _productos
+      .map((p) => p.nombreCategoria)
+      .whereType<String>()
+      .toSet()
+      .toList()
+    ..sort();
+
+  List<String> get _proveedoresDisponibles => _productos
+      .map((p) => p.nombreProveedor)
+      .whereType<String>()
+      .toSet()
+      .toList()
+    ..sort();
+
+  List<String> get _unidadesDisponibles => _productos
+      .map((p) => p.unidadMedida)
+      .whereType<String>()
+      .toSet()
+      .toList()
+    ..sort();
+
+  @override
+  void initState() {
+    super.initState();
+    _inicializar();
+  }
+
+  Future<void> _inicializar() async {
+    final prefs = await SharedPreferences.getInstance();
+    _token = prefs.getString('token');
+    setState(() => _cargandoInicial = false);
+    await _cargarProductos();
+  }
+
+  @override
+  void dispose() {
+    _busquedaCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _cargarProductos() async {
+    if (_token == null) {
+      setState(() => _error = 'No hay sesión activa (token no encontrado).');
+      return;
+    }
+    setState(() {
+      _cargando = true;
+      _error = null;
+    });
+    try {
+      final data = await _service.obtenerProductos(_token!);
+      setState(() {
+        _productos = data.map((json) => Producto.fromJson(json)).toList();
+        _cargando = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString().replaceFirst('Exception: ', '');
+        _cargando = false;
+      });
+    }
+  }
+
+  String _normalizar(String texto) {
+    const conTilde = 'áàäâéèëêíìïîóòöôúùüû';
+    const sinTilde = 'aaaaeeeeiiiioooouuuu';
+    var resultado = texto.toLowerCase();
+    for (var i = 0; i < conTilde.length; i++) {
+      resultado = resultado.replaceAll(conTilde[i], sinTilde[i]);
+    }
+    return resultado;
+  }
+
+  List<Producto> get _filtrados {
+    final texto = _normalizar(_busquedaCtrl.text);
+    return _productos.where((p) {
+      final matchTexto = texto.isEmpty ||
+          _normalizar(p.nombreProducto).contains(texto) ||
+          _normalizar(p.idProducto.toString()).contains(texto) ||
+          _normalizar(p.codigoBarras ?? '').contains(texto);
+
+      final matchEstado = _filtroEstado == 'todos' || p.estado == _filtroEstado;
+      final matchCategoria =
+          _filtroCategoria == 'todas' || p.nombreCategoria == _filtroCategoria;
+      final matchProveedor =
+          _filtroProveedor == 'todos' || p.nombreProveedor == _filtroProveedor;
+      final matchUnidad = _filtroUnidad == 'todas' || p.unidadMedida == _filtroUnidad;
+
+      return matchTexto && matchEstado && matchCategoria && matchProveedor && matchUnidad;
+    }).toList();
+  }
+
+  void _limpiarFiltros() {
+    setState(() {
+      _busquedaCtrl.clear();
+      _filtroEstado = 'todos';
+      _filtroCategoria = 'todas';
+      _filtroProveedor = 'todos';
+      _filtroUnidad = 'todas';
+    });
+  }
+
+  Map<String, Color> _coloresEstado(String estado) {
+    switch (estado) {
+      case 'alto':
+        return {'texto': AppColors.verde, 'fondo': AppColors.verdeFondo};
+      case 'medio':
+        return {'texto': AppColors.naranja, 'fondo': AppColors.naranjaFondo};
+      default:
+        return {'texto': AppColors.rojo, 'fondo': AppColors.rojoFondo};
+    }
+  }
+
+  String _textoEstado(String estado) {
+    switch (estado) {
+      case 'alto':
+        return 'Stock Alto';
+      case 'medio':
+        return 'Stock Medio';
+      default:
+        return 'Stock Bajo';
+    }
+  }
+
+  String _formatoMiles(num? numero) {
+    if (numero == null) return '—';
+    final texto = numero.toStringAsFixed(0);
+    final buffer = StringBuffer();
+    for (var i = 0; i < texto.length; i++) {
+      final posDesdeFinal = texto.length - i;
+      buffer.write(texto[i]);
+      if (posDesdeFinal > 1 && posDesdeFinal % 3 == 1) buffer.write('.');
+    }
+    return '\$${buffer.toString()}';
+  }
+
+  void _mostrarSnack(String mensaje, {bool esError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: esError ? Colors.red.shade600 : null,
+      ),
+    );
+  }
+
+  Future<void> _abrirEdicion(Producto p) async {
+    final resultado = await _mostrarFormularioProducto(producto: p);
+    if (resultado == null || _token == null) return;
+    try {
+      await _service.editarProducto(_token!, p.idProducto, resultado);
+      _mostrarSnack('Producto actualizado');
+      _cargarProductos();
+    } catch (e) {
+      _mostrarSnack(e.toString().replaceFirst('Exception: ', ''), esError: true);
+    }
+  }
+
+  Future<Map<String, dynamic>?> _mostrarFormularioProducto({Producto? producto}) {
+    final nombreCtrl = TextEditingController(text: producto?.nombreProducto ?? '');
+    final descCtrl = TextEditingController(text: producto?.descripcion ?? '');
+    final codigoCtrl = TextEditingController(text: producto?.codigoBarras ?? '');
+    final precioCtrl = TextEditingController(text: producto?.precioActual?.toString() ?? '');
+    final stockCtrl = TextEditingController(text: producto?.stockActual.toString() ?? '');
+    final unidadCtrl = TextEditingController(text: producto?.unidadMedida ?? '');
+
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Editar producto'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nombreCtrl, decoration: const InputDecoration(labelText: 'Nombre')),
+              TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Descripción')),
+              TextField(controller: codigoCtrl, decoration: const InputDecoration(labelText: 'Código de barras')),
+              TextField(controller: precioCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Precio')),
+              TextField(controller: stockCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stock')),
+              TextField(controller: unidadCtrl, decoration: const InputDecoration(labelText: 'Unidad de medida')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () {
+              if (nombreCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx, {
+                'nombre_producto': nombreCtrl.text.trim(),
+                'descripcion': descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
+                'codigo_barras': codigoCtrl.text.trim().isEmpty ? null : codigoCtrl.text.trim(),
+                'precio_actual': double.tryParse(precioCtrl.text),
+                'stock_actual': int.tryParse(stockCtrl.text) ?? 0,
+                'unidad_medida': unidadCtrl.text.trim().isEmpty ? null : unidadCtrl.text.trim(),
+              });
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Detalle en bottom sheet, igual estilo que Admin: aquí el Gerente
+  // siempre ve el botón "Editar" y nunca ve "Eliminar" ni "Agregar".
+  void _mostrarDetalle(Producto p) {
+    final colores = _coloresEstado(p.estado);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('Detalle del Producto',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              Container(
+                width: double.infinity,
+                height: 100,
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0ECE4),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.inventory_2_outlined, size: 36, color: AppColors.doradoOscuro),
+              ),
+              _filaDetalle('ID', '#${p.idProducto}'),
+              _filaDetalle('Cód. Barras', p.codigoBarras ?? '—'),
+              _filaDetalle('Nombre', p.nombreProducto),
+              _filaDetalle('Descripción', p.descripcion ?? '—'),
+              _filaDetalle('Categoría', p.nombreCategoria ?? 'Sin categoría'),
+              _filaDetalle('Proveedor', p.nombreProveedor ?? 'Sin proveedor'),
+              _filaDetalle('Unidad', p.unidadMedida ?? '—'),
+              _filaDetalle('Precio', _formatoMiles(p.precioActual)),
+              _filaDetalle('Stock actual', '${p.stockActual}'),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    const Text('Estado: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration:
+                          BoxDecoration(color: colores['fondo'], borderRadius: BorderRadius.circular(20)),
+                      child: Text(_textoEstado(p.estado),
+                          style: TextStyle(color: colores['texto'], fontWeight: FontWeight.w600, fontSize: 11)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    _abrirEdicion(p);
+                  },
+                  icon: const Icon(Icons.edit_outlined, size: 16),
+                  label: const Text('Editar'),
+                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.doradoOscuro),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _filaDetalle(String label, String valor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(fontSize: 13, color: Colors.black87),
+          children: [
+            TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+            TextSpan(text: valor),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final nombre = widget.usuario?['username'] ?? widget.usuario?['nombre'] ?? 'Gerente';
-    final email = widget.usuario?['email'] ?? '';
+    if (_cargandoInicial) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final esEscritorio = constraints.maxWidth >= _breakpointEscritorio;
+    return Container(
+      color: AppColors.fondo,
+      child: RefreshIndicator(
+        onRefresh: _cargarProductos,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 14),
+            _buildStats(),
+            const SizedBox(height: 14),
+            _buildPanelFiltros(),
+            const SizedBox(height: 10),
+            Text(
+              '$_total ${_total == 1 ? "PRODUCTO" : "PRODUCTOS"}',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.0,
+                color: Colors.grey.shade500,
+              ),
+            ),
+            const SizedBox(height: 12),
 
-        Widget sidebar({bool dentroDeDrawer = false}) {
-          return T4DSidebar(
-            userName: nombre,
-            userEmail: email,
-            menuItems: _menu,
-            selectedIndex: _indiceActual,
-            onItemSelected: (index) {
-              setState(() => _indiceActual = index);
-              if (dentroDeDrawer) {
-                Navigator.of(context).pop();
-              }
-            },
-            onLogout: _cerrarSesion,
-          );
-        }
-
-        final contenido = IndexedStack(
-          index: _indiceActual,
-          children: _pantallas,
-        );
-
-        // -------- ESCRITORIO / TABLET: sidebar fijo al costado --------
-        if (esEscritorio) {
-          return Scaffold(
-            backgroundColor: T4DColors.background,
-            body: Row(
-              children: [
-                sidebar(),
-                Expanded(
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  children: [
+                    Icon(Icons.error_outline, size: 40, color: Colors.red.shade400),
+                    const SizedBox(height: 8),
+                    Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: Colors.red.shade700)),
+                    const SizedBox(height: 8),
+                    TextButton(onPressed: _cargarProductos, child: const Text('Reintentar')),
+                  ],
+                ),
+              )
+            else if (_cargando)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_filtrados.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Center(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                        color: const Color(0xFF13202E),
-                        child: Text(
-                          _menu[_indiceActual].label,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Expanded(child: contenido),
+                      Icon(Icons.inventory_2_outlined, size: 40, color: Colors.grey.shade400),
+                      const SizedBox(height: 8),
+                      Text('No se encontraron productos', style: TextStyle(color: Colors.grey.shade600)),
                     ],
                   ),
                 ),
+              )
+            else
+              // Gerente: ve y edita, nunca elimina (onEliminar en null).
+              ..._filtrados.map(
+                (p) => ProductoCard(
+                  producto: p,
+                  onVer: () => _mostrarDetalle(p),
+                  onEditar: _puedeEditarCompleto ? () => _abrirEdicion(p) : null,
+                  onEliminar: _puedeEliminar ? null : null,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.navyOscuro, AppColors.navyClaro],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'GERENTE · INVENTARIO',
+                  style: TextStyle(
+                    color: AppColors.dorado,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Gestión de Inventario',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Productos de vehículos blindados',
+                  style: TextStyle(color: AppColors.subtitulo, fontSize: 12),
+                ),
               ],
             ),
-          );
-        }
+          ),
+          // A propósito NO hay botón "Agregar": el Gerente solo puede
+          // ver y editar productos existentes, nunca crear ni eliminar.
+        ],
+      ),
+    );
+  }
 
-        // -------- MÓVIL: sidebar como drawer, contenido a todo el ancho --------
-        return Scaffold(
-          backgroundColor: T4DColors.background,
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF13202E),
-            iconTheme: const IconThemeData(color: Colors.white),
-            title: Text(
-              _menu[_indiceActual].label,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+  Widget _buildStats() {
+    return Row(
+      children: [
+        Expanded(child: _statCard('$_total', 'Total', AppColors.dorado)),
+        const SizedBox(width: 8),
+        Expanded(child: _statCard('$_totalAlto', 'Alto', AppColors.verde)),
+        const SizedBox(width: 8),
+        Expanded(child: _statCard('$_totalMedio', 'Medio', AppColors.naranja)),
+        const SizedBox(width: 8),
+        Expanded(child: _statCard('$_totalBajo', 'Bajo', AppColors.rojo)),
+      ],
+    );
+  }
+
+  Widget _statCard(String valor, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border(top: BorderSide(color: color, width: 3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(valor, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+          const SizedBox(height: 2),
+          Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textoMuted)),
+        ],
+      ),
+    );
+  }
+
+  // Panel de filtros colapsable (estilo Admin/Contadora): buscador siempre
+  // visible, chips de estado siempre visibles, y filtros avanzados
+  // (categoría, proveedor, unidad) dentro del panel expandible.
+  Widget _buildPanelFiltros() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.doradoClaro),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.doradoOscuro),
+                  const SizedBox(width: 8),
+                  const Text('Filtros y Búsqueda',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const Spacer(),
+                  Icon(
+                    _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: Colors.grey.shade600,
+                  ),
+                ],
+              ),
             ),
           ),
-          drawer: Drawer(
-            backgroundColor: Colors.transparent,
-            child: sidebar(dentroDeDrawer: true),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: TextField(
+              controller: _busquedaCtrl,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                hintText: 'Buscar producto o código de barras...',
+                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                filled: true,
+                fillColor: AppColors.fondo,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: const BorderSide(color: AppColors.dorado),
+                ),
+              ),
+            ),
           ),
-          body: contenido,
-        );
-      },
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: SizedBox(
+              height: 36,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _chipFiltro('Todos', 'todos', AppColors.dorado),
+                  _chipFiltro('Alto', 'alto', AppColors.verde),
+                  _chipFiltro('Medio', 'medio', AppColors.naranja),
+                  _chipFiltro('Bajo', 'bajo', AppColors.rojo),
+                ],
+              ),
+            ),
+          ),
+          if (_filtrosAbiertos)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _dropdownFiltro('Categoría', _filtroCategoria, ['todas', ..._categoriasDisponibles],
+                      (v) => setState(() => _filtroCategoria = v!)),
+                  const SizedBox(height: 10),
+                  _dropdownFiltro('Proveedor', _filtroProveedor, ['todos', ..._proveedoresDisponibles],
+                      (v) => setState(() => _filtroProveedor = v!)),
+                  const SizedBox(height: 10),
+                  _dropdownFiltro('Unidad', _filtroUnidad, ['todas', ..._unidadesDisponibles],
+                      (v) => setState(() => _filtroUnidad = v!)),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: _limpiarFiltros,
+                      icon: const Icon(Icons.close, size: 14),
+                      label: const Text('Limpiar filtros', style: TextStyle(fontSize: 12)),
+                      style: TextButton.styleFrom(foregroundColor: AppColors.doradoOscuro),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dropdownFiltro(
+    String label,
+    String valor,
+    List<String> opciones,
+    ValueChanged<String?> onChanged,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.doradoOscuro)),
+        const SizedBox(height: 4),
+        DropdownButtonFormField<String>(
+          initialValue: valor,
+          isExpanded: true,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.fondo,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+          ),
+          items: opciones
+              .map((o) => DropdownMenuItem(value: o, child: Text(o, style: const TextStyle(fontSize: 13))))
+              .toList(),
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _chipFiltro(String label, String valor, Color color) {
+    final activo = _filtroEstado == valor;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: activo,
+        onSelected: (_) => setState(() => _filtroEstado = valor),
+        selectedColor: Colors.white,
+        backgroundColor: Colors.white,
+        showCheckmark: false,
+        labelStyle: TextStyle(
+          color: activo ? color : Colors.grey.shade500,
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+        ),
+        shape: StadiumBorder(
+          side: BorderSide(color: activo ? color : Colors.grey.shade200, width: activo ? 1.4 : 1),
+        ),
+      ),
     );
   }
 }

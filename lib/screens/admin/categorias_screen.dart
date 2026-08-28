@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../models/categoria.dart';
+import '../../services/categorias_service.dart';
 
 // ─── Paleta (igual a Inventario / Movimientos) ────────────────────────────
 class AppColors {
@@ -15,22 +18,6 @@ class AppColors {
   static const textoMuted = Color(0xFF6B7280);
 }
 
-class CategoriaBlindaje {
-  final int id;
-  final String codigo;
-  final String nombre;
-  final String descripcion;
-  final bool activa;
-
-  CategoriaBlindaje({
-    required this.id,
-    required this.codigo,
-    required this.nombre,
-    required this.descripcion,
-    required this.activa,
-  });
-}
-
 class CategoriasScreen extends StatefulWidget {
   final Map<String, dynamic>? usuario;
 
@@ -42,9 +29,15 @@ class CategoriasScreen extends StatefulWidget {
 
 class _CategoriasScreenState extends State<CategoriasScreen> {
   final TextEditingController _busquedaCtrl = TextEditingController();
+  final CategoriasService _categoriasService = CategoriasService();
 
   bool _cargando = false;
+  String? _error;
   List<CategoriaBlindaje> _categorias = [];
+  String? _token;
+
+  // ids de categorías cuyo toggle está en proceso (para deshabilitar el switch mientras responde el servidor)
+  final Set<int> _actualizandoEstado = {};
 
   int? get _idRol => widget.usuario?['id_rol'] as int?;
   bool get _esAdmin => _idRol == 1;
@@ -61,56 +54,30 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     super.dispose();
   }
 
-  /// Por ahora carga datos de ejemplo (mock) para validar el diseño.
-  /// Cuando conectemos el backend, esto se reemplaza por una llamada
-  /// a CategoriasService, ej:
-  ///
-  /// final data = await CategoriasService().obtenerCategorias(token);
-  /// setState(() => _categorias = data.map(CategoriaBlindaje.fromJson).toList());
-  Future<void> _cargarCategorias() async {
-    setState(() => _cargando = true);
-    await Future.delayed(const Duration(milliseconds: 300));
+  Future<String?> _obtenerToken() async {
+    if (_token != null) return _token;
+    final prefs = await SharedPreferences.getInstance();
+    _token = prefs.getString('token');
+    return _token;
+  }
 
+  Future<void> _cargarCategorias() async {
     setState(() {
-      _categorias = [
-        CategoriaBlindaje(
-          id: 1,
-          codigo: 'CAT-001',
-          nombre: 'Blindaje Nivel 1',
-          descripcion: 'Protección balística ligera para vehículos blindados',
-          activa: true,
-        ),
-        CategoriaBlindaje(
-          id: 2,
-          codigo: 'CAT-002',
-          nombre: 'Blindaje Nivel 2',
-          descripcion: 'Protección balística media, uso estándar',
-          activa: true,
-        ),
-        CategoriaBlindaje(
-          id: 3,
-          codigo: 'CAT-003',
-          nombre: 'Blindaje Nivel 3',
-          descripcion: 'Protección balística alta para escoltas',
-          activa: true,
-        ),
-        CategoriaBlindaje(
-          id: 4,
-          codigo: 'CAT-004',
-          nombre: 'Blindaje Nivel 4',
-          descripcion: 'Protección balística reforzada',
-          activa: false,
-        ),
-        CategoriaBlindaje(
-          id: 5,
-          codigo: 'CAT-005',
-          nombre: 'Blindaje Nivel 5',
-          descripcion: 'Máxima protección balística disponible',
-          activa: true,
-        ),
-      ];
-      _cargando = false;
+      _cargando = true;
+      _error = null;
     });
+
+    try {
+      final token = await _obtenerToken();
+      if (token == null) throw Exception('Sesión expirada, vuelve a iniciar sesión');
+
+      final data = await _categoriasService.obtenerCategorias(token);
+      setState(() => _categorias = data);
+    } catch (e) {
+      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
   }
 
   String _normalizar(String texto) {
@@ -136,10 +103,128 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   int get _totalActivas => _categorias.where((c) => c.activa).length;
   int get _totalInactivas => _categorias.where((c) => !c.activa).length;
 
-  void _mostrarProximamente(String accion) {
+  void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$accion: próximamente')),
+      SnackBar(content: Text(mensaje), backgroundColor: AppColors.rojo),
     );
+  }
+
+  void _mostrarExito(String mensaje) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensaje), backgroundColor: AppColors.verde),
+    );
+  }
+
+  // =====================================
+  // ACTIVAR / INHABILITAR (toggle rápido, sin abrir formulario)
+  // =====================================
+  Future<void> _toggleActiva(CategoriaBlindaje c) async {
+    setState(() => _actualizandoEstado.add(c.id));
+
+    final nuevoEstado = !c.activa;
+    try {
+      final token = await _obtenerToken();
+      if (token == null) throw Exception('Sesión expirada, vuelve a iniciar sesión');
+
+      // ⚠️ La columna real en Supabase se llama "activo", no "activa"
+      await _categoriasService.actualizarParcial(token, c.id, {'activo': nuevoEstado});
+
+      setState(() {
+        final index = _categorias.indexWhere((x) => x.id == c.id);
+        if (index != -1) {
+          _categorias[index] = c.copyWith(activa: nuevoEstado);
+        }
+      });
+
+      _mostrarExito(nuevoEstado ? 'Categoría activada' : 'Categoría inhabilitada');
+    } catch (e) {
+      _mostrarError(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _actualizandoEstado.remove(c.id));
+    }
+  }
+
+  // ─── Crear / Editar ──────────────────────────────────────────────────
+  Future<void> _abrirFormulario({CategoriaBlindaje? categoria}) async {
+    final nombreCtrl = TextEditingController(text: categoria?.nombre ?? '');
+    final descCtrl = TextEditingController(text: categoria?.descripcion ?? '');
+    bool activa = categoria?.activa ?? true;
+    final esEdicion = categoria != null;
+
+    final resultado = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(esEdicion ? 'Editar categoría' : 'Nueva categoría'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nombreCtrl,
+                  decoration: const InputDecoration(labelText: 'Nombre'),
+                ),
+                TextField(
+                  controller: descCtrl,
+                  decoration: const InputDecoration(labelText: 'Descripción'),
+                  maxLines: 2,
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Activa'),
+                  value: activa,
+                  onChanged: (v) => setDialogState(() => activa = v),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.dorado),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(esEdicion ? 'Guardar' : 'Crear'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (resultado != true) return;
+
+    if (nombreCtrl.text.trim().isEmpty) {
+      _mostrarError('El nombre es obligatorio');
+      return;
+    }
+
+    try {
+      final token = await _obtenerToken();
+      if (token == null) throw Exception('Sesión expirada, vuelve a iniciar sesión');
+
+      final nuevaCategoria = CategoriaBlindaje(
+        id: categoria?.id ?? 0,
+        nombre: nombreCtrl.text.trim(),
+        descripcion: descCtrl.text.trim(),
+        activa: activa,
+        categoriaPadre: categoria?.categoriaPadre,
+      );
+
+      if (esEdicion) {
+        await _categoriasService.editarCategoria(token, categoria.id, nuevaCategoria);
+        _mostrarExito('Categoría actualizada');
+      } else {
+        await _categoriasService.crearCategoria(token, nuevaCategoria);
+        _mostrarExito('Categoría creada');
+      }
+
+      await _cargarCategorias();
+    } catch (e) {
+      _mostrarError(e.toString().replaceFirst('Exception: ', ''));
+    }
   }
 
   void _confirmarEliminar(CategoriaBlindaje c) {
@@ -157,10 +242,17 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
             child: const Text('Cancelar'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
-              setState(() => _categorias.removeWhere((x) => x.id == c.id));
-              _mostrarProximamente('Eliminar "${c.nombre}"');
+              try {
+                final token = await _obtenerToken();
+                if (token == null) throw Exception('Sesión expirada, vuelve a iniciar sesión');
+                await _categoriasService.eliminarCategoria(token, c.id);
+                _mostrarExito('Categoría eliminada');
+                await _cargarCategorias();
+              } catch (e) {
+                _mostrarError(e.toString().replaceFirst('Exception: ', ''));
+              }
             },
             child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
           ),
@@ -203,6 +295,24 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 40),
                 child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_error != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.error_outline, size: 40, color: AppColors.rojo),
+                      const SizedBox(height: 8),
+                      Text(_error!, style: const TextStyle(color: AppColors.rojo)),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: _cargarCategorias,
+                        child: const Text('Reintentar'),
+                      ),
+                    ],
+                  ),
+                ),
               )
             else if (_filtradas.isEmpty)
               Padding(
@@ -275,7 +385,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           if (_esAdmin) ...[
             const SizedBox(width: 10),
             ElevatedButton.icon(
-              onPressed: () => _mostrarProximamente('Nueva categoría'),
+              onPressed: () => _abrirFormulario(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.dorado,
                 foregroundColor: Colors.white,
@@ -396,6 +506,8 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   }
 
   Widget _tarjetaCategoria(CategoriaBlindaje c) {
+    final actualizando = _actualizandoEstado.contains(c.id);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -426,32 +538,48 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                 ),
               ),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: c.activa ? AppColors.verdeFondo : AppColors.rojoFondo,
+              // ─── Badge + toggle activar/inhabilitar ───
+              if (actualizando)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                InkWell(
                   borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      c.activa ? Icons.check_circle : Icons.cancel,
-                      size: 11,
-                      color: c.activa ? AppColors.verde : AppColors.rojo,
+                  onTap: _esAdmin ? () => _toggleActiva(c) : null,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: c.activa ? AppColors.verdeFondo : AppColors.rojoFondo,
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      c.activa ? 'Activa' : 'Inactiva',
-                      style: TextStyle(
-                        color: c.activa ? AppColors.verde : AppColors.rojo,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          c.activa ? Icons.check_circle : Icons.cancel,
+                          size: 11,
+                          color: c.activa ? AppColors.verde : AppColors.rojo,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          c.activa ? 'Activa' : 'Inactiva',
+                          style: TextStyle(
+                            color: c.activa ? AppColors.verde : AppColors.rojo,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                        if (_esAdmin) ...[
+                          const SizedBox(width: 4),
+                          Icon(Icons.sync_alt, size: 11, color: c.activa ? AppColors.verde : AppColors.rojo),
+                        ],
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -496,7 +624,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
               children: [
                 InkWell(
                   borderRadius: BorderRadius.circular(8),
-                  onTap: () => _mostrarProximamente('Editar "${c.nombre}"'),
+                  onTap: () => _abrirFormulario(categoria: c),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
