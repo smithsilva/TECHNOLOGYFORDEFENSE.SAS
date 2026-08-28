@@ -3,6 +3,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app_t4d/models/producto.dart';
 import 'package:app_t4d/widgets/compartido/producto_card.dart';
 import '../../services/inventario_service.dart';
+import '../../models/categoria.dart';
+import '../../services/categorias_service.dart';
+import '../../models/proveedores_service.dart';
+import '../../services/proveedores_service.dart';
+import '../../models/sucursal.dart';
+import '../../services/sucursales_service.dart';
 
 /// Paleta ajustada para calzar con el panel web (Gestión de Inventario T4D).
 class AppColors {
@@ -50,6 +56,9 @@ class InventarioScreen extends StatefulWidget {
 class _InventarioScreenState extends State<InventarioScreen> {
   final TextEditingController _busquedaCtrl = TextEditingController();
   final InventarioService _service = InventarioService();
+  final CategoriasService _categoriasService = CategoriasService();
+  final ProveedoresService _proveedoresService = ProveedoresService();
+  final SucursalesService _sucursalesService = SucursalesService();
 
   String _filtroEstado = 'todos'; // todos | alto | medio | bajo
   bool _cargando = false;
@@ -57,6 +66,9 @@ class _InventarioScreenState extends State<InventarioScreen> {
   String? _error;
 
   List<Producto> _productos = [];
+  List<CategoriaBlindaje> _categoriasActivas = [];
+  List<Proveedor> _proveedores = [];
+  List<Sucursal> _sucursales = [];
 
   String? _token;
   int? get _idRol => widget.usuario?['id_rol'] as int?;
@@ -76,6 +88,17 @@ class _InventarioScreenState extends State<InventarioScreen> {
   int get _totalMedio => _productos.where((p) => p.estado == 'medio').length;
   int get _totalBajo => _productos.where((p) => p.estado == 'bajo').length;
 
+  /// Busca el nombre de la categoría de un producto a partir de su id_categoria,
+  /// usando la lista de categorías cargada desde la API. Si aún no ha cargado
+  /// o no la encuentra, cae en lo que ya traiga el producto (p.nombreCategoria).
+  String? _nombreCategoriaDe(Producto p) {
+    if (p.idCategoria == null) return p.nombreCategoria;
+    for (final c in _categoriasActivas) {
+      if (c.id == p.idCategoria) return c.nombre;
+    }
+    return p.nombreCategoria;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -87,6 +110,39 @@ class _InventarioScreenState extends State<InventarioScreen> {
     _token = prefs.getString('token');
     setState(() => _cargandoInicial = false);
     await _cargarProductos();
+    _cargarCategoriasBlindaje(); // no bloqueante
+    _cargarProveedores(); // no bloqueante
+    _cargarSucursales(); // no bloqueante
+  }
+
+  Future<void> _cargarCategoriasBlindaje() async {
+    if (_token == null) return;
+    try {
+      final data = await _categoriasService.obtenerCategorias(_token!);
+      setState(() => _categoriasActivas = data.where((c) => c.activa).toList());
+    } catch (e) {
+      debugPrint('No se pudieron cargar categorías: $e');
+    }
+  }
+
+  Future<void> _cargarProveedores() async {
+    if (_token == null) return;
+    try {
+      final data = await _proveedoresService.obtenerProveedores(_token!);
+      setState(() => _proveedores = data);
+    } catch (e) {
+      debugPrint('No se pudieron cargar proveedores: $e');
+    }
+  }
+
+  Future<void> _cargarSucursales() async {
+    if (_token == null) return;
+    try {
+      final data = await _sucursalesService.obtenerSucursales(_token!);
+      setState(() => _sucursales = data.where((s) => s.activo).toList());
+    } catch (e) {
+      debugPrint('No se pudieron cargar sucursales: $e');
+    }
   }
 
   @override
@@ -329,169 +385,301 @@ class _InventarioScreenState extends State<InventarioScreen> {
     final precioCtrl = TextEditingController(text: producto?.precioActual?.toString() ?? '');
     final stockCtrl = TextEditingController(text: producto?.stockActual.toString() ?? '');
     final unidadCtrl = TextEditingController(text: producto?.unidadMedida ?? '');
+    int? categoriaSeleccionada = producto?.idCategoria;
+    int? proveedorSeleccionado = producto?.idProveedor;
+    int? sucursalSeleccionada = producto?.idSucursal;
 
     return showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header oscuro con icono, igual estilo que el resto de la app
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.navyOscuro, AppColors.navyClaro],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          esEdicion ? Icons.edit_outlined : Icons.add_box_outlined,
-                          color: AppColors.dorado,
-                          size: 22,
-                        ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header oscuro con icono, igual estilo que el resto de la app
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [AppColors.navyOscuro, AppColors.navyClaro],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              esEdicion ? 'Editar producto' : 'Nuevo producto',
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            esEdicion ? Icons.edit_outlined : Icons.add_box_outlined,
+                            color: AppColors.dorado,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                esEdicion ? 'Editar producto' : 'Nuevo producto',
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                esEdicion
+                                    ? 'Actualiza los datos del producto'
+                                    : 'Agrega un producto al inventario',
+                                style: const TextStyle(color: AppColors.subtitulo, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _campoFormulario(
+                          controller: nombreCtrl,
+                          label: 'Nombre del producto',
+                          icono: Icons.inventory_2_outlined,
+                        ),
+                        const SizedBox(height: 14),
+                        _campoFormulario(
+                          controller: descCtrl,
+                          label: 'Descripción',
+                          icono: Icons.notes_outlined,
+                          maxLines: 2,
+                        ),
+                        const SizedBox(height: 14),
+
+                        // ─── Selector de Tipo de Blindaje (categoría) ───
+                        DropdownButtonFormField<int>(
+                          initialValue: categoriaSeleccionada,
+                          isExpanded: true,
+                          decoration: _decoracionDropdown(
+                            label: 'Tipo de blindaje',
+                            icono: Icons.shield_outlined,
+                          ),
+                          hint: const Text('Selecciona un tipo de blindaje', style: TextStyle(fontSize: 13)),
+                          items: _categoriasActivas
+                              .map((c) => DropdownMenuItem<int>(
+                                    value: c.id,
+                                    child: Text(
+                                      c.nombre,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
+                                  ))
+                              .toList(),
+                          onChanged: (valor) => setDialogState(() => categoriaSeleccionada = valor),
+                        ),
+                        if (_categoriasActivas.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 6, left: 4),
+                            child: Text(
+                              'No hay categorías activas disponibles.',
+                              style: TextStyle(fontSize: 11, color: AppColors.rojo),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              esEdicion ? 'Actualiza los datos del producto' : 'Agrega un producto al inventario',
-                              style: const TextStyle(color: AppColors.subtitulo, fontSize: 11),
+                          ),
+
+                        const SizedBox(height: 14),
+
+                        // ─── Selector de Proveedor ───
+                        DropdownButtonFormField<int>(
+                          initialValue: proveedorSeleccionado,
+                          isExpanded: true,
+                          decoration: _decoracionDropdown(
+                            label: 'Proveedor',
+                            icono: Icons.local_shipping_outlined,
+                          ),
+                          hint: const Text('Selecciona un proveedor', style: TextStyle(fontSize: 13)),
+                          items: _proveedores
+                              .map((pv) => DropdownMenuItem<int>(
+                                    value: pv.id,
+                                    child: Text(
+                                      pv.nombre,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
+                                  ))
+                              .toList(),
+                          onChanged: (valor) => setDialogState(() => proveedorSeleccionado = valor),
+                        ),
+                        if (_proveedores.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 6, left: 4),
+                            child: Text(
+                              'No hay proveedores disponibles.',
+                              style: TextStyle(fontSize: 11, color: AppColors.rojo),
+                            ),
+                          ),
+
+                        const SizedBox(height: 14),
+
+                        // ─── Selector de Sucursal ───
+                        DropdownButtonFormField<int>(
+                          initialValue: sucursalSeleccionada,
+                          isExpanded: true,
+                          decoration: _decoracionDropdown(
+                            label: 'Sucursal',
+                            icono: Icons.store_outlined,
+                          ),
+                          hint: const Text('Selecciona una sucursal', style: TextStyle(fontSize: 13)),
+                          items: _sucursales
+                              .map((s) => DropdownMenuItem<int>(
+                                    value: s.id,
+                                    child: Text(
+                                      s.nombre,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
+                                  ))
+                              .toList(),
+                          onChanged: (valor) => setDialogState(() => sucursalSeleccionada = valor),
+                        ),
+                        if (_sucursales.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 6, left: 4),
+                            child: Text(
+                              'No hay sucursales disponibles.',
+                              style: TextStyle(fontSize: 11, color: AppColors.rojo),
+                            ),
+                          ),
+
+                        const SizedBox(height: 14),
+                        _campoFormulario(
+                          controller: codigoCtrl,
+                          label: 'Código de barras',
+                          icono: Icons.qr_code_2_outlined,
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _campoFormulario(
+                                controller: precioCtrl,
+                                label: 'Precio',
+                                icono: Icons.attach_money,
+                                teclado: TextInputType.number,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _campoFormulario(
+                                controller: stockCtrl,
+                                label: 'Stock',
+                                icono: Icons.numbers,
+                                teclado: TextInputType.number,
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _campoFormulario(
-                        controller: nombreCtrl,
-                        label: 'Nombre del producto',
-                        icono: Icons.inventory_2_outlined,
-                      ),
-                      const SizedBox(height: 14),
-                      _campoFormulario(
-                        controller: descCtrl,
-                        label: 'Descripción',
-                        icono: Icons.notes_outlined,
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 14),
-                      _campoFormulario(
-                        controller: codigoCtrl,
-                        label: 'Código de barras',
-                        icono: Icons.qr_code_2_outlined,
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _campoFormulario(
-                              controller: precioCtrl,
-                              label: 'Precio',
-                              icono: Icons.attach_money,
-                              teclado: TextInputType.number,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _campoFormulario(
-                              controller: stockCtrl,
-                              label: 'Stock',
-                              icono: Icons.numbers,
-                              teclado: TextInputType.number,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      _campoFormulario(
-                        controller: unidadCtrl,
-                        label: 'Unidad de medida',
-                        icono: Icons.straighten_outlined,
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            side: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Cancelar', style: TextStyle(color: AppColors.textoMuted)),
+                        const SizedBox(height: 14),
+                        _campoFormulario(
+                          controller: unidadCtrl,
+                          label: 'Unidad de medida',
+                          icono: Icons.straighten_outlined,
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.dorado,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            elevation: 0,
-                          ),
-                          onPressed: () {
-                            if (nombreCtrl.text.trim().isEmpty) {
-                              _mostrarSnack('El nombre es obligatorio', esError: true);
-                              return;
-                            }
-                            Navigator.pop(ctx, {
-                              'nombre_producto': nombreCtrl.text.trim(),
-                              'descripcion': descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
-                              'codigo_barras': codigoCtrl.text.trim().isEmpty ? null : codigoCtrl.text.trim(),
-                              'precio_actual': double.tryParse(precioCtrl.text),
-                              'stock_actual': int.tryParse(stockCtrl.text) ?? 0,
-                              'unidad_medida': unidadCtrl.text.trim().isEmpty ? null : unidadCtrl.text.trim(),
-                            });
-                          },
-                          child: Text(esEdicion ? 'Guardar cambios' : 'Crear producto',
-                              style: const TextStyle(fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              side: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Cancelar', style: TextStyle(color: AppColors.textoMuted)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.dorado,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            onPressed: () {
+                              if (nombreCtrl.text.trim().isEmpty) {
+                                _mostrarSnack('El nombre es obligatorio', esError: true);
+                                return;
+                              }
+                              Navigator.pop(ctx, {
+                                'nombre_producto': nombreCtrl.text.trim(),
+                                'descripcion': descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
+                                'id_categoria': categoriaSeleccionada,
+                                'id_proveedor': proveedorSeleccionado,
+                                'id_sucursal': sucursalSeleccionada,
+                                'codigo_barras':
+                                    codigoCtrl.text.trim().isEmpty ? null : codigoCtrl.text.trim(),
+                                'precio_actual': double.tryParse(precioCtrl.text),
+                                'stock_actual': int.tryParse(stockCtrl.text) ?? 0,
+                                'unidad_medida':
+                                    unidadCtrl.text.trim().isEmpty ? null : unidadCtrl.text.trim(),
+                              });
+                            },
+                            child: Text(esEdicion ? 'Guardar cambios' : 'Crear producto',
+                                style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  InputDecoration _decoracionDropdown({required String label, required IconData icono}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(fontSize: 13, color: AppColors.textoMuted),
+      prefixIcon: Icon(icono, size: 19, color: AppColors.doradoOscuro),
+      filled: true,
+      fillColor: AppColors.fondo.withValues(alpha: 0.6),
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.dorado, width: 1.4),
       ),
     );
   }
@@ -944,8 +1132,12 @@ class _InventarioScreenState extends State<InventarioScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _filaDetalle(Icons.notes_outlined, 'Descripción', p.descripcion ?? '—'),
-                      _filaDetalle(Icons.category_outlined, 'Categoría', p.nombreCategoria ?? 'Sin categoría'),
-                      _filaDetalle(Icons.local_shipping_outlined, 'Proveedor', p.nombreProveedor ?? 'Sin proveedor'),
+                      _filaDetalle(
+                          Icons.category_outlined, 'Categoría', _nombreCategoriaDe(p) ?? 'Sin categoría'),
+                      _filaDetalle(
+                          Icons.local_shipping_outlined, 'Proveedor', p.nombreProveedor ?? 'Sin proveedor'),
+                      _filaDetalle(
+                          Icons.store_outlined, 'Sucursal', p.nombreSucursal ?? 'Sin sucursal'),
                       _filaDetalle(Icons.qr_code_2_outlined, 'Código de barras', p.codigoBarras ?? '—'),
                       _filaDetalle(Icons.straighten_outlined, 'Unidad de medida', p.unidadMedida ?? '—'),
                       const Divider(height: 24),

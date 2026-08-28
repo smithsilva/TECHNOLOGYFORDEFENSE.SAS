@@ -1,6 +1,6 @@
 /// Modelo de un producto de inventario.
-/// Basado en la tabla `productos` (y su relación con `proveedores`
-/// y `categorias`) que ya usas en la versión web con Supabase.
+/// Basado en la tabla `productos` (y su relación con `proveedores`,
+/// `categorias` y `sucursales`) que ya usas en la versión web con Supabase.
 class Producto {
   final int idProducto;
   final String nombreProducto;
@@ -19,6 +19,10 @@ class Producto {
   final String? nombreProveedor;
   final String? nitProveedor;
 
+  final int? idSucursal;
+  final String? nombreSucursal;
+  final String? ciudadSucursal;
+
   final String? blindaje; // ej: "Blindaje Nivel 1" (se ve en las tarjetas)
 
   Producto({
@@ -36,6 +40,9 @@ class Producto {
     this.idProveedor,
     this.nombreProveedor,
     this.nitProveedor,
+    this.idSucursal,
+    this.nombreSucursal,
+    this.ciudadSucursal,
     this.blindaje,
   });
 
@@ -50,6 +57,7 @@ class Producto {
   factory Producto.fromJson(Map<String, dynamic> json) {
     final proveedor = json['proveedores'] as Map<String, dynamic>?;
     final categoria = json['categorias'] as Map<String, dynamic>?;
+    final sucursal = json['sucursales'] as Map<String, dynamic>?;
 
     return Producto(
       idProducto: json['id_producto'] as int,
@@ -68,6 +76,9 @@ class Producto {
       idProveedor: json['id_proveedor'] as int?,
       nombreProveedor: proveedor?['nombre_proveedor']?.toString(),
       nitProveedor: proveedor?['nit']?.toString(),
+      idSucursal: json['id_sucursal'] as int?,
+      nombreSucursal: sucursal?['nombre_sucursal']?.toString(),
+      ciudadSucursal: sucursal?['ciudad']?.toString(),
       blindaje: json['blindaje']?.toString(),
     );
   }
