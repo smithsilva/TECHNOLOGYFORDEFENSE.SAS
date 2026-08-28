@@ -393,268 +393,29 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     );
   }
 
-  // ---------- ENCABEZADO OSCURO ----------
-  Widget _encabezado() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.headerOscuro, AppColors.headerOscuro2],
-          ),
-        ),
-        child: Stack(
-          children: [
-            // círculo decorativo
-            Positioned(
-              top: -40,
-              right: -30,
-              child: Container(
-                width: 130,
-                height: 130,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.dorado.withValues(alpha: 0.08),
-                ),
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  (widget.usuario?['rol']?.toString().toUpperCase() ??
-                          'ADMINISTRADOR') +
-                      ' · MOVIMIENTOS',
-                  style: const TextStyle(
-                    color: AppColors.dorado,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Movimientos de Inventario',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Historial completo de entradas y salidas',
-                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12.5),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _mostrarProximamente('Exportar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.dorado,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                        ),
-                        icon: const Icon(Icons.file_download_outlined, size: 17),
-                        label: const Text(
-                          'Exportar',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _cargarMovimientos,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.botonOscuro,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                        ),
-                        icon: const Icon(Icons.refresh, size: 17),
-                        label: const Text(
-                          'Actualizar',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // ---------- TARJETA DE TOTAL ----------
-  Widget _tarjetaTotal(String titulo, String valor, String subtitulo,
-      Color color, Color colorFondoIcono, IconData icono) {
+  Widget _tarjetaTotal(String titulo, String valor, String subtitulo, Color color) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border(
-          top: BorderSide(color: AppColors.doradoClaro.withValues(alpha: 0.5)),
-          right: BorderSide(color: AppColors.doradoClaro.withValues(alpha: 0.5)),
-          bottom: BorderSide(color: AppColors.doradoClaro.withValues(alpha: 0.5)),
-          left: BorderSide(color: color, width: 4),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  titulo,
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    color: AppColors.textoMuted,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  valor,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitulo,
-                  style: const TextStyle(fontSize: 10, color: AppColors.textoMuted),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: colorFondoIcono,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icono, size: 15, color: color),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------- PANEL DE FILTROS ----------
-  Widget _panelFiltros() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.doradoClaro),
+        border: Border.all(color: AppColors.doradoClaro.withValues(alpha: 0.6)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  const Icon(Icons.filter_alt_outlined,
-                      size: 18, color: AppColors.doradoOscuro),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Filtros y búsqueda',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    _filtrosAbiertos
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: Colors.grey.shade600,
-                  ),
-                ],
-              ),
-            ),
+          Text(titulo, style: const TextStyle(fontSize: 11, color: AppColors.textoMuted)),
+          const SizedBox(height: 4),
+          Text(
+            valor,
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
           ),
-          if (_filtrosAbiertos)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _busquedaCtrl,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      hintText: 'Buscar por producto o usuario...',
-                      prefixIcon: const Icon(Icons.search, size: 20),
-                      filled: true,
-                      fillColor: AppColors.fondo,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      _chipTipo('Todos', 'todos'),
-                      _chipTipo('Entrada', 'entrada'),
-                      _chipTipo('Salida', 'salida'),
-                      TextButton.icon(
-                        onPressed: _limpiarFiltros,
-                        icon: const Icon(Icons.close, size: 14),
-                        label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.textoMuted,
-                          padding: EdgeInsets.zero,
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+          const SizedBox(height: 2),
+          Text(
+            subtitulo,
+            style: const TextStyle(fontSize: 10, color: AppColors.textoMuted),
+          ),
         ],
       ),
     );
@@ -679,28 +440,6 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
           width: activo ? 1.4 : 1,
         ),
       ),
-    );
-  }
-
-  // ---------- SEPARADOR "N REGISTROS" ----------
-  Widget _separadorRegistros(int cantidad) {
-    return Row(
-      children: [
-        Expanded(child: Divider(color: AppColors.doradoClaro.withValues(alpha: 0.6))),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Text(
-            '$cantidad REGISTRO${cantidad == 1 ? '' : 'S'}',
-            style: const TextStyle(
-              fontSize: 10.5,
-              color: AppColors.textoMuted,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-            ),
-          ),
-        ),
-        Expanded(child: Divider(color: AppColors.doradoClaro.withValues(alpha: 0.6))),
-      ],
     );
   }
 
