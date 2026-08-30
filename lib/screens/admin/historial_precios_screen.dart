@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/historial_precio.dart';
-// import '../services/historial_precios_service.dart'; // ← lo conectas cuando pases de mock a datos reales
+import '../../services//historial_precios_service.dart'; // ← lo conectas cuando pases de mock a datos reales
 
 class AppColors {
   static const dorado = Color(0xFFD4A743);
