@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../screens/admin/inventario_screen.dart' hide AppColors;
+import '../../screens/admin/notificaciones_screen.dart' hide AppColors;
 import '../../widgets/t4d_sidebar.dart';
 import '../../widgets/gerente/gerente_appbar.dart';
+import '../../widgets/admin/notificaciones_bottom_sheet.dart';
 
 import 'Asignacion tareas screen.dart';
 import 'Direcciones cliente.dart';
@@ -94,6 +96,25 @@ class _MainShellGerenteState extends State<MainShellGerente> {
     widget.onLogout?.call();
   }
 
+  // Gerente no tiene pestaña propia de "Notificaciones", así que "Ver
+  // todas" abre la pantalla completa encima (misma NotificacionesScreen
+  // de Admin).
+  void _abrirNotificacionesCompleto() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF13202E),
+            foregroundColor: Colors.white,
+            title: const Text('Notificaciones'),
+          ),
+          body: NotificacionesScreen(usuario: widget.usuario),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final nombre = widget.usuario?['username'] ?? widget.usuario?['nombre'] ?? 'Gerente';
@@ -170,7 +191,10 @@ class _MainShellGerenteState extends State<MainShellGerente> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.notifications_none, color: Colors.white),
-                              onPressed: () {},
+                              onPressed: () => mostrarNotificacionesBottomSheet(
+                                context,
+                                onVerTodas: _abrirNotificacionesCompleto,
+                              ),
                             ),
                           ],
                         ),
@@ -190,6 +214,10 @@ class _MainShellGerenteState extends State<MainShellGerente> {
           appBar: GerenteAppBar(
             titulo: _menu[_indiceActual].label,
             nombreUsuario: nombre.toString(),
+            onNotificationsTap: () => mostrarNotificacionesBottomSheet(
+              context,
+              onVerTodas: _abrirNotificacionesCompleto,
+            ),
           ),
           drawer: Drawer(
             backgroundColor: Colors.transparent,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/notificacion.dart';
-// import '../services/notificaciones_service.dart'; // ← lo conectas cuando pases de mock a datos reales
+import '../../services/notificaciones_service.dart';
 
 class AppColors {
   static const dorado = Color(0xFFD4A743);
@@ -15,7 +16,6 @@ class AppColors {
   static const verdeFondo = Color(0xFFE3F7E9);
   static const textoMuted = Color(0xFF6B7280);
 
-  // Colores del header oscuro (mismos que en Movimientos)
   static const headerOscuro = Color(0xFF15151F);
   static const headerOscuro2 = Color(0xFF1E1E2C);
   static const botonOscuro = Color(0xFF2B2B3A);
@@ -31,8 +31,18 @@ class NotificacionesScreen extends StatefulWidget {
 }
 
 class _NotificacionesScreenState extends State<NotificacionesScreen> {
+  final NotificacionesService _service = NotificacionesService();
+
   bool _cargando = false;
+  String? _error;
   List<Notificacion> _notificaciones = [];
+
+  /// El token vive en SharedPreferences (ver login_screen.dart), NO en
+  /// widget.usuario. Mismo patrón que en historial_precios_screen.dart.
+  Future<String?> _obtenerToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token');
+  }
 
   @override
   void initState() {
@@ -40,68 +50,157 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     _cargarNotificaciones();
   }
 
-  /// Por ahora carga datos de ejemplo (mock) para la parte visual.
-  /// Cuando conectes el backend, reemplaza el contenido de este método
-  /// por una llamada a tu NotificacionesService, por ejemplo:
-  ///
-  /// final data = await NotificacionesService().obtenerNotificaciones();
-  /// setState(() => _notificaciones = data);
   Future<void> _cargarNotificaciones() async {
-    setState(() => _cargando = true);
-    await Future.delayed(const Duration(milliseconds: 300));
+    final token = await _obtenerToken();
+
+    if (token == null || token.isEmpty) {
+      setState(() {
+        _error = 'No se encontró el token de sesión. Vuelve a iniciar sesión.';
+        _cargando = false;
+      });
+      return;
+    }
 
     setState(() {
-      _notificaciones = [
-        Notificacion(
-          id: 1,
-          titulo: 'Stock Bajo — Llantaa',
-          tipo: 'alerta',
-          mensaje: 'Solo quedan 3 unidades disponibles.',
-          fecha: DateTime.now().subtract(const Duration(hours: 2)),
-          leida: false,
-        ),
-        Notificacion(
-          id: 2,
-          titulo: 'Stock Bajo — Amortiguador Delantero',
-          tipo: 'alerta',
-          mensaje: 'Solo quedan 5 unidades disponibles.',
-          fecha: DateTime.now().subtract(const Duration(days: 1)),
-          leida: false,
-        ),
-        Notificacion(
-          id: 3,
-          titulo: 'Movimiento registrado',
-          tipo: 'info',
-          mensaje: 'Juan realizó una salida de 7 unidades de Amortiguador Delantero Reforzado.',
-          fecha: DateTime.now().subtract(const Duration(days: 1)),
-          leida: true,
-        ),
-      ];
-      _cargando = false;
+      _cargando = true;
+      _error = null;
     });
+
+    try {
+      final data = await _service.obtenerNotificaciones(token);
+      if (!mounted) return;
+      setState(() {
+        _notificaciones = data;
+        _cargando = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Error al cargar notificaciones: $e';
+        _cargando = false;
+      });
+    }
   }
 
-  int get _totalNuevas => _notificaciones.where((n) => !n.leida).length;
+  int get _totalNuevas => _notificaciones.where((n) => !n.leido).length;
 
-  void _marcarTodasLeidas() {
-    setState(() {
-      for (final n in _notificaciones) {
-        n.leida = true;
+  Future<void> _marcarTodasLeidas() async {
+    final token = await _obtenerToken();
+    if (token == null) return;
+
+    final pendientes = _notificaciones.where((n) => !n.leido).toList();
+    for (final n in pendientes) {
+      try {
+        await _service.marcarLeida(token, n.id);
+        if (mounted) setState(() => n.leido = true);
+      } catch (_) {
+        // si una falla, seguimos con las demás
       }
-    });
+    }
   }
 
-  void _marcarLeida(Notificacion n) {
-    setState(() => n.leida = true);
+  Future<void> _marcarLeida(Notificacion n) async {
+    if (n.leido) return;
+    final token = await _obtenerToken();
+    if (token == null) return;
+
+    try {
+      await _service.marcarLeida(token, n.id);
+      if (!mounted) return;
+      setState(() => n.leido = true);
+    } catch (e) {
+      _mostrarSnack('No se pudo marcar como leída: $e', color: AppColors.rojo);
+    }
   }
 
-  void _eliminar(Notificacion n) {
-    setState(() => _notificaciones.removeWhere((x) => x.id == n.id));
-  }
-
-  void _mostrarProximamente(String accion) {
+  void _mostrarSnack(String texto, {Color? color}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$accion: próximamente')),
+      SnackBar(content: Text(texto), backgroundColor: color),
+    );
+  }
+
+  // =======================================================================
+  // NUEVA NOTIFICACIÓN (envía a todos los roles)
+  // =======================================================================
+  void _abrirNuevaNotificacion() {
+    final tituloCtrl = TextEditingController();
+    final descripcionCtrl = TextEditingController();
+    bool enviando = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Nuevo mensaje'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '📢 Esta notificación le llegará a todos los roles del sistema.',
+                style: TextStyle(fontSize: 12, color: AppColors.textoMuted),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: tituloCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Asunto',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: descripcionCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Mensaje',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: enviando ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.dorado),
+              onPressed: enviando
+                  ? null
+                  : () async {
+                      final titulo = tituloCtrl.text.trim();
+                      final descripcion = descripcionCtrl.text.trim();
+                      if (titulo.isEmpty || descripcion.isEmpty) {
+                        _mostrarSnack('Completa asunto y mensaje', color: AppColors.rojo);
+                        return;
+                      }
+                      final token = await _obtenerToken();
+                      if (token == null) return;
+
+                      setDialogState(() => enviando = true);
+                      try {
+                        await _service.enviarATodos(
+                          token,
+                          titulo: titulo,
+                          descripcion: descripcion,
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        _mostrarSnack('Notificación enviada', color: AppColors.verde);
+                        _cargarNotificaciones();
+                      } catch (e) {
+                        setDialogState(() => enviando = false);
+                        _mostrarSnack('No se pudo enviar: $e', color: AppColors.rojo);
+                      }
+                    },
+              child: Text(enviando ? 'Enviando...' : 'Enviar'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -167,13 +266,24 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             _encabezado(),
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
 
-            // Separador "N NOTIFICACIONES"
+            if (_error != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.rojoFondo,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(_error!, style: const TextStyle(color: AppColors.rojo, fontSize: 13)),
+              ),
+              const SizedBox(height: 14),
+            ],
+
             _separadorNotificaciones(_notificaciones.length),
             const SizedBox(height: 12),
 
-            // Lista de notificaciones
             if (_cargando)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 40),
@@ -187,8 +297,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                     children: [
                       Icon(Icons.notifications_none, size: 40, color: Colors.grey.shade400),
                       const SizedBox(height: 8),
-                      Text('No tienes notificaciones',
-                          style: TextStyle(color: Colors.grey.shade600)),
+                      Text('No tienes notificaciones', style: TextStyle(color: Colors.grey.shade600)),
                     ],
                   ),
                 ),
@@ -217,7 +326,6 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
         ),
         child: Stack(
           children: [
-            // círculo decorativo
             Positioned(
               top: -40,
               right: -30,
@@ -238,8 +346,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        (widget.usuario?['rol']?.toString().toUpperCase() ??
-                                'ADMINISTRADOR') +
+                        (widget.usuario?['rol']?.toString().toUpperCase() ?? 'ADMINISTRADOR') +
                             ' · NOTIFICACIONES',
                         style: const TextStyle(
                           color: AppColors.dorado,
@@ -258,11 +365,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                         ),
                         child: Text(
                           '$_totalNuevas nuevas',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 11,
-                          ),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11),
                         ),
                       ),
                   ],
@@ -270,11 +373,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                 const SizedBox(height: 8),
                 const Text(
                   'Notificaciones',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -286,15 +385,13 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => _mostrarProximamente('Nueva notificación'),
+                        onPressed: _abrirNuevaNotificacion,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.dorado,
                           foregroundColor: Colors.black87,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                         ),
                         icon: const Icon(Icons.add, size: 17),
                         label: const Text(
@@ -313,9 +410,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                           foregroundColor: Colors.white,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                         ),
                         icon: const Icon(Icons.check, size: 17),
                         label: const Text(
@@ -357,10 +452,6 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   }
 
   // ---------- TARJETA DE NOTIFICACIÓN ----------
-  // Nota: la franja de color superior se separa del borde (Container aparte
-  // dentro de una Column, no un Border con colores distintos + borderRadius)
-  // para evitar el error de Flutter "borderRadius can only be given on
-  // borders with uniform colors" que rompía el pintado en Movimientos.
   Widget _tarjetaNotificacion(Notificacion n) {
     final colores = _coloresTipo(n.tipo);
     final colorPrincipal = colores['texto'] as Color;
@@ -372,10 +463,8 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
         borderRadius: BorderRadius.circular(14),
         child: Container(
           decoration: BoxDecoration(
-            color: n.leida ? Colors.white : colorFondo,
-            border: Border.all(
-              color: colorPrincipal.withValues(alpha: n.leida ? 0.25 : 0.5),
-            ),
+            color: n.leido ? Colors.white : colorFondo,
+            border: Border.all(color: colorPrincipal.withValues(alpha: n.leido ? 0.25 : 0.5)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
@@ -387,9 +476,9 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(height: 3, color: colorPrincipal), // franja superior
+              Container(height: 3, color: colorPrincipal),
               InkWell(
-                onTap: n.leida ? null : () => _marcarLeida(n),
+                onTap: n.leido ? null : () => _marcarLeida(n),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
@@ -401,15 +490,8 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                           Container(
                             width: 26,
                             height: 26,
-                            decoration: BoxDecoration(
-                              color: colorFondo,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              _iconoTipo(n.tipo),
-                              size: 14,
-                              color: colorPrincipal,
-                            ),
+                            decoration: BoxDecoration(color: colorFondo, shape: BoxShape.circle),
+                            child: Icon(_iconoTipo(n.tipo), size: 14, color: colorPrincipal),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -417,16 +499,8 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                               padding: const EdgeInsets.only(top: 4),
                               child: Text(
                                 n.titulo,
-                                style:
-                                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                               ),
-                            ),
-                          ),
-                          InkWell(
-                            onTap: () => _eliminar(n),
-                            child: const Padding(
-                              padding: EdgeInsets.all(2),
-                              child: Icon(Icons.close, size: 16, color: AppColors.textoMuted),
                             ),
                           ),
                         ],
@@ -440,41 +514,30 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Container(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 color: colorPrincipal.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
                                 _etiquetaTipo(n.tipo),
-                                style: TextStyle(
-                                  color: colorPrincipal,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 10,
-                                ),
+                                style: TextStyle(color: colorPrincipal, fontWeight: FontWeight.w700, fontSize: 10),
                               ),
                             ),
                             Text(
                               _tiempoRelativo(n.fecha),
-                              style: const TextStyle(
-                                  fontSize: 11, color: AppColors.textoMuted),
+                              style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
                             ),
-                            if (!n.leida)
+                            if (!n.leido)
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: AppColors.rojo,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: const Text(
                                   'Nueva',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 10,
-                                  ),
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 10),
                                 ),
                               ),
                           ],
@@ -484,9 +547,8 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                       Padding(
                         padding: const EdgeInsets.only(left: 34),
                         child: Text(
-                          n.mensaje,
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.black87, height: 1.35),
+                          n.descripcion,
+                          style: const TextStyle(fontSize: 12, color: Colors.black87, height: 1.35),
                         ),
                       ),
                     ],

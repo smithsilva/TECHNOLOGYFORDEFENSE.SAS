@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../widgets/t4d_sidebar.dart';
 import '../../widgets/contadora/contadora_appbar.dart';
+import '../../widgets/admin/notificaciones_bottom_sheet.dart';
+import '../admin/notificaciones_screen.dart' hide AppColors;
 import 'inventario_contadora_screen.dart' hide AppColors; // -> class InventarioContadoraScreen
 
 import 'Empleados screen.dart' hide AppColors; // -> class EmpleadosScreen
@@ -59,6 +61,25 @@ class _MainShellContadoraState extends State<MainShellContadora> {
     // Usa el callback centralizado en main.dart (limpia SharedPreferences
     // y vuelve a la vista 'login'), igual que MainShell y MainShellGerente.
     widget.onLogout?.call();
+  }
+
+  // Contadora no tiene pestaña propia de "Notificaciones" en el sidebar,
+  // así que "Ver todas" dentro del bottom sheet abre la pantalla completa
+  // encima (reutilizando la misma NotificacionesScreen de Admin).
+  void _abrirNotificacionesCompleto() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF13161F),
+            foregroundColor: Colors.white,
+            title: const Text('Notificaciones'),
+          ),
+          body: NotificacionesScreen(usuario: widget.usuario),
+        ),
+      ),
+    );
   }
 
   @override
@@ -141,7 +162,10 @@ class _MainShellContadoraState extends State<MainShellContadora> {
                             IconButton(
                               icon: const Icon(Icons.notifications_none,
                                   color: Colors.white),
-                              onPressed: () {},
+                              onPressed: () => mostrarNotificacionesBottomSheet(
+                                context,
+                                onVerTodas: _abrirNotificacionesCompleto,
+                              ),
                             ),
                           ],
                         ),
@@ -161,6 +185,10 @@ class _MainShellContadoraState extends State<MainShellContadora> {
           appBar: ContadoraAppBar(
             titulo: _menu[_indiceActual].label,
             nombreUsuario: nombre.toString(),
+            onNotificationsTap: () => mostrarNotificacionesBottomSheet(
+              context,
+              onVerTodas: _abrirNotificacionesCompleto,
+            ),
           ),
           drawer: Drawer(
             backgroundColor: Colors.transparent,

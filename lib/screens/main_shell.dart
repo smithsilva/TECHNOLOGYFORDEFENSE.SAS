@@ -9,6 +9,7 @@ import './admin/gestion_usuarios_screen.dart';
 import './admin/registro_usuarios_screen.dart';
 import '../widgets/compartido/inventario_header.dart';
 import '../widgets/admin/admin_panel_drawer.dart';
+import '../widgets/admin/notificaciones_bottom_sheet.dart';
 
 class AppColors {
   static const dorado = Color(0xFFD4A743);
@@ -84,10 +85,13 @@ class _MainShellState extends State<MainShell> {
       appBar: InventarioHeader(
         titulo: _titulos[_indiceActual],
         usuario: widget.usuario,
-        // Antes tenía el índice 3 fijo ("hardcodeado"), lo que se
-        // desincroniza cada vez que agregas/quitas una sección.
-        // Ahora reutiliza _irASeccion() con la clave, igual que el Drawer.
-        onNotificaciones: () => _irASeccion('notificaciones'),
+        // Ahora abre el bottom sheet de notificaciones. Si el usuario
+        // toca "Ver todas" dentro del sheet, ahí sí navega a la
+        // pantalla completa reutilizando _irASeccion(), igual que el Drawer.
+        onNotificaciones: () => mostrarNotificacionesBottomSheet(
+          context,
+          onVerTodas: () => _irASeccion('notificaciones'),
+        ),
         onLogout: widget.onLogout,
       ),
       drawer: PanelDrawer(

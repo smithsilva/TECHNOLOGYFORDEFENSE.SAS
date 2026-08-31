@@ -4,23 +4,6 @@ import 'auth_service.dart';
 import '../models/producto.dart';
 import '../models/historial_precio.dart';
 
-/// Servicio para consumir la API de Historial de Precios.
-/// Misma URL base, API key y token JWT que el resto de servicios (ver CategoriasService).
-///
-/// Rutas del backend (montadas bajo `/historial-precios`):
-///   GET    /historial-precios/productos
-///   POST   /historial-precios/productos            (admin, gerente)
-///   PUT    /historial-precios/productos/:id         (admin, gerente)
-///   PATCH  /historial-precios/productos/:id/estado  (solo admin)
-///   DELETE /historial-precios/productos/:id         (solo admin)
-///   GET    /historial-precios            (soporta ?id_producto=)
-///   DELETE /historial-precios/:id                   (solo admin)
-///
-/// Nota importante: el endpoint /productos de este módulo solo devuelve
-/// `id_producto, nombre_producto, precio_actual, activo` (no todo lo que trae
-/// el `Producto` de inventario general). `Producto.fromJson` funciona igual
-/// porque el resto de campos son opcionales/con default, simplemente quedan
-/// sin llenar (descripcion, stock, categoría, etc. quedarán null/0).
 class HistorialPreciosService {
   static const String _baseUrl = '${AuthService.apiUrl}/historial-precios';
   static const String _apiKey = AuthService.apiKey;
