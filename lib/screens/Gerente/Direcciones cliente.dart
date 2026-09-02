@@ -1,19 +1,34 @@
 import 'package:flutter/material.dart';
 
-
-
 class AppColorsDir {
-  static const dorado = Color(0xFFD4A743);
-  static const doradoOscuro = Color(0xFF8C6B3F);
-  static const doradoClaro = Color(0xFFE7C98A);
-  static const fondo = Color(0xFFF7F1E3);
-  static const encabezado = Color(0xFF13202E);
+  // ---- Paleta nueva ----
+  static const dorado = Color(0xFFC9962E);
+  static const doradoOscuro = Color(0xFF8C6B2E);
+  static const doradoClaro = Color(0xFFE8C97A);
+  static const doradoMezcla = Color(0xFFAB812E); // punto medio dorado/doradoOscuro
+  static const fondo = Color(0xFFFAF3E4);
 
-  // Colores auxiliares
-  static const verde = Color(0xFF2E7D32);
-  static const verdeFondo = Color(0xFFE3F3E5);
-  static const rojo = Color(0xFFC62828);
-  static const grisTexto = Color(0xFF6B7280);
+  static const navyOscuro = Color(0xFF0F1B2E);
+  static const navyClaro = Color(0xFF16233A);
+  static const subtitulo = Color(0xFF8FA3C4);
+
+  static const verde = Color(0xFF2E9E5B);
+  static const verdeFondo = Color(0xFFDDF2E1);
+
+  static const naranja = Color(0xFFA17A2E);
+  static const naranjaFondo = Color(0xFFF5E3C3);
+
+  static const rojo = Color(0xFFC0293B);
+  static const rojoFondo = Color(0xFFFADCE0);
+
+  static const textoMuted = Color(0xFF6B7280);
+  static const enlace = Color(0xFF2563EB);
+
+  // Alias usados en el resto del archivo (no cambian nombres para
+  // no tener que tocar cada referencia). Ahora apuntan a la paleta nueva.
+  static const encabezado = navyOscuro; // header + texto oscuro
+  static const verdeFondoAlias = verdeFondo;
+  static const grisTexto = textoMuted;
 }
 
 // ==================== MODELOS ====================
@@ -258,7 +273,7 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
       elevation: 0,
       titleSpacing: 0,
       leading: IconButton(
-        icon: const Icon(Icons.menu, color: Colors.white),
+        icon: const Icon(Icons.menu_rounded, color: Colors.white),
         onPressed: () {},
       ),
       title: Row(
@@ -309,83 +324,69 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.notifications_none, color: Colors.white),
+          icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
           onPressed: () {},
-        ),
-        Padding(
-          padding: const EdgeInsets.only(right: 12),
-          child: Row(
-            children: [
-              const CircleAvatar(
-                radius: 14,
-                backgroundColor: AppColorsDir.dorado,
-                child: Icon(Icons.person, size: 16, color: AppColorsDir.encabezado),
-              ),
-              const SizedBox(width: 6),
-              const Text('Gerente', style: TextStyle(color: Colors.white, fontSize: 13)),
-            ],
-          ),
         ),
       ],
     );
   }
 
   // ------------------------------------------------------------
-  // TÍTULO + BOTÓN "Agregar dirección" (igual estructura que
-  // Exportar/Actualizar en Movimientos)
+  // CUADRO "Direcciones del cliente" — recuadro navy con borde
+  // dorado, título, subtítulo, estrellas y botones. (ÚNICO CAMBIO
+  // solicitado: se agregó este recuadro tal como en la imagen)
   // ------------------------------------------------------------
   Widget _buildTituloYAcciones() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Direcciones del Cliente',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColorsDir.encabezado,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColorsDir.navyOscuro,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColorsDir.dorado, width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Direcciones del cliente',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColorsDir.doradoClaro,
+            ),
           ),
-        ),
-        const SizedBox(height: 2),
-        const Text(
-          'Gestión y administración de direcciones registradas por los clientes',
-          style: TextStyle(fontSize: 13, color: AppColorsDir.grisTexto),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, size: 18, color: AppColorsDir.encabezado),
-                label: const Text(
-                  'Agregar dirección',
-                  style: TextStyle(color: AppColorsDir.encabezado, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColorsDir.dorado,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.refresh, size: 18, color: AppColorsDir.encabezado),
-                label: const Text('Actualizar', style: TextStyle(color: AppColorsDir.encabezado)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColorsDir.dorado),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          const SizedBox(height: 4),
+          const Text(
+            'Gestión y administración de direcciones registradas por los clientes',
+            style: TextStyle(fontSize: 12.5, color: AppColorsDir.subtitulo, height: 1.35),
+          ),
+          const SizedBox(height: 8),
+          const Row(
+            children: [
+              Icon(Icons.star_rounded, size: 16, color: AppColorsDir.dorado),
+              Icon(Icons.star_rounded, size: 16, color: AppColorsDir.dorado),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _GoldButton(
+                  icon: Icons.add_location_alt_rounded,
+                  label: 'Agregar dirección',
+                  onTap: () {},
+                  expand: true,
                 ),
               ),
-            ),
-          ],
-        ),
-      ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ActualizarButtonOscuro(onTap: () {}),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -397,7 +398,7 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
       children: [
         Expanded(
           child: _StatCard(
-            icon: Icons.people_alt_rounded,
+            icon: Icons.groups_rounded,
             value: '$_totalClientes',
             label: 'Total clientes',
           ),
@@ -405,7 +406,7 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
         const SizedBox(width: 10),
         Expanded(
           child: _StatCard(
-            icon: Icons.location_on,
+            icon: Icons.location_on_rounded,
             value: '$_totalDirecciones',
             label: 'Total direcciones',
           ),
@@ -413,7 +414,7 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
         const SizedBox(width: 10),
         Expanded(
           child: _StatCard(
-            icon: Icons.star,
+            icon: Icons.star_rounded,
             value: '$_totalPrincipales',
             label: 'Direcciones\nprincipales',
           ),
@@ -438,7 +439,7 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
         children: [
           Row(
             children: const [
-              Icon(Icons.filter_alt_outlined, color: AppColorsDir.dorado, size: 18),
+              Icon(Icons.manage_search_rounded, color: AppColorsDir.dorado, size: 18),
               SizedBox(width: 6),
               Text(
                 'Buscar cliente',
@@ -453,7 +454,7 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
             decoration: InputDecoration(
               hintText: 'Buscar por nombre o documento...',
               hintStyle: const TextStyle(fontSize: 13, color: AppColorsDir.grisTexto),
-              prefixIcon: const Icon(Icons.search, color: AppColorsDir.grisTexto),
+              prefixIcon: const Icon(Icons.search_rounded, color: AppColorsDir.grisTexto),
               filled: true,
               fillColor: AppColorsDir.fondo,
               contentPadding: const EdgeInsets.symmetric(vertical: 0),
@@ -551,6 +552,44 @@ class _OutlineButton extends StatelessWidget {
                   style: const TextStyle(color: AppColorsDir.encabezado, fontWeight: FontWeight.w600, fontSize: 12),
                   overflow: TextOverflow.ellipsis,
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Botón de borde blanco para usar SOLO dentro del recuadro navy nuevo,
+// así el _OutlineButton original (usado en "Editar cliente") no cambia.
+class _ActualizarButtonOscuro extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _ActualizarButtonOscuro({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.white54),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.refresh_rounded, size: 16, color: Colors.white),
+              SizedBox(width: 6),
+              Text(
+                'Actualizar',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
               ),
             ],
           ),
@@ -683,7 +722,7 @@ class ClientCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(Icons.calendar_today, size: 11, color: AppColorsDir.grisTexto),
+                        const Icon(Icons.event_rounded, size: 11, color: AppColorsDir.grisTexto),
                         const SizedBox(width: 3),
                         Text(client.date, style: const TextStyle(fontSize: 10.5, color: AppColorsDir.grisTexto)),
                       ],
@@ -702,7 +741,7 @@ class ClientCard extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.phone, size: 13, color: AppColorsDir.grisTexto),
+                    const Icon(Icons.call_rounded, size: 13, color: AppColorsDir.grisTexto),
                     const SizedBox(width: 4),
                     Text(client.phone, style: const TextStyle(fontSize: 12, color: AppColorsDir.encabezado)),
                   ],
@@ -710,7 +749,7 @@ class ClientCard extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.email_outlined, size: 13, color: AppColorsDir.grisTexto),
+                    const Icon(Icons.mail_outline_rounded, size: 13, color: AppColorsDir.grisTexto),
                     const SizedBox(width: 4),
                     Text(client.email, style: const TextStyle(fontSize: 12, color: AppColorsDir.encabezado)),
                   ],
@@ -736,11 +775,11 @@ class ClientCard extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: _GoldButton(icon: Icons.add, label: 'Agregar dirección', onTap: () {}, expand: true),
+                  child: _GoldButton(icon: Icons.add_location_alt_rounded, label: 'Agregar dirección', onTap: () {}, expand: true),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _OutlineButton(icon: Icons.edit, label: 'Editar cliente', onTap: () {}),
+                  child: _OutlineButton(icon: Icons.manage_accounts_rounded, label: 'Editar cliente', onTap: () {}),
                 ),
               ],
             ),
@@ -752,6 +791,16 @@ class ClientCard extends StatelessWidget {
 }
 
 // ==================== TABLA DE DIRECCIONES ====================
+// Ancho total fijo de la tabla. En pantallas angostas, el usuario puede
+// deslizar el dedo hacia los lados para ver todas las columnas, en vez
+// de que el ID y la Dirección se corten y solo se vea Barrio/Est/Acc.
+const double _tableWidth = 460;
+const double _colId = 40;
+const double _colDireccion = 190;
+const double _colBarrio = 110;
+const double _colEstado = 56;
+const double _colAcciones = 48;
+
 class _AddressTable extends StatelessWidget {
   final List<AddressModel> addresses;
 
@@ -759,29 +808,35 @@ class _AddressTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-            color: AppColorsDir.encabezado,
-            border: Border(
-              top: BorderSide(color: AppColorsDir.dorado, width: 1),
-              bottom: BorderSide(color: AppColorsDir.dorado, width: 1),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(
+        width: _tableWidth,
+        child: Column(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                color: AppColorsDir.encabezado,
+                border: Border(
+                  top: BorderSide(color: AppColorsDir.dorado, width: 1),
+                  bottom: BorderSide(color: AppColorsDir.dorado, width: 1),
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: const Row(
+                children: [
+                  SizedBox(width: _colId, child: Text('ID', style: _headerStyle)),
+                  SizedBox(width: _colDireccion, child: Text('Dirección / Ciudad', style: _headerStyle)),
+                  SizedBox(width: _colBarrio, child: Text('Barrio', style: _headerStyle)),
+                  SizedBox(width: _colEstado, child: Text('Est.', style: _headerStyle)),
+                  SizedBox(width: _colAcciones, child: Text('Acc.', style: _headerStyle)),
+                ],
+              ),
             ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: const Row(
-            children: [
-              SizedBox(width: 30, child: Text('ID', style: _headerStyle)),
-              Expanded(flex: 3, child: Text('Dirección / Ciudad', style: _headerStyle)),
-              Expanded(flex: 2, child: Text('Barrio', style: _headerStyle)),
-              SizedBox(width: 46, child: Text('Est.', style: _headerStyle)),
-              SizedBox(width: 44, child: Text('Acc.', style: _headerStyle)),
-            ],
-          ),
+            ...addresses.map((a) => _AddressRow(address: a)),
+          ],
         ),
-        ...addresses.map((a) => _AddressRow(address: a)),
-      ],
+      ),
     );
   }
 }
@@ -804,47 +859,50 @@ class _AddressRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 30,
+            width: _colId,
             child: Text(
               address.id,
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColorsDir.encabezado),
             ),
           ),
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(address.street, style: const TextStyle(fontSize: 12, color: AppColorsDir.encabezado)),
-                Text(address.city, style: const TextStyle(fontSize: 11, color: AppColorsDir.grisTexto)),
-                Text(
-                  address.note,
-                  style: const TextStyle(fontSize: 10.5, fontStyle: FontStyle.italic, color: AppColorsDir.grisTexto),
-                ),
-                if (address.isPrincipal)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.star, size: 11, color: AppColorsDir.dorado),
-                        SizedBox(width: 2),
-                        Text(
-                          'Principal',
-                          style: TextStyle(fontSize: 10.5, color: AppColorsDir.doradoOscuro, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
+          SizedBox(
+            width: _colDireccion,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(address.street, style: const TextStyle(fontSize: 12, color: AppColorsDir.encabezado)),
+                  Text(address.city, style: const TextStyle(fontSize: 11, color: AppColorsDir.grisTexto)),
+                  Text(
+                    address.note,
+                    style: const TextStyle(fontSize: 10.5, fontStyle: FontStyle.italic, color: AppColorsDir.grisTexto),
                   ),
-              ],
+                  if (address.isPrincipal)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.star_rounded, size: 11, color: AppColorsDir.dorado),
+                          SizedBox(width: 2),
+                          Text(
+                            'Principal',
+                            style: TextStyle(fontSize: 10.5, color: AppColorsDir.doradoOscuro, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-          Expanded(
-            flex: 2,
+          SizedBox(
+            width: _colBarrio,
             child: Text(address.neighborhood, style: const TextStyle(fontSize: 12, color: AppColorsDir.encabezado)),
           ),
           SizedBox(
-            width: 46,
+            width: _colEstado,
             child: _Badge(
               text: address.status,
               bg: AppColorsDir.doradoClaro.withOpacity(0.4),
@@ -852,17 +910,17 @@ class _AddressRow extends StatelessWidget {
             ),
           ),
           SizedBox(
-            width: 44,
+            width: _colAcciones,
             child: Row(
               children: [
                 InkWell(
                   onTap: () {},
-                  child: const Icon(Icons.edit, size: 15, color: AppColorsDir.grisTexto),
+                  child: const Icon(Icons.edit_rounded, size: 15, color: AppColorsDir.grisTexto),
                 ),
                 const SizedBox(width: 6),
                 InkWell(
                   onTap: () {},
-                  child: const Icon(Icons.delete, size: 15, color: AppColorsDir.grisTexto),
+                  child: const Icon(Icons.delete_outline_rounded, size: 15, color: AppColorsDir.rojo),
                 ),
               ],
             ),
