@@ -1,35 +1,50 @@
 import 'package:flutter/material.dart';
 
-// ============================================================
-// PALETA DE COLORES (definida aquí mismo, sin depender de otro
-// archivo, para que esta pantalla compile de forma independiente)
-// ============================================================
 class AppColors {
   AppColors._();
 
   // Fondo general de la app
-  static const Color fondo = Color(0xFFF7F8FA);
+  static const Color fondo = Color(0xFFFAF3E4);
 
   // Header oscuro superior
-  static const Color encabezado = Color(0xFF0B1F3A);
+  static const Color encabezado = Color(0xFF0F1B2E);
+  static const Color navyClaro = Color(0xFF16233A);
+  static const Color subtitulo = Color(0xFF8FA3C4);
 
   // Dorado (marca / acentos)
-  static const Color dorado = Color(0xFFC9A227);
-  static const Color doradoClaro = Color(0xFFF0E6C8);
-  static const Color doradoOscuro = Color(0xFF8A6D1E);
+  static const Color dorado = Color(0xFFC9962E);
+  static const Color doradoClaro = Color(0xFFE8C97A);
+  static const Color doradoOscuro = Color(0xFF8C6B2E);
+  // Punto medio exacto entre dorado y doradoOscuro
+  static const Color doradoMezcla = Color(0xFFAB812E);
 
   // Básicos
   static const Color white = Colors.white;
   static const Color textDark = Color(0xFF111827);
   static const Color grayText = Color(0xFF6B7280);
-  static const Color neutral = Color(0xFF4B5563);
-  static const Color orange = Color(0xFFF59E0B);
+  static const Color textoMuted = Color(0xFF6B7280);
+  static const Color neutral = grayText; // actualizado según nueva paleta
+  static const Color orange = doradoOscuro; // actualizado según nueva paleta
+  static const Color naranjaFondo = Color(0xFFF5E3C3);
 
   // Estados
-  static const Color green = Color(0xFF16A34A);
-  static const Color greenBg = Color(0xFFDCFCE7);
-  static const Color red = Color(0xFFDC2626);
-  static const Color redBg = Color(0xFFFEE2E2);
+  static const Color green = Color(0xFF2E9E5B);
+  static const Color greenBg = Color(0xFFDDF2E1);
+  static const Color red = Color(0xFFC0293B);
+  static const Color redBg = Color(0xFFFADCE0);
+  static const Color enlace = Color(0xFF2563EB);
+
+  // ---- Nueva paleta unificada (aliases adicionales) ----
+  static const navy = encabezado;
+  static const background = fondo;
+  static const panelDark = encabezado;
+  static const gold = dorado;
+  static const goldLight = doradoClaro;
+  static const goldDark = doradoOscuro;
+  static const goldBg = doradoClaro;
+  static const borderLight = dorado;
+  static const cardWhiteSubtitle = grayText;
+  static const orangeBg = doradoClaro;
 }
 
 // ============================================================
@@ -58,9 +73,9 @@ extension DocTypeData on DocType {
       case DocType.ce:
         return AppColors.orange;
       case DocType.pasaporte:
-        return const Color(0xFF7C3AED);
+        return AppColors.doradoMezcla;
       case DocType.nit:
-        return const Color(0xFF0D9488);
+        return AppColors.doradoOscuro;
     }
   }
 }
@@ -95,16 +110,17 @@ class ClientRecord {
   }
 }
 
-// Paleta usada para los avatares (colorida, decorativa; se deja
-// igual porque identifica visualmente a cada cliente).
+// Paleta de avatares dentro de la familia dorado/navy (ya no colores
+// random tipo arcoíris; usa tonos derivados de la marca para que se
+// vea coherente y no "genérico").
 const List<Color> _avatarPalette = [
-  Color(0xFF8B5CF6), // morado
-  Color(0xFFF59E0B), // naranja
-  Color(0xFF2563EB), // azul (solo decorativo de avatar)
-  Color(0xFFEF4444), // rojo
-  Color(0xFF10B981), // verde
-  Color(0xFF0EA5E9), // celeste
-  Color(0xFFEC4899), // rosado
+  AppColors.doradoMezcla,
+  AppColors.doradoOscuro,
+  Color(0xFF2F4B78), // azul navy derivado, para dar variedad sutil
+  AppColors.dorado,
+  Color(0xFF3D6B57), // verde apagado, en línea con AppColors.green
+  Color(0xFF6B5B3D), // marrón dorado oscuro
+  Color(0xFF4A3F6B), // morado apagado, para variar sin romper la paleta
 ];
 
 // Datos tomados de las capturas enviadas.
@@ -271,7 +287,6 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
 
   // ------------------------------------------------------------
   // FILTRADO: aplica búsqueda de texto + estado sobre mockClients.
-  // Antes esto no existía y la tabla siempre mostraba todo.
   // ------------------------------------------------------------
   List<ClientRecord> get _filteredClients {
     final query = _searchController.text.trim().toLowerCase();
@@ -292,7 +307,6 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
   @override
   void initState() {
     super.initState();
-    // Redibuja la lista cada vez que el usuario escribe en el buscador.
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -312,16 +326,18 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
     super.dispose();
   }
 
-  // NOTA: aquí ya NO se llama el panel con el título "Gestión de Clientes".
-  // Ese título ya aparece una sola vez en el header oscuro junto al logo
-  // (como "Cliente"). Se conservan las estadísticas y el botón "Nuevo
-  // Cliente" dentro de _StatsAndActionCard, sin repetir el texto.
   Widget _buildContent(BuildContext context) {
     final filtered = _filteredClients;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
       children: [
+        const _PageHeaderCard(
+          eyebrow: 'ADMINISTRADOR - CLIENTES',
+          title: 'Gestión de Clientes',
+          subtitle: 'Administra la información de tus clientes',
+        ),
+        const SizedBox(height: 14),
         _StatsAndActionCard(total: total, activos: activos, esteMes: esteMes, direcciones: direcciones),
         const SizedBox(height: 14),
         _FiltersCard(
@@ -376,7 +392,75 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
 }
 
 // ============================================================
-// HEADER SUPERIOR (único lugar con el título)
+// TARJETA DE ENCABEZADO ESTILO "HISTORIAL DE PRECIOS"
+// Fondo azul marino oscuro, etiqueta dorada, título blanco,
+// subtítulo azul claro y dos estrellitas doradas.
+// ============================================================
+class _PageHeaderCard extends StatelessWidget {
+  final String eyebrow;
+  final String title;
+  final String subtitle;
+
+  const _PageHeaderCard({
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.navy,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            eyebrow.toUpperCase(),
+            style: const TextStyle(
+              color: AppColors.gold,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: AppColors.subtitulo,
+              fontSize: 12.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: const [
+              Icon(Icons.star_rounded, size: 14, color: AppColors.gold),
+              SizedBox(width: 3),
+              Icon(Icons.star_rounded, size: 14, color: AppColors.gold),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================
+// HEADER SUPERIOR
 // ============================================================
 class _TopHeader extends StatelessWidget {
   const _TopHeader();
@@ -394,7 +478,7 @@ class _TopHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               child: const Padding(
                 padding: EdgeInsets.all(6),
-                child: Icon(Icons.menu, color: Colors.white, size: 22),
+                child: Icon(Icons.menu_rounded, color: Colors.white, size: 22),
               ),
             ),
           ),
@@ -432,18 +516,18 @@ class _TopHeader extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.notifications_none, color: Colors.white, size: 20),
+          const Icon(Icons.notifications_none_rounded, color: AppColors.subtitulo, size: 20),
           const SizedBox(width: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(color: AppColors.navyClaro, borderRadius: BorderRadius.circular(20)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: const [
                 CircleAvatar(
                   radius: 9,
                   backgroundColor: AppColors.dorado,
-                  child: Icon(Icons.person, size: 11, color: AppColors.encabezado),
+                  child: Icon(Icons.person_rounded, size: 11, color: AppColors.encabezado),
                 ),
                 SizedBox(width: 5),
                 Text('Gerente', style: TextStyle(color: Colors.white, fontSize: 11.5)),
@@ -458,7 +542,6 @@ class _TopHeader extends StatelessWidget {
 
 // ============================================================
 // TARJETA DE ESTADÍSTICAS + BOTÓN "NUEVO CLIENTE"
-// (sin título, para no repetir "Gestión de Clientes" / "Cliente")
 // ============================================================
 class _StatsAndActionCard extends StatelessWidget {
   final int total;
@@ -505,7 +588,7 @@ class _StatsAndActionCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              icon: const Icon(Icons.add, size: 16),
+              icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
               label: const Text('Nuevo Cliente', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
             ),
           ),
@@ -517,9 +600,8 @@ class _StatsAndActionCard extends StatelessWidget {
                   label: 'registrados',
                   title: 'Total Clientes',
                   value: '$total',
-                  icon: Icons.people_outline,
-                  iconColor: const Color(0xFF9CA3AF),
-                  iconBg: const Color(0xFFF3F4F6),
+                  icon: Icons.contact_page_outlined,
+                  accentColor: AppColors.dorado,
                 ),
               ),
               const SizedBox(width: 10),
@@ -528,9 +610,8 @@ class _StatsAndActionCard extends StatelessWidget {
                   label: 'clientes activos',
                   title: 'Activos',
                   value: '$activos',
-                  icon: Icons.check_circle_outline,
-                  iconColor: AppColors.green,
-                  iconBg: AppColors.greenBg,
+                  icon: Icons.task_alt_rounded,
+                  accentColor: AppColors.green,
                 ),
               ),
             ],
@@ -543,20 +624,18 @@ class _StatsAndActionCard extends StatelessWidget {
                   label: 'nuevos registros',
                   title: 'Este Mes',
                   value: '$esteMes',
-                  icon: Icons.calendar_today_outlined,
-                  iconColor: const Color(0xFF9CA3AF),
-                  iconBg: const Color(0xFFF3F4F6),
+                  icon: Icons.event_note_rounded,
+                  accentColor: AppColors.orange,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _StatBox(
-                  label: 'registrados',
+                  label: 'registradas',
                   title: 'Direcciones',
                   value: '$direcciones',
-                  icon: Icons.location_on_outlined,
-                  iconColor: AppColors.doradoOscuro,
-                  iconBg: AppColors.doradoClaro,
+                  icon: Icons.map_outlined,
+                  accentColor: AppColors.doradoOscuro,
                 ),
               ),
             ],
@@ -567,54 +646,50 @@ class _StatsAndActionCard extends StatelessWidget {
   }
 }
 
+// Tarjeta de estadística sin círculo de ícono (para evitar el look
+// genérico de dashboard-IA): borde de acento a la izquierda + ícono
+// pequeño alineado con el título.
 class _StatBox extends StatelessWidget {
   final String title;
   final String label;
   final String value;
   final IconData icon;
-  final Color iconColor;
-  final Color iconBg;
+  final Color accentColor;
 
   const _StatBox({
     required this.title,
     required this.label,
     required this.value,
     required this.icon,
-    required this.iconColor,
-    required this.iconBg,
+    required this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.fondo,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.dorado, width: 1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border(left: BorderSide(color: accentColor, width: 3)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontSize: 10.5, color: Color(0xFF6B7280))),
-                const SizedBox(height: 2),
-                Text(value,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF111827))),
-                Text(label, style: const TextStyle(fontSize: 10.5, color: Color(0xFF9CA3AF))),
-              ],
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(title,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 10.5, color: AppColors.textoMuted)),
+              ),
+              Icon(icon, size: 14, color: accentColor),
+            ],
           ),
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
-            alignment: Alignment.center,
-            child: Icon(icon, size: 17, color: iconColor),
-          ),
+          const SizedBox(height: 2),
+          Text(value, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+          Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF))),
         ],
       ),
     );
@@ -657,15 +732,13 @@ class _FiltersCard extends StatelessWidget {
         children: [
           Row(
             children: const [
-              Icon(Icons.filter_alt_outlined, size: 16, color: AppColors.dorado),
+              Icon(Icons.tune_rounded, size: 16, color: AppColors.dorado),
               SizedBox(width: 6),
               Text('Filtros y Búsqueda',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF111827))),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
             ],
           ),
           const SizedBox(height: 10),
-          // AnimatedBuilder asegura que el ícono de "borrar" (X) del campo
-          // aparezca/desaparezca según haya texto o no.
           AnimatedBuilder(
             animation: controller,
             builder: (context, _) {
@@ -675,11 +748,11 @@ class _FiltersCard extends StatelessWidget {
                 decoration: InputDecoration(
                   hintText: 'Buscar por nombre, documento o correo',
                   hintStyle: const TextStyle(fontSize: 11.5, color: AppColors.grayText),
-                  prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.grayText),
+                  prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppColors.grayText),
                   suffixIcon: controller.text.isEmpty
                       ? null
                       : IconButton(
-                          icon: const Icon(Icons.clear, size: 16, color: AppColors.grayText),
+                          icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.grayText),
                           onPressed: controller.clear,
                         ),
                   filled: true,
@@ -716,8 +789,8 @@ class _FiltersCard extends StatelessWidget {
                     child: DropdownButton<String>(
                       value: estado,
                       isExpanded: true,
-                      icon: const Icon(Icons.keyboard_arrow_down, size: 18, color: AppColors.grayText),
-                      style: const TextStyle(fontSize: 12.5, color: Color(0xFF111827)),
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.grayText),
+                      style: const TextStyle(fontSize: 12.5, color: AppColors.textDark),
                       items: _estados.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                       onChanged: (v) {
                         if (v != null) onEstadoChanged(v);
@@ -735,7 +808,7 @@ class _FiltersCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                icon: const Icon(Icons.close, size: 14),
+                icon: const Icon(Icons.close_rounded, size: 14),
                 label: const Text('Limpiar Filtros', style: TextStyle(fontSize: 11.5)),
               ),
             ],
@@ -747,7 +820,7 @@ class _FiltersCard extends StatelessWidget {
 }
 
 // ============================================================
-// ESTADO VACÍO (cuando la búsqueda/filtro no encuentra resultados)
+// ESTADO VACÍO
 // ============================================================
 class _EmptyState extends StatelessWidget {
   final VoidCallback onClear;
@@ -765,11 +838,11 @@ class _EmptyState extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(Icons.search_off, size: 34, color: AppColors.grayText),
+          const Icon(Icons.search_off_rounded, size: 34, color: AppColors.grayText),
           const SizedBox(height: 10),
           const Text(
             'No se encontraron clientes',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF111827)),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
           ),
           const SizedBox(height: 4),
           const Text(
@@ -785,7 +858,7 @@ class _EmptyState extends StatelessWidget {
               side: const BorderSide(color: AppColors.doradoClaro),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            icon: const Icon(Icons.close, size: 14),
+            icon: const Icon(Icons.close_rounded, size: 14),
             label: const Text('Limpiar Filtros', style: TextStyle(fontSize: 11.5)),
           ),
         ],
@@ -891,7 +964,7 @@ class _ClientRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(client.name,
-                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF111827))),
+                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                       Text(client.email,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 10.5, color: AppColors.neutral)),
@@ -900,7 +973,8 @@ class _ClientRow extends StatelessWidget {
                         children: [
                           Text(client.date, style: const TextStyle(fontSize: 10, color: AppColors.grayText)),
                           const SizedBox(width: 6),
-                          Icon(Icons.check_circle, size: 11, color: client.active ? AppColors.green : AppColors.grayText),
+                          Icon(Icons.check_circle_rounded,
+                              size: 11, color: client.active ? AppColors.green : AppColors.grayText),
                           const SizedBox(width: 2),
                           Text(
                             client.active ? 'Activo' : 'Inactivo',
@@ -917,15 +991,11 @@ class _ClientRow extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 4),
-          Column(
-            children: [
-              _ActionIcon(icon: Icons.remove_red_eye_outlined, bg: AppColors.doradoClaro, fg: AppColors.doradoOscuro, onTap: () {}),
-              const SizedBox(height: 4),
-              _ActionIcon(icon: Icons.edit_outlined, bg: AppColors.doradoClaro, fg: AppColors.doradoOscuro, onTap: () {}),
-              const SizedBox(height: 4),
-              _ActionIcon(icon: Icons.delete_outline, bg: AppColors.redBg, fg: AppColors.red, onTap: () {}),
-            ],
+          const SizedBox(width: 2),
+          _ClientActionsMenu(
+            onView: () {},
+            onEdit: () {},
+            onDelete: () {},
           ),
         ],
       ),
@@ -933,26 +1003,70 @@ class _ClientRow extends StatelessWidget {
   }
 }
 
-class _ActionIcon extends StatelessWidget {
-  final IconData icon;
-  final Color bg;
-  final Color fg;
-  final VoidCallback onTap;
+// Menú de acciones tipo lista nativa (un solo botón "⋮" que despliega
+// Ver / Editar / Eliminar) en vez de tres botones cuadrados apilados.
+class _ClientActionsMenu extends StatelessWidget {
+  final VoidCallback onView;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
-  const _ActionIcon({required this.icon, required this.bg, required this.fg, required this.onTap});
+  const _ClientActionsMenu({required this.onView, required this.onEdit, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(7),
-      child: Container(
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(7)),
-        alignment: Alignment.center,
-        child: Icon(icon, size: 13, color: fg),
-      ),
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert_rounded, size: 18, color: AppColors.grayText),
+      padding: EdgeInsets.zero,
+      splashRadius: 18,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      onSelected: (value) {
+        switch (value) {
+          case 'ver':
+            onView();
+            break;
+          case 'editar':
+            onEdit();
+            break;
+          case 'eliminar':
+            onDelete();
+            break;
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'ver',
+          height: 38,
+          child: Row(
+            children: [
+              Icon(Icons.visibility_outlined, size: 16, color: AppColors.doradoOscuro),
+              SizedBox(width: 8),
+              Text('Ver', style: TextStyle(fontSize: 12.5)),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'editar',
+          height: 38,
+          child: Row(
+            children: [
+              Icon(Icons.edit_outlined, size: 16, color: AppColors.doradoOscuro),
+              SizedBox(width: 8),
+              Text('Editar', style: TextStyle(fontSize: 12.5)),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'eliminar',
+          height: 38,
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.red),
+              SizedBox(width: 8),
+              Text('Eliminar', style: TextStyle(fontSize: 12.5, color: AppColors.red)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
