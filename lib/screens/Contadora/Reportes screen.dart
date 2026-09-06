@@ -1,173 +1,553 @@
 import 'package:flutter/material.dart';
+import '../../models/reporte.dart';
+// import '../services/reportes_service.dart'; // ← lo conectas cuando pases de mock a datos reales
 
-// ==================== PALETA DE COLORES ====================
 class AppColors {
-  static const dorado = Color(0xFFC9962E);
-  static const doradoOscuro = Color(0xFF8C6B2E);
-  static const doradoClaro = Color(0xFFE8C97A);
-  static const doradoMezcla = Color(0xFFAB812E); // punto medio dorado/doradoOscuro
-  static const fondo = Color(0xFFFAF3E4);
-
-  static const navyOscuro = Color(0xFF0F1B2E);
-  static const navyClaro = Color(0xFF16233A);
-  static const subtitulo = Color(0xFF8FA3C4);
-
-  static const verde = Color(0xFF2E9E5B);
-  static const verdeFondo = Color(0xFFDDF2E1);
-
-  static const naranja = Color(0xFFA17A2E);
-  static const naranjaFondo = Color(0xFFF5E3C3);
-
-  static const rojo = Color(0xFFC0293B);
-  static const rojoFondo = Color(0xFFFADCE0);
-
+  static const dorado = Color(0xFFD4A743);
+  static const doradoOscuro = Color(0xFF8C6B3F);
+  static const doradoClaro = Color(0xFFE7C98A);
+  static const fondo = Color(0xFFF7F1E3);
+  static const navy = Color(0xFF13202E);
+  static const navyOscuro = Color(0xFF101F3C);
+  static const navyClaro = Color(0xFF1B2B4E);
+  static const azul = Color(0xFF3B82F6);
+  static const morado = Color(0xFF8B5CF6);
+  static const verde = Color(0xFF1F9D55);
+  static const verdeFondo = Color(0xFFE3F7E9);
+  static const rojo = Color(0xFFC0392B);
+  static const rojoFondo = Color(0xFFFBE2DF);
+  static const naranja = Color(0xFFC98A1B);
+  static const naranjaFondo = Color(0xFFFBF0DD);
   static const textoMuted = Color(0xFF6B7280);
-  static const enlace = Color(0xFF2563EB);
-
-  // Púrpura: no viene en la paleta enviada, se conserva para
-  // diferenciar "Reparación" y "Sucursales", igual que en tus capturas.
-  static const purpura = Color(0xFF8B7FE8);
-
-  // Alias usados en esta pantalla
-  static const background = fondo;
-  static const navy = navyOscuro;
-  static const gold = dorado;
-  static const goldDark = doradoOscuro;
-  static const textDark = Color(0xFF111827);
-  static const textGrey = textoMuted;
-  static const white = Colors.white;
-  static const cardBorder = Color(0xFFEFEFF2);
-  static const cardShadow = Color(0x14000000);
-  static const barTrack = Color(0xFFF1F1F5);
+  static const subtitulo = Color(0xFF8FA3C4);
 }
 
-// ==================== MODELO ====================
-class MovimientoTipoModel {
-  final String nombre;
-  final int cantidad;
-  final double proporcion; // 0.0 - 1.0, relativo al máximo
-  final Color colorInicio;
-  final Color colorFin;
+class ReportesScreen extends StatefulWidget {
+  final Map<String, dynamic>? usuario;
 
-  const MovimientoTipoModel({
-    required this.nombre,
-    required this.cantidad,
-    required this.proporcion,
-    required this.colorInicio,
-    required this.colorFin,
-  });
+  const ReportesScreen({super.key, this.usuario});
+
+  @override
+  State<ReportesScreen> createState() => _ReportesScreenState();
 }
 
-const int totalMovimientos = 15;
-const String totalEgresos = '\$12.683.998';
-const int totalProveedores = 3;
-const int totalSucursales = 8;
+class _ReportesScreenState extends State<ReportesScreen> {
+  bool _cargando = false;
+  ResumenReporte? _resumen;
 
-final List<MovimientoTipoModel> movimientosPorTipoData = [
-  const MovimientoTipoModel(
-    nombre: 'Mantenimiento',
-    cantidad: 10,
-    proporcion: 1.0,
-    colorInicio: AppColors.enlace,
-    colorFin: AppColors.enlace,
-  ),
-  const MovimientoTipoModel(
-    nombre: 'Reparación',
-    cantidad: 4,
-    proporcion: 0.4,
-    colorInicio: AppColors.purpura,
-    colorFin: AppColors.purpura,
-  ),
-  const MovimientoTipoModel(
-    nombre: 'Blindamiento',
-    cantidad: 1,
-    proporcion: 0.1,
-    colorInicio: AppColors.dorado,
-    colorFin: AppColors.doradoOscuro,
-  ),
-];
+  // Conteo de estado general del inventario (mock, independiente del modelo
+  // ResumenReporte). Cuando conectes el backend, reemplázalos por los
+  // valores reales que te devuelva tu servicio (o agrégalos al modelo).
+  int _stockAlto = 8;
+  int _stockMedio = 2;
 
-// ==================== PANTALLA PRINCIPAL ====================
-class ReportesFinancierosScreen extends StatelessWidget {
-  const ReportesFinancierosScreen({super.key});
+  // Paleta cíclica para los puntos/barras de "Distribución por categoría"
+  static const List<Color> _coloresCategoria = [
+    AppColors.azul,
+    AppColors.azul,
+    AppColors.morado,
+    AppColors.naranja,
+    AppColors.rojo,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarReporte();
+  }
+
+  /// Por ahora carga datos de ejemplo (mock) para la parte visual.
+  /// Cuando conectes el backend, reemplaza el contenido de este método
+  /// por una llamada a tu ReportesService, por ejemplo:
+  ///
+  /// final data = await ReportesService().obtenerResumen();
+  /// setState(() => _resumen = data);
+  Future<void> _cargarReporte() async {
+    setState(() => _cargando = true);
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    setState(() {
+      _resumen = ResumenReporte(
+        totalProductos: 13,
+        valorTotal: 3280000,
+        stockBajo: 3,
+        movimientosPeriodo: 16,
+        categorias: [
+          CategoriaDistribucion(nombre: 'Blindaje Nivel 1', cantidad: 3),
+          CategoriaDistribucion(nombre: 'Blindaje Nivel 2', cantidad: 6),
+          CategoriaDistribucion(nombre: 'Blindaje Nivel 3', cantidad: 1),
+          CategoriaDistribucion(nombre: 'Blindaje Nivel 4', cantidad: 1),
+          CategoriaDistribucion(nombre: 'Blindaje Nivel 5', cantidad: 2),
+        ],
+        destacados: [
+          ProductoDestacado(
+            posicion: 1,
+            nombre: 'Kit de Embrague Toyota',
+            stock: 780000,
+            valor: 780000,
+            estado: 'alto',
+          ),
+          ProductoDestacado(
+            posicion: 2,
+            nombre: 'Neumático Todo Terreno 265/70R17',
+            stock: 16,
+            valor: 15200000,
+            estado: 'alto',
+          ),
+          ProductoDestacado(
+            posicion: 3,
+            nombre: 'Batería 12V 900A',
+            stock: 10,
+            valor: 5800000,
+            estado: 'bajo',
+          ),
+          ProductoDestacado(
+            posicion: 4,
+            nombre: 'Amortiguador Delantero Reforzado',
+            stock: 5,
+            valor: 1600000,
+            estado: 'bajo',
+          ),
+          ProductoDestacado(
+            posicion: 5,
+            nombre: 'Disco de Freno Delantero',
+            stock: 18,
+            valor: 3240000,
+            estado: 'alto',
+          ),
+        ],
+      );
+      _cargando = false;
+    });
+  }
+
+  void _mostrarProximamente(String accion) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$accion: próximamente')),
+    );
+  }
+
+  String _formatoMiles(num numero) {
+    final texto = numero.toStringAsFixed(0);
+    final buffer = StringBuffer();
+    for (var i = 0; i < texto.length; i++) {
+      final posDesdeFinal = texto.length - i;
+      buffer.write(texto[i]);
+      if (posDesdeFinal > 1 && posDesdeFinal % 3 == 1) buffer.write('.');
+    }
+    return buffer.toString();
+  }
+
+  /// Convierte un número grande a formato compacto tipo "$3.28M"
+  String _formatoCompacto(double numero) {
+    if (numero >= 1000000) {
+      return '\$${(numero / 1000000).toStringAsFixed(2)}M';
+    } else if (numero >= 1000) {
+      return '\$${(numero / 1000).toStringAsFixed(1)}K';
+    }
+    return '\$${numero.toStringAsFixed(0)}';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final r = _resumen;
+    final maxCantidad = r == null || r.categorias.isEmpty
+        ? 1
+        : r.categorias.map((c) => c.cantidad).reduce((a, b) => a > b ? a : b);
+
+    final rolCrudo = (widget.usuario?['rol'] ?? 'administrador').toString().toUpperCase();
+
     return Container(
-      color: AppColors.background,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
-        children: [
-          const _PageHeaderCard(
-            eyebrow: 'CONTADORA - REPORTES',
-            title: 'Reportes Financieros',
-            subtitle: 'Resumen contable del período',
-          ),
-          const SizedBox(height: 14),
-          _buildStatsGrid(),
-          const SizedBox(height: 14),
-          _buildMovimientosCard(),
-        ],
+      color: AppColors.fondo,
+      child: RefreshIndicator(
+        onRefresh: _cargarReporte,
+        child: _cargando || r == null
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Encabezado oscuro, igual estilo que el resto de la app
+                  _encabezado(rolCrudo),
+                  const SizedBox(height: 14),
+
+                  // Tarjetas de estadísticas (oscuras, con icono)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _tarjetaEstadistica(
+                          titulo: 'Total Productos',
+                          valor: '${r.totalProductos}',
+                          subtitulo: 'en inventario',
+                          color: AppColors.dorado,
+                          icono: Icons.inventory_2_outlined,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _tarjetaEstadistica(
+                          titulo: 'Valor Total',
+                          valor: _formatoCompacto(r.valorTotal),
+                          subtitulo: 'en stock',
+                          color: AppColors.azul,
+                          icono: Icons.account_balance_wallet_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _tarjetaEstadistica(
+                          titulo: 'Stock Crítico',
+                          valor: '${r.stockBajo}',
+                          subtitulo: 'productos en riesgo',
+                          color: AppColors.rojo,
+                          icono: Icons.warning_amber_rounded,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _tarjetaEstadistica(
+                          titulo: 'Movimientos',
+                          valor: '${r.movimientosPeriodo}',
+                          subtitulo: 'en el periodo',
+                          color: AppColors.verde,
+                          icono: Icons.sync_alt,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Distribución por categoría
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.doradoClaro),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _tituloConBarra('Distribución por Categoría'),
+                        const SizedBox(height: 14),
+                        ...r.categorias.asMap().entries.map((entry) {
+                          final indice = entry.key;
+                          final c = entry.value;
+                          final color = _coloresCategoria[indice % _coloresCategoria.length];
+                          final porcentaje =
+                              r.totalProductos == 0 ? 0 : (c.cantidad / r.totalProductos * 100);
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      margin: const EdgeInsets.only(right: 8),
+                                      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                                    ),
+                                    Expanded(
+                                      child: Text(
+                                        c.nombre,
+                                        style: const TextStyle(
+                                            fontSize: 13, fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                    Text(
+                                      '${c.cantidad} prod.',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.doradoOscuro,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${porcentaje.round()}%',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textoMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: LinearProgressIndicator(
+                                    value: c.cantidad / maxCantidad,
+                                    minHeight: 8,
+                                    backgroundColor: AppColors.fondo,
+                                    valueColor: AlwaysStoppedAnimation(color),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Productos destacados
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.doradoClaro),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _tituloConBarra('Productos Destacados'),
+                        const SizedBox(height: 10),
+                        ...r.destacados.map((p) => _filaDestacado(p)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Resumen de estado de stock (tarjeta oscura)
+                  _resumenEstadoStock(r.stockBajo),
+                ],
+              ),
       ),
     );
   }
 
-  Widget _buildStatsGrid() {
-    return Column(
-      children: [
-        Row(
+  // ---------------------------------------------------------------------
+  // ENCABEZADO OSCURO (mismo estilo que Historial de Precios / Inventario)
+  // ---------------------------------------------------------------------
+  Widget _encabezado(String rolCrudo) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.navyOscuro, AppColors.navyClaro],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Stack(
           children: [
-            Expanded(
-              child: _StatCard(
-                label: 'TOTAL MOVIMIENTOS',
-                value: '$totalMovimientos',
-                color: AppColors.gold,
+            Positioned(
+              top: -30,
+              right: -20,
+              child: Container(
+                width: 110,
+                height: 110,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.04),
+                ),
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _StatCard(
-                label: 'TOTAL EGRESOS',
-                value: totalEgresos,
-                color: AppColors.rojo,
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$rolCrudo · REPORTES',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.dorado,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Reportes del Sistema',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Resumen y estadísticas del inventario',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.65),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                label: 'PROVEEDORES',
-                value: '$totalProveedores',
-                color: AppColors.enlace,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _StatCard(
-                label: 'SUCURSALES',
-                value: '$totalSucursales',
-                color: AppColors.purpura,
-              ),
-            ),
-          ],
+      ),
+    );
+  }
+
+  Widget _tituloConBarra(String texto) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 16,
+          decoration: BoxDecoration(
+            color: AppColors.dorado,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          texto,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
       ],
     );
   }
 
-  Widget _buildMovimientosCard() {
+  Widget _tarjetaEstadistica({
+    required String titulo,
+    required String valor,
+    required String subtitulo,
+    required Color color,
+    required IconData icono,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.navy,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  titulo.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4,
+                    color: Colors.grey.shade400,
+                  ),
+                ),
+              ),
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icono, size: 16, color: color),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            valor,
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitulo,
+            style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _filaDestacado(ProductoDestacado p) {
+    final esAlto = p.estado == 'alto';
+    final colorEstado = esAlto ? AppColors.verde : AppColors.rojo;
+    final fondoEstado = esAlto ? AppColors.verdeFondo : AppColors.rojoFondo;
+    final textoEstado = esAlto ? 'Alto' : 'Bajo';
+    final esPrimero = p.posicion == 1;
+
+    return InkWell(
+      onTap: () => _mostrarProximamente('Ver "${p.nombre}"'),
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 26,
+              height: 26,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: esPrimero ? AppColors.dorado : AppColors.doradoClaro.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${p.posicion}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  color: esPrimero ? Colors.white : AppColors.doradoOscuro,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    p.nombre,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Stock: ${_formatoMiles(p.stock)} · \$${_formatoMiles(p.valor)}',
+                    style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: fondoEstado,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                textoEstado,
+                style: TextStyle(color: colorEstado, fontWeight: FontWeight.w600, fontSize: 11),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // RESUMEN DE ESTADO DE STOCK (tarjeta oscura con 3 columnas)
+  // ---------------------------------------------------------------------
+  Widget _resumenEstadoStock(int stockBajo) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.navy,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gold, width: 1.2),
-        boxShadow: const [
-          BoxShadow(color: AppColors.cardShadow, blurRadius: 10, offset: Offset(0, 4)),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,215 +558,58 @@ class ReportesFinancierosScreen extends StatelessWidget {
                 width: 4,
                 height: 16,
                 decoration: BoxDecoration(
-                  color: AppColors.gold,
+                  color: AppColors.dorado,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(width: 8),
               const Text(
-                'Movimientos por Tipo',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
+                'Resumen de Estado de Stock',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          ...movimientosPorTipoData.map((m) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: _MovimientoBar(movimiento: m),
-              )),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _bloqueEstado('$_stockAlto', 'Stock Alto', AppColors.verde, AppColors.verdeFondo),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _bloqueEstado(
+                    '$_stockMedio', 'Stock Medio', AppColors.naranja, AppColors.naranjaFondo),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _bloqueEstado('$stockBajo', 'Stock Bajo', AppColors.rojo, AppColors.rojoFondo),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
-}
 
-// ============================================================
-// TARJETA DE ENCABEZADO ESTILO "HISTORIAL DE PRECIOS"
-// Fondo azul marino oscuro, borde dorado (igual que el botón
-// "Agregar dirección" de Direcciones Cliente), etiqueta dorada,
-// título blanco y subtítulo azul claro.
-// ============================================================
-class _PageHeaderCard extends StatelessWidget {
-  final String eyebrow;
-  final String title;
-  final String subtitle;
-
-  const _PageHeaderCard({
-    required this.eyebrow,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _bloqueEstado(String valor, String label, Color color, Color fondo) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.navy,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.gold, width: 1.2),
+        color: fondo.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(valor, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
+          const SizedBox(height: 2),
           Text(
-            eyebrow.toUpperCase(),
-            style: const TextStyle(
-              color: AppColors.gold,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              height: 1.2,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: AppColors.subtitulo,
-              fontSize: 12.5,
-            ),
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 10, color: AppColors.subtitulo),
           ),
         ],
       ),
-    );
-  }
-}
-
-// ==================== TARJETA DE ESTADÍSTICA (fondo navy) ====================
-// Franja de acento a la izquierda + borde dorado en todo el cuadro.
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _StatCard({required this.label, required this.value, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.navy,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.gold, width: 1.2),
-        boxShadow: const [
-          BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(width: 4, color: color),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
-                        color: color,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      value,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: color,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ==================== BARRA DE MOVIMIENTO POR TIPO ====================
-class _MovimientoBar extends StatelessWidget {
-  final MovimientoTipoModel movimiento;
-
-  const _MovimientoBar({required this.movimiento});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              movimiento.nombre,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: movimiento.colorInicio,
-              ),
-            ),
-            Text(
-              '${movimiento.cantidad}',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textDark,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return Stack(
-                children: [
-                  Container(
-                    height: 8,
-                    width: constraints.maxWidth,
-                    color: AppColors.barTrack,
-                  ),
-                  Container(
-                    height: 8,
-                    width: constraints.maxWidth * movimiento.proporcion,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [movimiento.colorInicio, movimiento.colorFin],
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ],
     );
   }
 }
