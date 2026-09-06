@@ -145,8 +145,9 @@ class ProveedoresScreen extends StatelessWidget {
 
 // ============================================================
 // TARJETA DE ENCABEZADO ESTILO "HISTORIAL DE PRECIOS"
-// Fondo azul marino oscuro, etiqueta dorada, título blanco
-// y subtítulo azul claro.
+// Fondo azul marino oscuro, borde dorado (igual que el botón
+// "Agregar dirección" de Direcciones Cliente), etiqueta dorada,
+// título blanco y subtítulo azul claro.
 // ============================================================
 class _PageHeaderCard extends StatelessWidget {
   final String eyebrow;
@@ -167,6 +168,7 @@ class _PageHeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.navy,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,8 +206,7 @@ class _PageHeaderCard extends StatelessWidget {
 }
 
 // ==================== TARJETA DE ESTADÍSTICA ====================
-// Sin ícono decorativo: solo un filo de color arriba, valor grande
-// y etiqueta debajo.
+// Filo de color arriba + borde dorado en todo el cuadro.
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;
@@ -223,7 +224,7 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
@@ -285,9 +286,9 @@ class _EstadoBadge extends StatelessWidget {
   }
 }
 
-// Fila de información con label a la izquierda y valor a la derecha,
-// igual al estilo de tus capturas. "Ciudad" usa el color de enlace
-// para diferenciarse visualmente del resto de los datos.
+// Fila de información con label a la izquierda y valor a la derecha.
+// "Ciudad" usa el color de enlace para diferenciarse visualmente del
+// resto de los datos.
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
@@ -320,8 +321,8 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-// Tarjeta de proveedor con franja de acento azul a la izquierda,
-// sin íconos decorativos.
+// Tarjeta de proveedor con franja de acento azul a la izquierda y
+// borde dorado en todo el cuadro.
 class _ProveedorCard extends StatelessWidget {
   final ProveedorModel proveedor;
 
@@ -333,7 +334,7 @@ class _ProveedorCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],

@@ -164,7 +164,7 @@ class ReportesFinancierosScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 10, offset: Offset(0, 4)),
         ],
@@ -206,8 +206,9 @@ class ReportesFinancierosScreen extends StatelessWidget {
 
 // ============================================================
 // TARJETA DE ENCABEZADO ESTILO "HISTORIAL DE PRECIOS"
-// Fondo azul marino oscuro, etiqueta dorada, título blanco
-// y subtítulo azul claro. Igual a Empleados y Sucursales.
+// Fondo azul marino oscuro, borde dorado (igual que el botón
+// "Agregar dirección" de Direcciones Cliente), etiqueta dorada,
+// título blanco y subtítulo azul claro.
 // ============================================================
 class _PageHeaderCard extends StatelessWidget {
   final String eyebrow;
@@ -228,6 +229,7 @@ class _PageHeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.navy,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,6 +268,7 @@ class _PageHeaderCard extends StatelessWidget {
 }
 
 // ==================== TARJETA DE ESTADÍSTICA (fondo navy) ====================
+// Franja de acento a la izquierda + borde dorado en todo el cuadro.
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;
@@ -279,6 +282,7 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.navy,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],

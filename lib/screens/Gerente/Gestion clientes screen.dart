@@ -34,6 +34,11 @@ class AppColors {
   static const Color redBg = Color(0xFFFADCE0);
   static const Color enlace = Color(0xFF2563EB);
 
+  // Fondos suaves para los botones de acción (ver / editar / eliminar)
+  static const Color viewBg = Color(0xFFF3F4F6);
+  static const Color viewBorder = Color(0xFFE1E4E9);
+  static const Color viewIcon = Color(0xFF6B7280);
+
   // ---- Nueva paleta unificada (aliases adicionales) ----
   static const navy = encabezado;
   static const background = fondo;
@@ -66,18 +71,10 @@ extension DocTypeData on DocType {
     }
   }
 
-  Color get color {
-    switch (this) {
-      case DocType.cc:
-        return AppColors.neutral;
-      case DocType.ce:
-        return AppColors.orange;
-      case DocType.pasaporte:
-        return AppColors.doradoMezcla;
-      case DocType.nit:
-        return AppColors.doradoOscuro;
-    }
-  }
+  // En el diseño final la etiqueta del tipo de documento siempre se
+  // muestra en dorado (igual para CC, CE, Pasaporte y NIT), tal como
+  // aparece en las imágenes de referencia.
+  Color get color => AppColors.dorado;
 }
 
 // ============================================================
@@ -87,6 +84,7 @@ class ClientRecord {
   final DocType docType;
   final String docNumber;
   final String name;
+  final String phone;
   final String email;
   final String date;
   final bool active;
@@ -96,11 +94,34 @@ class ClientRecord {
     required this.docType,
     required this.docNumber,
     required this.name,
+    required this.phone,
     required this.email,
     required this.date,
     required this.avatarColor,
     this.active = true,
   });
+
+  ClientRecord copyWith({
+    DocType? docType,
+    String? docNumber,
+    String? name,
+    String? phone,
+    String? email,
+    String? date,
+    bool? active,
+    Color? avatarColor,
+  }) {
+    return ClientRecord(
+      docType: docType ?? this.docType,
+      docNumber: docNumber ?? this.docNumber,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
+      date: date ?? this.date,
+      active: active ?? this.active,
+      avatarColor: avatarColor ?? this.avatarColor,
+    );
+  }
 
   String get initials {
     final parts = name.trim().split(RegExp(r'\s+'));
@@ -110,157 +131,162 @@ class ClientRecord {
   }
 }
 
-// Paleta de avatares dentro de la familia dorado/navy (ya no colores
-// random tipo arcoíris; usa tonos derivados de la marca para que se
-// vea coherente y no "genérico").
-const List<Color> _avatarPalette = [
-  AppColors.doradoMezcla,
-  AppColors.doradoOscuro,
-  Color(0xFF2F4B78), // azul navy derivado, para dar variedad sutil
-  AppColors.dorado,
-  Color(0xFF3D6B57), // verde apagado, en línea con AppColors.green
-  Color(0xFF6B5B3D), // marrón dorado oscuro
-  Color(0xFF4A3F6B), // morado apagado, para variar sin romper la paleta
-];
-
-// Datos tomados de las capturas enviadas.
-// Reemplaza esta lista por la respuesta real de tu API/backend.
+// Colores de avatar tomados EXACTAMENTE de las capturas enviadas, uno
+// por cliente (no aleatorios), para que la lista luzca igual a la
+// imagen de referencia.
 final List<ClientRecord> mockClients = [
   ClientRecord(
     docType: DocType.cc,
     docNumber: '102078588',
     name: 'Camila Torrez',
+    phone: '352 678 9794',
     email: 'camilatorrez@gmail.com',
     date: '20/05/2026',
-    avatarColor: _avatarPalette[0],
+    avatarColor: const Color(0xFF8B7FE8), // morado
   ),
   ClientRecord(
     docType: DocType.cc,
     docNumber: '922234455',
     name: 'Andrés Martinez',
+    phone: '320 456 7890',
     email: 'andresmartinez@yahoo.com',
     date: '20/06/2026',
-    avatarColor: _avatarPalette[1],
+    avatarColor: const Color(0xFFE85D9E), // rosa/magenta
   ),
   ClientRecord(
     docType: DocType.ce,
     docNumber: '134456867',
     name: 'Sofia Rodriguez',
+    phone: '310 789 1234',
     email: 'sofiarodriguez@gmail.com',
     date: '20/05/2026',
-    avatarColor: _avatarPalette[1],
+    avatarColor: const Color(0xFFF2994A), // naranja
   ),
   ClientRecord(
     docType: DocType.pasaporte,
     docNumber: '445566778',
     name: 'Carlos Fernández',
+    phone: '301 234 5678',
     email: 'carlosfernandez@hotmail.com',
     date: '20/06/2026',
-    avatarColor: _avatarPalette[2],
+    avatarColor: const Color(0xFF16A085), // verde azulado
   ),
   ClientRecord(
     docType: DocType.cc,
     docNumber: '1059887766',
     name: 'Cristian Muñoz',
+    phone: '322 689 5675',
     email: 'cristianm@gmail.com',
     date: '26/06/2026',
-    avatarColor: _avatarPalette[2],
+    avatarColor: const Color(0xFF2F80ED), // azul
   ),
   ClientRecord(
     docType: DocType.ce,
     docNumber: '1023456789',
     name: 'Juan Esteban Gómez',
+    phone: '310 456 7890',
     email: 'juan.gomez@gmail.com',
     date: '26/06/2026',
-    avatarColor: _avatarPalette[3],
+    avatarColor: const Color(0xFFEB5757), // rojo
   ),
   ClientRecord(
     docType: DocType.nit,
     docNumber: '205687788',
     name: 'Miguel Ángel Rojas',
+    phone: '312 678 9012',
     email: 'miguel.rojas@gmail.com',
     date: '26/06/2026',
-    avatarColor: _avatarPalette[4],
+    avatarColor: const Color(0xFF9B51E0), // morado
   ),
   ClientRecord(
     docType: DocType.pasaporte,
     docNumber: 'P44556677',
     name: 'Natalia Ramirez',
+    phone: '313 789 0123',
     email: 'natalia.ramirez@gmail.com',
     date: '26/06/2026',
-    avatarColor: _avatarPalette[1],
+    avatarColor: const Color(0xFFF2994A), // naranja
   ),
   ClientRecord(
     docType: DocType.cc,
     docNumber: '1123334455',
     name: 'Felipe Torres',
+    phone: '314 890 1234',
     email: 'felipe.torres@email.com',
     date: '26/06/2026',
-    avatarColor: _avatarPalette[0],
+    avatarColor: const Color(0xFF56CCF2), // celeste
   ),
   ClientRecord(
     docType: DocType.cc,
     docNumber: '1003245678',
     name: 'María Fernanda López',
+    phone: '315 901 2345',
     email: 'marialopez@email.com',
     date: '26/06/2026',
-    avatarColor: _avatarPalette[4],
+    avatarColor: const Color(0xFFF2C94C), // amarillo/verde
   ),
   ClientRecord(
     docType: DocType.ce,
     docNumber: '105566778',
     name: 'Sara Jiménez',
+    phone: '317 123 4567',
     email: 'sara.jimenez@gmail.com',
     date: '26/06/2026',
-    avatarColor: _avatarPalette[6],
+    avatarColor: const Color(0xFFBB6BD9), // fucsia
   ),
   ClientRecord(
     docType: DocType.pasaporte,
     docNumber: 'P99887766',
     name: 'Andrés Cárdenas',
+    phone: '324 890 1235',
     email: 'andrescardenas@gmail.com',
     date: '26/06/2026',
-    avatarColor: _avatarPalette[2],
+    avatarColor: const Color(0xFF2D9CDB), // azul cielo
   ),
   ClientRecord(
     docType: DocType.cc,
     docNumber: '1009887663',
     name: 'Daniela Herrera',
+    phone: '321 567 8902',
     email: 'daniela.herrera@email.com',
     date: '26/06/2026',
-    avatarColor: _avatarPalette[3],
+    avatarColor: const Color(0xFFF06292), // rosado
   ),
   ClientRecord(
     docType: DocType.ce,
     docNumber: '209765431',
     name: 'Alejandro Martínez',
+    phone: '322 678 9013',
     email: 'alejandro.martinez@email.com',
     date: '26/06/2026',
-    avatarColor: _avatarPalette[4],
+    avatarColor: const Color(0xFF27AE60), // verde
   ),
   ClientRecord(
     docType: DocType.cc,
     docNumber: '1033445568',
     name: 'Paula Sánchez',
+    phone: '325 901 2346',
     email: 'paula.sanchez@email.com',
     date: '26/06/2026',
-    avatarColor: _avatarPalette[0],
+    avatarColor: const Color(0xFF8B7FE8), // morado
   ),
   ClientRecord(
     docType: DocType.ce,
     docNumber: '201234567',
     name: 'Nicolás Castro',
+    phone: '326 012 3467',
     email: 'nicolas.castro@email.com',
     date: '26/06/2026',
-    avatarColor: _avatarPalette[1],
+    avatarColor: const Color(0xFFF2994A), // naranja
   ),
   ClientRecord(
     docType: DocType.pasaporte,
     docNumber: 'P95778899',
     name: 'Juliana Moreno',
+    phone: '328 234 5679',
     email: 'juliana.moreno@email.com',
     date: '26/06/2026',
-    avatarColor: _avatarPalette[5],
+    avatarColor: const Color(0xFF2F80ED), // azul
   ),
 ];
 
@@ -280,20 +306,32 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _estadoFiltro = 'Todos los estados';
 
-  int get total => mockClients.length;
-  int get activos => mockClients.where((c) => c.active).length;
+  // Lista mutable en memoria para que Ver / Editar / Eliminar
+  // funcionen en tiempo real dentro de la pantalla.
+  late List<ClientRecord> _clients;
+
+  int get total => _clients.length;
+  int get activos => _clients.where((c) => c.active).length;
   final int esteMes = 0;
   final int direcciones = 28;
 
+  @override
+  void initState() {
+    super.initState();
+    _clients = List.of(mockClients);
+    _searchController.addListener(_onSearchChanged);
+  }
+
   // ------------------------------------------------------------
-  // FILTRADO: aplica búsqueda de texto + estado sobre mockClients.
+  // FILTRADO: aplica búsqueda de texto + estado sobre _clients.
   // ------------------------------------------------------------
   List<ClientRecord> get _filteredClients {
     final query = _searchController.text.trim().toLowerCase();
-    return mockClients.where((c) {
+    return _clients.where((c) {
       final matchesQuery = query.isEmpty ||
           c.name.toLowerCase().contains(query) ||
           c.docNumber.toLowerCase().contains(query) ||
+          c.phone.toLowerCase().contains(query) ||
           c.email.toLowerCase().contains(query);
 
       final matchesEstado = _estadoFiltro == 'Todos los estados' ||
@@ -302,12 +340,6 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
 
       return matchesQuery && matchesEstado;
     }).toList();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController.addListener(_onSearchChanged);
   }
 
   void _onSearchChanged() => setState(() {});
@@ -324,6 +356,419 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _showSnack(String msg, {Color? color}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: const TextStyle(fontSize: 13)),
+        backgroundColor: color ?? AppColors.encabezado,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // Encabezado navy reutilizable para los diálogos (Ver / Editar /
+  // Eliminar), con avatar/ícono, título y botón de cerrar.
+  // ------------------------------------------------------------
+  Widget _dialogHeader({
+    required BuildContext dialogContext,
+    required Widget leading,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
+      decoration: const BoxDecoration(
+        color: AppColors.encabezado,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(17),
+          topRight: Radius.circular(17),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          leading,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: AppColors.doradoClaro, fontSize: 11.5),
+                ),
+              ],
+            ),
+          ),
+          InkWell(
+            onTap: () => Navigator.pop(dialogContext),
+            borderRadius: BorderRadius.circular(20),
+            child: const Padding(
+              padding: EdgeInsets.all(2),
+              child: Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dialogShell({required Widget child}) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 420),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.dorado, width: 1.5),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: SingleChildScrollView(child: child),
+      ),
+    );
+  }
+
+  InputDecoration _fieldDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: AppColors.grayText, fontSize: 13),
+      filled: true,
+      fillColor: AppColors.fondo,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.doradoClaro),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.dorado, width: 1.4),
+      ),
+    );
+  }
+
+  Widget _dialogCancelButton(VoidCallback onTap) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.grayText,
+        side: const BorderSide(color: AppColors.doradoClaro),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      icon: const Icon(Icons.close_rounded, size: 16),
+      label: const Text('Cancelar'),
+    );
+  }
+
+  Widget _dialogConfirmButton({
+    required String label,
+    required VoidCallback onTap,
+    Color bg = AppColors.dorado,
+    Color fg = AppColors.encabezado,
+    IconData icon = Icons.check_rounded,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: bg,
+        foregroundColor: fg,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        elevation: 0,
+      ),
+      icon: Icon(icon, size: 16),
+      label: Text(label),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.fondo,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.doradoClaro),
+            ),
+            child: Icon(icon, size: 15, color: AppColors.doradoOscuro),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 10.5, color: AppColors.grayText)),
+                const SizedBox(height: 2),
+                Text(value, style: const TextStyle(fontSize: 13, color: AppColors.textDark, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // -------- VER CLIENTE --------
+  void _showViewDialog(ClientRecord c) {
+    showDialog(
+      context: context,
+      builder: (ctx) => _dialogShell(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _dialogHeader(
+              dialogContext: ctx,
+              leading: CircleAvatar(
+                radius: 20,
+                backgroundColor: c.avatarColor,
+                child: Text(c.initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+              title: c.name,
+              subtitle: '${c.docType.label} • ${c.docNumber}',
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _infoRow(Icons.call_rounded, 'Teléfono', c.phone),
+                  _infoRow(Icons.mail_outline_rounded, 'Correo electrónico', c.email),
+                  _infoRow(Icons.event_rounded, 'Fecha de registro', c.date),
+                  _infoRow(
+                    c.active ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                    'Estado',
+                    c.active ? 'Activo' : 'Inactivo',
+                  ),
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    width: double.infinity,
+                    child: _dialogConfirmButton(
+                      label: 'Cerrar',
+                      icon: Icons.close_rounded,
+                      onTap: () => Navigator.pop(ctx),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // -------- EDITAR CLIENTE --------
+  Future<void> _showEditDialog(ClientRecord c) async {
+    final nameCtrl = TextEditingController(text: c.name);
+    final phoneCtrl = TextEditingController(text: c.phone);
+    final emailCtrl = TextEditingController(text: c.email);
+    final docNumberCtrl = TextEditingController(text: c.docNumber);
+    DocType docType = c.docType;
+    bool active = c.active;
+    final formKey = GlobalKey<FormState>();
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return _dialogShell(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _dialogHeader(
+                    dialogContext: ctx,
+                    leading: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.dorado, width: 1.5),
+                      ),
+                      child: const Icon(Icons.manage_accounts_rounded, color: AppColors.dorado, size: 18),
+                    ),
+                    title: 'Editar cliente',
+                    subtitle: c.name,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TextFormField(
+                            controller: nameCtrl,
+                            style: const TextStyle(fontSize: 13, color: AppColors.encabezado),
+                            decoration: _fieldDecoration('Nombre completo'),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Campo requerido' : null,
+                          ),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<DocType>(
+                            value: docType,
+                            decoration: _fieldDecoration('Tipo de documento'),
+                            items: DocType.values
+                                .map((t) => DropdownMenuItem(value: t, child: Text(t.label, style: const TextStyle(fontSize: 13))))
+                                .toList(),
+                            onChanged: (v) => setDialogState(() => docType = v ?? docType),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: docNumberCtrl,
+                            style: const TextStyle(fontSize: 13, color: AppColors.encabezado),
+                            decoration: _fieldDecoration('Número de documento'),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Campo requerido' : null,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: phoneCtrl,
+                            keyboardType: TextInputType.phone,
+                            style: const TextStyle(fontSize: 13, color: AppColors.encabezado),
+                            decoration: _fieldDecoration('Teléfono'),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Campo requerido' : null,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: emailCtrl,
+                            keyboardType: TextInputType.emailAddress,
+                            style: const TextStyle(fontSize: 13, color: AppColors.encabezado),
+                            decoration: _fieldDecoration('Correo electrónico'),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Campo requerido' : null,
+                          ),
+                          const SizedBox(height: 4),
+                          CheckboxListTile(
+                            value: active,
+                            onChanged: (v) => setDialogState(() => active = v ?? active),
+                            title: const Text('Cliente activo', style: TextStyle(fontSize: 12.5, color: AppColors.encabezado)),
+                            activeColor: AppColors.dorado,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            contentPadding: EdgeInsets.zero,
+                            dense: true,
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(child: _dialogCancelButton(() => Navigator.pop(ctx, false))),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _dialogConfirmButton(
+                                  label: 'Guardar',
+                                  onTap: () {
+                                    if (formKey.currentState!.validate()) Navigator.pop(ctx, true);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (saved == true) {
+      final index = _clients.indexOf(c);
+      if (index != -1) {
+        setState(() {
+          _clients[index] = c.copyWith(
+            name: nameCtrl.text.trim(),
+            docType: docType,
+            docNumber: docNumberCtrl.text.trim(),
+            phone: phoneCtrl.text.trim(),
+            email: emailCtrl.text.trim(),
+            active: active,
+          );
+        });
+        _showSnack('Cliente actualizado correctamente');
+      }
+    }
+  }
+
+  // -------- ELIMINAR CLIENTE --------
+  Future<void> _confirmDelete(ClientRecord c) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => _dialogShell(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _dialogHeader(
+              dialogContext: ctx,
+              leading: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.red, width: 1.5),
+                ),
+                child: const Icon(Icons.delete_outline_rounded, color: AppColors.red, size: 18),
+              ),
+              title: 'Eliminar cliente',
+              subtitle: c.name,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '¿Seguro que deseas eliminar a "${c.name}"? Esta acción no se puede deshacer.',
+                    style: const TextStyle(fontSize: 13, color: AppColors.grayText, height: 1.4),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(child: _dialogCancelButton(() => Navigator.pop(ctx, false))),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _dialogConfirmButton(
+                          label: 'Eliminar',
+                          icon: Icons.delete_outline_rounded,
+                          bg: AppColors.red,
+                          fg: Colors.white,
+                          onTap: () => Navigator.pop(ctx, true),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() => _clients.remove(c));
+      _showSnack('Cliente eliminado', color: AppColors.red);
+    }
   }
 
   Widget _buildContent(BuildContext context) {
@@ -367,7 +812,12 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
         if (filtered.isEmpty)
           _EmptyState(onClear: _clearFilters)
         else
-          _ClientsTable(clients: filtered),
+          _ClientsTable(
+            clients: filtered,
+            onView: _showViewDialog,
+            onEdit: _showEditDialog,
+            onDelete: _confirmDelete,
+          ),
       ],
     );
   }
@@ -393,8 +843,6 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
 
 // ============================================================
 // TARJETA DE ENCABEZADO ESTILO "HISTORIAL DE PRECIOS"
-// Fondo azul marino oscuro, etiqueta dorada, título blanco,
-// subtítulo azul claro y dos estrellitas doradas.
 // ============================================================
 class _PageHeaderCard extends StatelessWidget {
   final String eyebrow;
@@ -575,21 +1023,21 @@ class _StatsAndActionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ---------------------------------------------------
+          // Botón "Nuevo Cliente": mismo widget/estilo dorado que
+          // "Agregar dirección" (Material + InkWell), en vez de
+          // ElevatedButton, para que el color quede IDÉNTICO
+          // (ElevatedButton en Material 3 aplica un tinte propio
+          // que hacía lucir el dorado ligeramente distinto).
+          // ---------------------------------------------------
           Align(
             alignment: Alignment.centerRight,
-            child: ElevatedButton.icon(
-              onPressed: () {
+            child: _GoldButton(
+              icon: Icons.person_add_alt_1_rounded,
+              label: 'Nuevo Cliente',
+              onTap: () {
                 // TODO: navegar a formulario de nuevo cliente
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.dorado,
-                foregroundColor: AppColors.encabezado,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
-              label: const Text('Nuevo Cliente', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
             ),
           ),
           const SizedBox(height: 14),
@@ -646,9 +1094,61 @@ class _StatsAndActionCard extends StatelessWidget {
   }
 }
 
-// Tarjeta de estadística sin círculo de ícono (para evitar el look
-// genérico de dashboard-IA): borde de acento a la izquierda + ícono
-// pequeño alineado con el título.
+// ============================================================
+// BOTÓN DORADO REUTILIZABLE
+// Mismo widget (Material + InkWell) que "Agregar dirección", para
+// que el color y el aspecto sean EXACTAMENTE iguales en toda la app.
+// ============================================================
+class _GoldButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool expand;
+
+  const _GoldButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.expand = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final button = Material(
+      color: AppColors.dorado,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 14, color: AppColors.encabezado),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.encabezado,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11.5,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return expand ? SizedBox(width: double.infinity, child: button) : button;
+  }
+}
+
 class _StatBox extends StatelessWidget {
   final String title;
   final String label;
@@ -746,7 +1246,7 @@ class _FiltersCard extends StatelessWidget {
                 controller: controller,
                 style: const TextStyle(fontSize: 13),
                 decoration: InputDecoration(
-                  hintText: 'Buscar por nombre, documento o correo',
+                  hintText: 'Buscar por nombre, documento, teléfono o correo',
                   hintStyle: const TextStyle(fontSize: 11.5, color: AppColors.grayText),
                   prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppColors.grayText),
                   suffixIcon: controller.text.isEmpty
@@ -872,7 +1372,16 @@ class _EmptyState extends StatelessWidget {
 // ============================================================
 class _ClientsTable extends StatelessWidget {
   final List<ClientRecord> clients;
-  const _ClientsTable({required this.clients});
+  final ValueChanged<ClientRecord> onView;
+  final ValueChanged<ClientRecord> onEdit;
+  final ValueChanged<ClientRecord> onDelete;
+
+  const _ClientsTable({
+    required this.clients,
+    required this.onView,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -902,7 +1411,7 @@ class _ClientsTable extends StatelessWidget {
                             fontSize: 9.5, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.4)),
                   ),
                   SizedBox(
-                    width: 32,
+                    width: 102,
                     child: Text('ACCIONES',
                         textAlign: TextAlign.right,
                         style: TextStyle(
@@ -912,7 +1421,12 @@ class _ClientsTable extends StatelessWidget {
               ),
             ),
             for (int i = 0; i < clients.length; i++) ...[
-              _ClientRow(client: clients[i]),
+              _ClientRow(
+                client: clients[i],
+                onView: () => onView(clients[i]),
+                onEdit: () => onEdit(clients[i]),
+                onDelete: () => onDelete(clients[i]),
+              ),
               if (i != clients.length - 1) const Divider(height: 1, color: AppColors.doradoClaro),
             ],
           ],
@@ -924,7 +1438,16 @@ class _ClientsTable extends StatelessWidget {
 
 class _ClientRow extends StatelessWidget {
   final ClientRecord client;
-  const _ClientRow({required this.client});
+  final VoidCallback onView;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _ClientRow({
+    required this.client,
+    required this.onView,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -965,6 +1488,9 @@ class _ClientRow extends StatelessWidget {
                     children: [
                       Text(client.name,
                           style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                      const SizedBox(height: 1),
+                      Text(client.phone,
+                          style: const TextStyle(fontSize: 10.5, color: AppColors.grayText)),
                       Text(client.email,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 10.5, color: AppColors.neutral)),
@@ -991,80 +1517,92 @@ class _ClientRow extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 2),
-          _ClientActionsMenu(
-            onView: () {},
-            onEdit: () {},
-            onDelete: () {},
-          ),
+          const SizedBox(width: 4),
+          _ClientActionIcons(onView: onView, onEdit: onEdit, onDelete: onDelete),
         ],
       ),
     );
   }
 }
 
-// Menú de acciones tipo lista nativa (un solo botón "⋮" que despliega
-// Ver / Editar / Eliminar) en vez de tres botones cuadrados apilados.
-class _ClientActionsMenu extends StatelessWidget {
+// ============================================================
+// ICONOS DE ACCIÓN (Ver / Editar / Eliminar)
+// Tres botones cuadrados independientes, cada uno con su color
+// suave de fondo + borde, igual a como aparece en las imágenes
+// de referencia.
+// ============================================================
+class _ActionIconButton extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color bgColor;
+  final Color borderColor;
+  final VoidCallback onTap;
+
+  const _ActionIconButton({
+    required this.icon,
+    required this.iconColor,
+    required this.bgColor,
+    required this.borderColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: borderColor, width: 1),
+          ),
+          child: Icon(icon, size: 14, color: iconColor),
+        ),
+      ),
+    );
+  }
+}
+
+class _ClientActionIcons extends StatelessWidget {
   final VoidCallback onView;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const _ClientActionsMenu({required this.onView, required this.onEdit, required this.onDelete});
+  const _ClientActionIcons({required this.onView, required this.onEdit, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert_rounded, size: 18, color: AppColors.grayText),
-      padding: EdgeInsets.zero,
-      splashRadius: 18,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      onSelected: (value) {
-        switch (value) {
-          case 'ver':
-            onView();
-            break;
-          case 'editar':
-            onEdit();
-            break;
-          case 'eliminar':
-            onDelete();
-            break;
-        }
-      },
-      itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: 'ver',
-          height: 38,
-          child: Row(
-            children: [
-              Icon(Icons.visibility_outlined, size: 16, color: AppColors.doradoOscuro),
-              SizedBox(width: 8),
-              Text('Ver', style: TextStyle(fontSize: 12.5)),
-            ],
-          ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _ActionIconButton(
+          icon: Icons.visibility_outlined,
+          iconColor: AppColors.viewIcon,
+          bgColor: AppColors.viewBg,
+          borderColor: AppColors.viewBorder,
+          onTap: onView,
         ),
-        const PopupMenuItem(
-          value: 'editar',
-          height: 38,
-          child: Row(
-            children: [
-              Icon(Icons.edit_outlined, size: 16, color: AppColors.doradoOscuro),
-              SizedBox(width: 8),
-              Text('Editar', style: TextStyle(fontSize: 12.5)),
-            ],
-          ),
+        const SizedBox(width: 6),
+        _ActionIconButton(
+          icon: Icons.edit_outlined,
+          iconColor: AppColors.doradoOscuro,
+          bgColor: AppColors.doradoClaro.withOpacity(0.28),
+          borderColor: AppColors.doradoClaro,
+          onTap: onEdit,
         ),
-        const PopupMenuItem(
-          value: 'eliminar',
-          height: 38,
-          child: Row(
-            children: [
-              Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.red),
-              SizedBox(width: 8),
-              Text('Eliminar', style: TextStyle(fontSize: 12.5, color: AppColors.red)),
-            ],
-          ),
+        const SizedBox(width: 6),
+        _ActionIconButton(
+          icon: Icons.delete_outline_rounded,
+          iconColor: AppColors.red,
+          bgColor: AppColors.redBg,
+          borderColor: AppColors.red.withOpacity(0.35),
+          onTap: onDelete,
         ),
       ],
     );
