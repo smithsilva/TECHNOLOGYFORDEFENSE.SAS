@@ -67,7 +67,7 @@ class _MainShellGerenteState extends State<MainShellGerente> {
       visibleEnPanelPrincipal: true,
     ),
     _SeccionGerente(
-      item: const T4DMenuItem(icon: Icons.fact_check_outlined, label: 'Tareas'),
+      item: const T4DMenuItem(icon: Icons.fact_check_outlined, label: 'Asignacion de Tareas'),
       pantalla: const AsignacionTareasScreen(embedded: true),
       visibleEnPanelPrincipal: true,
     ),

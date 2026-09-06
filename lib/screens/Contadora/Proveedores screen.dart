@@ -2,14 +2,39 @@ import 'package:flutter/material.dart';
 
 // ==================== PALETA DE COLORES ====================
 class AppColors {
-  static const background = Color(0xFFF1EEE6);
-  static const navy = Color(0xFF13161F);
-  static const gold = Color(0xFFE0A93B);
-  static const goldDark = Color(0xFFC8901E);
-  static const green = Color(0xFF33B76A);
-  static const greenBg = Color(0xFFE3F7EA);
-  static const textDark = Color(0xFF1C1E2A);
-  static const textGrey = Color(0xFF8C8FA0);
+  static const dorado = Color(0xFFC9962E);
+  static const doradoOscuro = Color(0xFF8C6B2E);
+  static const doradoClaro = Color(0xFFE8C97A);
+  static const doradoMezcla = Color(0xFFAB812E); // punto medio dorado/doradoOscuro
+  static const fondo = Color(0xFFFAF3E4);
+
+  static const navyOscuro = Color(0xFF0F1B2E);
+  static const navyClaro = Color(0xFF16233A);
+  static const subtitulo = Color(0xFF8FA3C4);
+
+  static const verde = Color(0xFF2E9E5B);
+  static const verdeFondo = Color(0xFFDDF2E1);
+
+  static const naranja = Color(0xFFA17A2E);
+  static const naranjaFondo = Color(0xFFF5E3C3);
+
+  static const rojo = Color(0xFFC0293B);
+  static const rojoFondo = Color(0xFFFADCE0);
+
+  static const textoMuted = Color(0xFF6B7280);
+  static const enlace = Color(0xFF2563EB);
+
+  // Alias usados en esta pantalla, ahora apuntando a la paleta nueva.
+  static const background = fondo;
+  static const navy = navyOscuro;
+  static const gold = dorado;
+  static const goldDark = doradoOscuro;
+  static const green = verde;
+  static const greenBg = verdeFondo;
+  static const textDark = Color(0xFF111827);
+  static const textGrey = textoMuted;
+  static const white = Colors.white;
+  static const cardBorder = Color(0xFFEFEFF2);
   static const cardShadow = Color(0x14000000);
 }
 
@@ -78,7 +103,11 @@ class ProveedoresScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
         children: [
-          _buildHeaderCard(),
+          _PageHeaderCard(
+            eyebrow: 'CONTADORA - PROVEEDORES',
+            title: 'Proveedores',
+            subtitle: '$_total proveedores registrados',
+          ),
           const SizedBox(height: 14),
           _buildStatsRow(),
           const SizedBox(height: 14),
@@ -91,84 +120,84 @@ class ProveedoresScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeaderCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(color: AppColors.cardShadow, blurRadius: 10, offset: Offset(0, 4)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Proveedores',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.navy,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Container(width: 26, height: 2.4, color: AppColors.gold),
-              const SizedBox(width: 4),
-              const Icon(Icons.star, size: 10, color: AppColors.gold),
-              const SizedBox(width: 4),
-              Container(width: 26, height: 2.4, color: AppColors.gold),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildStatsRow() {
     return Row(
       children: [
-        Expanded(child: _StatCard(label: 'Total Proveedores', value: '$_total')),
+        Expanded(
+          child: _StatCard(
+            label: 'Total',
+            value: '$_total',
+            accentColor: AppColors.gold,
+          ),
+        ),
         const SizedBox(width: 10),
-        Expanded(child: _StatCard(label: 'Activos', value: '$_activos', valueColor: AppColors.green)),
+        Expanded(
+          child: _StatCard(
+            label: 'Activos',
+            value: '$_activos',
+            accentColor: AppColors.green,
+          ),
+        ),
       ],
     );
   }
 }
 
-// ==================== WIDGETS AUXILIARES ====================
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color valueColor;
+// ============================================================
+// TARJETA DE ENCABEZADO ESTILO "HISTORIAL DE PRECIOS"
+// Fondo azul marino oscuro, borde dorado (igual que el botón
+// "Agregar dirección" de Direcciones Cliente), etiqueta dorada,
+// título blanco y subtítulo azul claro.
+// ============================================================
+class _PageHeaderCard extends StatelessWidget {
+  final String eyebrow;
+  final String title;
+  final String subtitle;
 
-  const _StatCard({
-    required this.label,
-    required this.value,
-    this.valueColor = AppColors.textDark,
+  const _PageHeaderCard({
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.navy,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
-          BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
-        ],
+        border: Border.all(color: AppColors.gold, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textGrey)),
+          Text(
+            eyebrow.toUpperCase(),
+            style: const TextStyle(
+              color: AppColors.gold,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
-            value,
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: valueColor),
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: AppColors.subtitulo,
+              fontSize: 12.5,
+            ),
           ),
         ],
       ),
@@ -176,6 +205,61 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+// ==================== TARJETA DE ESTADÍSTICA ====================
+// Filo de color arriba + borde dorado en todo el cuadro.
+class _StatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color accentColor;
+
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.gold, width: 1.2),
+        boxShadow: const [
+          BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Container(height: 4, color: accentColor),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Column(
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: accentColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 11, color: AppColors.textGrey),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== WIDGETS AUXILIARES ====================
 class _EstadoBadge extends StatelessWidget {
   final String estado;
 
@@ -194,7 +278,7 @@ class _EstadoBadge extends StatelessWidget {
         estado,
         style: TextStyle(
           color: activo ? AppColors.green : AppColors.textGrey,
-          fontSize: 11,
+          fontSize: 10.5,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -202,29 +286,33 @@ class _EstadoBadge extends StatelessWidget {
   }
 }
 
+// Fila de información con label a la izquierda y valor a la derecha.
+// "Ciudad" usa el color de enlace para diferenciarse visualmente del
+// resto de los datos.
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
+  final Color? valueColor;
 
-  const _InfoRow({required this.label, required this.value});
+  const _InfoRow({required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          SizedBox(
-            width: 74,
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: AppColors.goldDark, fontWeight: FontWeight.w600),
-            ),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10.5, color: AppColors.textGrey),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 12.5, color: AppColors.textDark),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: valueColor ?? AppColors.textDark,
             ),
           ),
         ],
@@ -233,6 +321,8 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
+// Tarjeta de proveedor con franja de acento azul a la izquierda y
+// borde dorado en todo el cuadro.
 class _ProveedorCard extends StatelessWidget {
   final ProveedorModel proveedor;
 
@@ -241,49 +331,72 @@ class _ProveedorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(width: 4, color: AppColors.enlace),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      proveedor.nombre,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textDark,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                proveedor.nombre,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'NIT: ${proveedor.nit}',
+                                style: const TextStyle(
+                                  fontSize: 10.5,
+                                  color: AppColors.goldDark,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _EstadoBadge(estado: proveedor.estado),
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'NIT: ${proveedor.nit}',
-                      style: const TextStyle(fontSize: 11, color: AppColors.textGrey),
+                    const SizedBox(height: 8),
+                    const Divider(height: 1, color: AppColors.cardBorder),
+                    const SizedBox(height: 8),
+                    _InfoRow(label: 'Contacto', value: proveedor.contacto),
+                    _InfoRow(label: 'Teléfono', value: proveedor.telefono),
+                    _InfoRow(
+                      label: 'Ciudad',
+                      value: proveedor.ciudad,
+                      valueColor: AppColors.enlace,
                     ),
                   ],
                 ),
               ),
-              _EstadoBadge(estado: proveedor.estado),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _InfoRow(label: 'Contacto', value: proveedor.contacto),
-          _InfoRow(label: 'Teléfono', value: proveedor.telefono),
-          _InfoRow(label: 'Correo', value: proveedor.correo),
-          _InfoRow(label: 'Ciudad', value: proveedor.ciudad),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,24 +1,54 @@
 import 'package:flutter/material.dart';
 
 class _TareasColors {
-  static const dorado = Color(0xFFD4A743);
-  static const doradoOscuro = Color(0xFF8C6B3F);
-  static const doradoClaro = Color(0xFFE7C98A);
-  static const fondo = Color(0xFFF7F1E3);
-  static const encabezado = Color(0xFF13202E);
+  // ---- Paleta nueva (la que enviaste) ----
+  static const dorado = Color(0xFFC9962E);
+  static const doradoOscuro = Color(0xFF8C6B2E);
+  static const doradoClaro = Color(0xFFE8C97A);
+  static const doradoMezcla = Color(0xFFAB812E); // punto medio dorado/doradoOscuro
+  static const fondo = Color(0xFFFAF3E4);
+
+  static const navyOscuro = Color(0xFF0F1B2E);
+  static const navyClaro = Color(0xFF16233A);
+  static const subtitulo = Color(0xFF8FA3C4);
+
+  static const verde = Color(0xFF2E9E5B);
+  static const verdeFondo = Color(0xFFDDF2E1);
+
+  static const naranja = Color(0xFFA17A2E);
+  static const naranjaFondo = Color(0xFFF5E3C3);
+
+  static const rojo = Color(0xFFC0293B);
+  static const rojoFondo = Color(0xFFFADCE0);
+
+  static const textoMuted = Color(0xFF6B7280);
+  static const enlace = Color(0xFF2563EB);
 
   // Alias usados en el resto del archivo (no cambian nombres para
-  // no tener que tocar cada referencia)
+  // no tener que tocar cada referencia). Ahora apuntan a la paleta nueva.
   static const white = Color(0xFFFFFFFF); // tarjetas en blanco puro
   static const gold = dorado;
-  static const grayText = Color(0xFF6B7280);
+  static const grayText = textoMuted;
+  static const encabezado = navyOscuro; // se usa como color de TEXTO/ícono oscuro, no como fondo
+  static const headerBg = white; // fondo del header: blanco, ya no azul marino
 
-  static const blue = Color(0xFF2563EB);
-  static const blueBg = Color(0xFFE1EEFE);
-  static const green = Color(0xFF16A34A);
-  static const greenBg = Color(0xFFDCFCE7);
-  static const orange = doradoOscuro;
-  static const orangeBg = doradoClaro;
+  static const blue = enlace;
+  static const blueBg = Color(0xFFE1EEFE); // tinte claro de "enlace", no venía en la paleta
+  static const green = verde;
+  static const greenBg = verdeFondo;
+  static const orange = doradoOscuro; // actualizado según nueva paleta
+  static const orangeBg = doradoClaro; // actualizado según nueva paleta
+
+  // ---- Nueva paleta unificada (aliases adicionales) ----
+  static const navy = encabezado;
+  static const background = fondo;
+  static const panelDark = encabezado;
+  static const goldLight = doradoClaro;
+  static const goldDark = doradoOscuro;
+  static const goldBg = doradoClaro;
+  static const borderLight = dorado;
+  static const cardWhiteSubtitle = grayText;
+  static const neutral = grayText;
 }
 
 // ============================================================
@@ -45,7 +75,7 @@ extension TaskStatusData on TaskStatus {
   Color get color {
     switch (this) {
       case TaskStatus.pendiente:
-        return const Color(0xFF6B7280);
+        return _TareasColors.textoMuted;
       case TaskStatus.enProceso:
         return _TareasColors.blue;
       case TaskStatus.finalizada:
@@ -69,9 +99,9 @@ extension TaskPriorityData on TaskPriority {
   Color get bg {
     switch (this) {
       case TaskPriority.alta:
-        return const Color(0xFFF6D9A8);
+        return _TareasColors.naranjaFondo;
       case TaskPriority.media:
-        return const Color(0xFFFBEBC8);
+        return _TareasColors.doradoClaro;
       case TaskPriority.baja:
         return const Color(0xFFE5E7EB);
     }
@@ -80,11 +110,11 @@ extension TaskPriorityData on TaskPriority {
   Color get fg {
     switch (this) {
       case TaskPriority.alta:
-        return const Color(0xFF9A6316);
+        return _TareasColors.naranja;
       case TaskPriority.media:
-        return const Color(0xFF9A6316);
+        return _TareasColors.doradoMezcla;
       case TaskPriority.baja:
-        return const Color(0xFF6B7280);
+        return _TareasColors.textoMuted;
     }
   }
 }
@@ -92,13 +122,15 @@ extension TaskPriorityData on TaskPriority {
 extension PaymentModalityData on PaymentModality {
   String get label => this == PaymentModality.online ? 'Online' : 'Presencial';
   Color get bg => this == PaymentModality.online
-      ? const Color(0xFFE1EEFE)
-      : const Color(0xFFFBEBC8);
+      ? _TareasColors.blueBg
+      : _TareasColors.naranjaFondo;
   Color get fg => this == PaymentModality.online
       ? _TareasColors.blue
-      : const Color(0xFF9A6316);
+      : _TareasColors.naranja;
+  // Íconos más específicos: nube para online, mostrador para presencial
+  // (antes eran genéricos wifi / storefront sin más criterio).
   IconData get icon =>
-      this == PaymentModality.online ? Icons.wifi : Icons.storefront_outlined;
+      this == PaymentModality.online ? Icons.cloud_done_rounded : Icons.storefront_rounded;
 }
 
 // ============================================================
@@ -443,14 +475,19 @@ class _AsignacionTareasScreenState extends State<AsignacionTareasScreen> {
     super.dispose();
   }
 
-  // NOTA: aquí ya NO se llama el panel con el título "Asignación de Tareas".
-  // Ese título ya aparece una sola vez en el header oscuro junto al logo.
-  // Se conservan las estadísticas (Pendientes/En proceso/etc.) y el botón
-  // "Nueva Asignación" dentro de _StatsAndActionCard, sin repetir el texto.
+  // NOTA: aquí ya NO se llama el panel con el título "Asignación de Tareas"
+  // como texto suelto: ahora ese título vive en la tarjeta oscura
+  // _PageHeaderCard, igual que "Historial de Precios".
   Widget _buildContent(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
       children: [
+        const _PageHeaderCard(
+          eyebrow: 'ADMINISTRADOR - TAREAS',
+          title: 'Asignación de Tareas',
+          subtitle: 'Gestiona y asigna tareas a los mecánicos',
+        ),
+        const SizedBox(height: 14),
         _StatsAndActionCard(
           pendientes: pendientes,
           enProceso: enProceso,
@@ -502,7 +539,76 @@ class _AsignacionTareasScreenState extends State<AsignacionTareasScreen> {
 }
 
 // ============================================================
-// HEADER SUPERIOR (único lugar con el título "Asignación de Tareas")
+// TARJETA DE ENCABEZADO ESTILO "HISTORIAL DE PRECIOS"
+// Fondo azul marino oscuro, etiqueta dorada, título blanco,
+// subtítulo azul claro y dos estrellitas doradas.
+// ============================================================
+class _PageHeaderCard extends StatelessWidget {
+  final String eyebrow;
+  final String title;
+  final String subtitle;
+
+  const _PageHeaderCard({
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _TareasColors.navy,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            eyebrow.toUpperCase(),
+            style: const TextStyle(
+              color: _TareasColors.gold,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: _TareasColors.subtitulo,
+              fontSize: 12.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: const [
+              Icon(Icons.star_rounded, size: 14, color: _TareasColors.gold),
+              SizedBox(width: 3),
+              Icon(Icons.star_rounded, size: 14, color: _TareasColors.gold),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================
+// HEADER SUPERIOR (único lugar con el título "Asignación de Tareas"
+// que aparece dentro del top bar, para navegación con Scaffold suelto)
 // ============================================================
 class _TopHeader extends StatelessWidget {
   final VoidCallback onMenuTap;
@@ -511,7 +617,12 @@ class _TopHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: _TareasColors.encabezado,
+      decoration: BoxDecoration(
+        color: _TareasColors.headerBg,
+        border: Border(
+          bottom: BorderSide(color: _TareasColors.dorado.withOpacity(0.5), width: 1),
+        ),
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
         children: [
@@ -520,7 +631,7 @@ class _TopHeader extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             child: const Padding(
               padding: EdgeInsets.all(6),
-              child: Icon(Icons.menu, color: Colors.white, size: 22),
+              child: Icon(Icons.menu_rounded, color: _TareasColors.encabezado, size: 22),
             ),
           ),
           const SizedBox(width: 8),
@@ -546,26 +657,27 @@ class _TopHeader extends StatelessWidget {
               children: [
                 Text('BIENVENIDO',
                     style: TextStyle(
-                        color: _TareasColors.doradoClaro,
+                        color: _TareasColors.doradoOscuro,
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.5)),
                 Text('Asignación de Tareas',
                     style: TextStyle(
-                        color: Colors.white,
+                        color: _TareasColors.encabezado,
                         fontSize: 13,
                         fontWeight: FontWeight.w700),
                     overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
-          const Icon(Icons.notifications_none, color: Colors.white, size: 20),
+          const Icon(Icons.notifications_none_rounded, color: _TareasColors.encabezado, size: 20),
           const SizedBox(width: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08),
+              color: _TareasColors.fondo,
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: _TareasColors.doradoClaro),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -573,10 +685,10 @@ class _TopHeader extends StatelessWidget {
                 CircleAvatar(
                   radius: 9,
                   backgroundColor: _TareasColors.dorado,
-                  child: Icon(Icons.person, size: 11, color: _TareasColors.encabezado),
+                  child: Icon(Icons.person_rounded, size: 11, color: _TareasColors.encabezado),
                 ),
                 SizedBox(width: 5),
-                Text('Gerente', style: TextStyle(color: Colors.white, fontSize: 11.5)),
+                Text('Gerente', style: TextStyle(color: _TareasColors.encabezado, fontSize: 11.5)),
               ],
             ),
           ),
@@ -622,26 +734,21 @@ class _StatsAndActionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ---------------------------------------------------
+          // Botón "Nueva Asignación": mismo widget/estilo dorado
+          // que "Agregar dirección" (Material + InkWell), en vez
+          // de ElevatedButton, para que el color sea IDÉNTICO
+          // (ElevatedButton en Material 3 aplica un tinte propio
+          // que hacía lucir el dorado ligeramente distinto).
+          // ---------------------------------------------------
           Align(
             alignment: Alignment.centerRight,
-            child: ElevatedButton.icon(
-              onPressed: () {
+            child: _GoldButton(
+              icon: Icons.add_rounded,
+              label: 'Nueva Asignación',
+              onTap: () {
                 // TODO: navegar a formulario de nueva asignación
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _TareasColors.gold,
-                foregroundColor: _TareasColors.encabezado,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text(
-                'Nueva Asignación',
-                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
-              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -651,7 +758,7 @@ class _StatsAndActionCard extends StatelessWidget {
                 child: _StatBox(
                   label: 'Pendientes',
                   value: '$pendientes',
-                  icon: Icons.pending_actions,
+                  icon: Icons.schedule_rounded,
                   iconColor: _TareasColors.orange,
                   iconBg: _TareasColors.orangeBg,
                 ),
@@ -661,7 +768,7 @@ class _StatsAndActionCard extends StatelessWidget {
                 child: _StatBox(
                   label: 'En proceso',
                   value: '$enProceso',
-                  icon: Icons.autorenew,
+                  icon: Icons.sync_rounded,
                   iconColor: _TareasColors.blue,
                   iconBg: _TareasColors.blueBg,
                 ),
@@ -675,7 +782,7 @@ class _StatsAndActionCard extends StatelessWidget {
                 child: _StatBox(
                   label: 'Finalizadas',
                   value: '$finalizadas',
-                  icon: Icons.check_circle_outline,
+                  icon: Icons.task_alt_rounded,
                   iconColor: _TareasColors.green,
                   iconBg: _TareasColors.greenBg,
                 ),
@@ -685,8 +792,8 @@ class _StatsAndActionCard extends StatelessWidget {
                 child: _StatBox(
                   label: 'Alta prioridad',
                   value: '$altaPrioridad',
-                  icon: Icons.warning_amber_rounded,
-                  iconColor: const Color(0xFF9CA3AF),
+                  icon: Icons.priority_high_rounded,
+                  iconColor: _TareasColors.doradoMezcla,
                   iconBg: const Color(0xFFF3F4F6),
                 ),
               ),
@@ -695,6 +802,61 @@ class _StatsAndActionCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// ============================================================
+// BOTÓN DORADO REUTILIZABLE
+// Mismo widget (Material + InkWell) que "Agregar dirección", para
+// que el color y el aspecto sean EXACTAMENTE iguales en toda la app.
+// ============================================================
+class _GoldButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool expand;
+
+  const _GoldButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.expand = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final button = Material(
+      color: _TareasColors.gold,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 14, color: _TareasColors.encabezado),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: _TareasColors.encabezado,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11.5,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return expand ? SizedBox(width: double.infinity, child: button) : button;
   }
 }
 
@@ -777,7 +939,7 @@ class _FiltersCard extends StatelessWidget {
         children: [
           Row(
             children: const [
-              Icon(Icons.filter_alt_outlined, size: 16, color: _TareasColors.gold),
+              Icon(Icons.tune_rounded, size: 16, color: _TareasColors.gold),
               SizedBox(width: 6),
               Text(
                 'Filtros y Búsqueda',
@@ -792,7 +954,7 @@ class _FiltersCard extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'Buscar vehículo, mecánico, cliente o sucursal...',
               hintStyle: const TextStyle(fontSize: 12, color: _TareasColors.grayText),
-              prefixIcon: const Icon(Icons.search, size: 18, color: _TareasColors.grayText),
+              prefixIcon: const Icon(Icons.search_rounded, size: 18, color: _TareasColors.grayText),
               filled: true,
               fillColor: _TareasColors.fondo,
               contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
@@ -871,7 +1033,7 @@ class _AssignmentCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.local_shipping_outlined, size: 14, color: _TareasColors.orange),
+              const Icon(Icons.directions_car_filled_rounded, size: 14, color: _TareasColors.orange),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
@@ -897,14 +1059,14 @@ class _AssignmentCard extends StatelessWidget {
           const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Icons.person_outline, size: 13, color: _TareasColors.grayText),
+              const Icon(Icons.badge_outlined, size: 13, color: _TareasColors.grayText),
               const SizedBox(width: 3),
               Text(
                 assignment.mechanic,
                 style: const TextStyle(fontSize: 11, color: _TareasColors.grayText),
               ),
               const SizedBox(width: 10),
-              const Icon(Icons.location_on_outlined, size: 13, color: _TareasColors.grayText),
+              const Icon(Icons.location_on_rounded, size: 13, color: _TareasColors.grayText),
               const SizedBox(width: 3),
               Expanded(
                 child: Text(
@@ -943,7 +1105,7 @@ class _AssignmentCard extends StatelessWidget {
                   if (assignment.date.isNotEmpty)
                     Row(
                       children: [
-                        const Icon(Icons.calendar_today_outlined, size: 11, color: _TareasColors.grayText),
+                        const Icon(Icons.event_rounded, size: 11, color: _TareasColors.grayText),
                         const SizedBox(width: 3),
                         Text(
                           assignment.date,

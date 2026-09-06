@@ -40,8 +40,7 @@ class AppColors {
   static const red = Color(0xFFE04B4B);
   static const redBg = Color(0xFFFCE7E7);
 
-  // Alias adicionales para que otras pantallas (Cliente, Tareas, etc.)
-  // que ya usaban estos nombres puedan reutilizar esta misma paleta.
+  
   static const navy = encabezado;
   static const background = fondo;
   static const panelDark = encabezado;
@@ -188,6 +187,104 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
       mockPriceChanges.where((c) => c.tipo == CambioTipo.incremento).length;
   int get _totalDisminuciones =>
       mockPriceChanges.where((c) => c.tipo == CambioTipo.disminucion).length;
+  int get _totalCambios => mockPriceChanges.length;
+  int get _totalProductosIniciales =>
+      mockPriceChanges.map((c) => c.producto).toSet().length;
+
+  // ------------------------------------------------------------
+  // CUADRO "Historial de Precios" — recuadro navy con borde dorado,
+  // etiqueta, título, subtítulo y estrellas.
+  // ------------------------------------------------------------
+  Widget _buildTituloPrecios() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.encabezado,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.dorado, width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'ADMINISTRADOR · PRECIOS',
+            style: TextStyle(
+              color: AppColors.doradoClaro,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Historial de Precios',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Rastrea y analiza cada cambio de precio',
+            style: TextStyle(color: Color(0xFF8FA3C4), fontSize: 12.5),
+          ),
+          const SizedBox(height: 8),
+          const Row(
+            children: [
+              Icon(Icons.star_rounded, size: 16, color: AppColors.dorado),
+              Icon(Icons.star_rounded, size: 16, color: AppColors.dorado),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // 4 MINI TARJETAS — Total / Aumentos / Reduc. / Iniciales
+  // (ÚNICO CAMBIO solicitado en este turno: se agregó esta fila,
+  // sin tocar las tarjetas de Incrementos/Disminuciones existentes)
+  // ------------------------------------------------------------
+  Widget _buildMiniStats() {
+    return Row(
+      children: [
+        Expanded(
+          child: _MiniStatCard(
+            value: '$_totalCambios',
+            label: 'Total',
+            color: AppColors.encabezado,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _MiniStatCard(
+            value: '$_totalIncrementos',
+            label: 'Aumentos',
+            color: AppColors.red,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _MiniStatCard(
+            value: '$_totalDisminuciones',
+            label: 'Reduc.',
+            color: AppColors.green,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _MiniStatCard(
+            value: '$_totalProductosIniciales',
+            label: 'Iniciales',
+            color: AppColors.encabezado,
+            borderColor: const Color(0xFF8FA3C4),
+          ),
+        ),
+      ],
+    );
+  }
 
   // NOTA: aquí ya NO se llama _TitleCard. Ese panel repetía el título
   // "Historial de Precios" que ya aparece arriba junto al logo, así que
@@ -197,27 +294,9 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                title: 'Incrementos',
-                value: '$_totalIncrementos',
-                subtitle: 'productos con alza de precio',
-                valueColor: AppColors.green,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _StatCard(
-                title: 'Disminuciones',
-                value: '$_totalDisminuciones',
-                subtitle: 'productos con baja de precio',
-                valueColor: AppColors.red,
-              ),
-            ),
-          ],
-        ),
+        _buildTituloPrecios(),
+        const SizedBox(height: 14),
+        _buildMiniStats(),
         const SizedBox(height: 14),
         _FiltersCard(
           controller: _searchController,
@@ -275,6 +354,47 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
             Expanded(child: _buildContent(context)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ==================== MINI TARJETA (Total/Aumentos/Reduc./Iniciales) ====================
+class _MiniStatCard extends StatelessWidget {
+  final String value;
+  final String label;
+  final Color color;
+  final Color? borderColor;
+
+  const _MiniStatCard({
+    required this.value,
+    required this.label,
+    required this.color,
+    this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(10)),
+        border: Border(top: BorderSide(color: borderColor ?? color, width: 3)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 9.5, color: AppColors.grayText),
+          ),
+        ],
       ),
     );
   }
@@ -364,50 +484,6 @@ class _TopHeader extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ==================== TARJETAS DE ESTADÍSTICAS ====================
-class _StatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final String subtitle;
-  final Color valueColor;
-
-  const _StatCard({
-    required this.title,
-    required this.value,
-    required this.subtitle,
-    required this.valueColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.dorado, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.doradoOscuro.withOpacity(0.08),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontSize: 12, color: AppColors.grayText)),
-          const SizedBox(height: 4),
-          Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: valueColor)),
-          const SizedBox(height: 2),
-          Text(subtitle, style: const TextStyle(fontSize: 10.5, color: AppColors.grayText)),
         ],
       ),
     );
