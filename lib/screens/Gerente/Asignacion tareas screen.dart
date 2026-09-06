@@ -734,26 +734,21 @@ class _StatsAndActionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ---------------------------------------------------
+          // Botón "Nueva Asignación": mismo widget/estilo dorado
+          // que "Agregar dirección" (Material + InkWell), en vez
+          // de ElevatedButton, para que el color sea IDÉNTICO
+          // (ElevatedButton en Material 3 aplica un tinte propio
+          // que hacía lucir el dorado ligeramente distinto).
+          // ---------------------------------------------------
           Align(
             alignment: Alignment.centerRight,
-            child: ElevatedButton.icon(
-              onPressed: () {
+            child: _GoldButton(
+              icon: Icons.add_rounded,
+              label: 'Nueva Asignación',
+              onTap: () {
                 // TODO: navegar a formulario de nueva asignación
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _TareasColors.gold,
-                foregroundColor: _TareasColors.encabezado,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              icon: const Icon(Icons.add_rounded, size: 16),
-              label: const Text(
-                'Nueva Asignación',
-                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
-              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -807,6 +802,61 @@ class _StatsAndActionCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// ============================================================
+// BOTÓN DORADO REUTILIZABLE
+// Mismo widget (Material + InkWell) que "Agregar dirección", para
+// que el color y el aspecto sean EXACTAMENTE iguales en toda la app.
+// ============================================================
+class _GoldButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool expand;
+
+  const _GoldButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.expand = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final button = Material(
+      color: _TareasColors.gold,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 14, color: _TareasColors.encabezado),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: _TareasColors.encabezado,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11.5,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return expand ? SizedBox(width: double.infinity, child: button) : button;
   }
 }
 

@@ -2,7 +2,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  static const String apiUrl = 'http://192.168.137.1:5000'; 
+<<<<<<<<< Temporary merge branch 1
+  static const String apiUrl = 'http://192.168.2.24:5000'; 
+=========
+  static const String apiUrl = 'http://localhost:5000'; 
+>>>>>>>>> Temporary merge branch 2
   // cambie su IP del computador por la de ustedes 
   static const String apiKey = 'pollo';
 

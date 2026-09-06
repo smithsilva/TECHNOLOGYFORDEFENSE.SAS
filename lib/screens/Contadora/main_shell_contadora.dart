@@ -5,13 +5,15 @@ import '../../widgets/contadora/contadora_appbar.dart';
 import '../../widgets/admin/notificaciones_bottom_sheet.dart';
 import '../admin/notificaciones_screen.dart' hide AppColors;
 import 'inventario_contadora_screen.dart' hide AppColors; // -> class InventarioContadoraScreen
-
-import 'Empleados screen.dart' hide AppColors; // -> class EmpleadosScreen
-import 'Historial precios screen.dart' hide AppColors; // -> class HistorialPreciosScreen
+import 'Movimientos_Contables_screen.dart' hide AppColors; // ->  class movimientos_contables
 import 'Metodos pago screen.dart' hide AppColors; // -> class MetodosPagoScreen
+import 'Historial precios screen.dart' hide AppColors; // -> class HistorialPreciosScreen
 import 'Proveedores screen.dart' hide AppColors; // -> class ProveedoresScreen
-import 'Reportes screen.dart' hide AppColors; // -> class ReportesFinancierosScreen
+import 'Empleados screen.dart' hide AppColors; // -> class EmpleadosScreen
 import 'Sucursales screen.dart' hide AppColors; // -> class SucursalesScreen
+import 'Reportes screen.dart' hide AppColors; // -> class ReportesFinancierosScreen
+
+
 
 class MainShellContadora extends StatefulWidget {
   final Map<String, dynamic>? usuario;
@@ -38,23 +40,27 @@ class _MainShellContadoraState extends State<MainShellContadora> {
 
   static const List<T4DMenuItem> _menu = [
     T4DMenuItem(icon: Icons.inventory_2_outlined, label: 'Inventario'),
-    T4DMenuItem(icon: Icons.badge_outlined, label: 'Empleados'),
+    T4DMenuItem(icon: Icons.account_balance_wallet_outlined, label: 'Movimientos contables'),
     T4DMenuItem(icon: Icons.payments_outlined, label: 'Métodos de pago'),
-    T4DMenuItem(icon: Icons.local_shipping_outlined, label: 'Proveedores'),
-    T4DMenuItem(icon: Icons.bar_chart_rounded, label: 'Reportes'),
-    T4DMenuItem(icon: Icons.store_outlined, label: 'Sucursales'),
     T4DMenuItem(icon: Icons.history_rounded, label: 'Historial de precios'),
+    T4DMenuItem(icon: Icons.local_shipping_outlined, label: 'Proveedores'),
+    T4DMenuItem(icon: Icons.badge_outlined, label: 'Empleados'),
+    T4DMenuItem(icon: Icons.store_outlined, label: 'Sucursales'),
+    T4DMenuItem(icon: Icons.bar_chart_rounded, label: 'Reportes'),
+    
+    
   ];
 
   // El orden debe coincidir 1 a 1 con _menu de arriba.
   late final List<Widget> _pantallas = [
     InventarioContadoraScreen(usuario: widget.usuario),
-    const EmpleadosScreen(),
+    const MovimientosContablesScreen(),
     const MetodosPagoScreen(),
-    const ProveedoresScreen(),
-    const ReportesFinancierosScreen(),
-    const SucursalesScreen(),
     const HistorialPreciosScreen(),
+    const ProveedoresScreen(),
+    const EmpleadosScreen(),
+    const SucursalesScreen(),
+    const ReportesFinancierosScreen(),
   ];
 
   void _cerrarSesion() {

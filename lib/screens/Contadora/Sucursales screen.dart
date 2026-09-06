@@ -183,8 +183,9 @@ class SucursalesScreen extends StatelessWidget {
 
 // ============================================================
 // TARJETA DE ENCABEZADO ESTILO "HISTORIAL DE PRECIOS"
-// Fondo azul marino oscuro, etiqueta dorada, título blanco
-// y subtítulo azul claro.
+// Fondo azul marino oscuro, borde dorado (igual que el botón
+// "Agregar dirección" de Direcciones Cliente), etiqueta dorada,
+// título blanco y subtítulo azul claro.
 // ============================================================
 class _PageHeaderCard extends StatelessWidget {
   final String eyebrow;
@@ -205,6 +206,7 @@ class _PageHeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.navy,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,6 +244,8 @@ class _PageHeaderCard extends StatelessWidget {
 }
 
 // ==================== TARJETA DE ESTADÍSTICA (Total / Activas) ====================
+// Borde dorado en todo el cuadro (antes usaba el color del acento
+// con opacidad; ahora siempre es dorado, igual al resto de la app).
 class _StatCard extends StatelessWidget {
   final String valor;
   final String label;
@@ -260,7 +264,7 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.35), width: 1.4),
+        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
@@ -354,7 +358,7 @@ class _InfoRow extends StatelessWidget {
 }
 
 // Tarjeta de sucursal con franja de acento a la izquierda (verde si
-// está activa), sin íconos decorativos, igual al estilo de tus capturas.
+// está activa) y borde dorado en todo el cuadro.
 class _SucursalCard extends StatelessWidget {
   final SucursalModel sucursal;
 
@@ -368,7 +372,7 @@ class _SucursalCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],

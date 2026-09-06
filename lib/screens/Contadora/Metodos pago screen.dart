@@ -39,74 +39,232 @@ class AppColors {
 }
 
 // ==================== MODELO ====================
+// Nota: dejó de ser 100% inmutable "const" porque ahora se crea
+// dinámicamente desde el formulario (el usuario define el % real).
 class MetodoPagoModel {
   final String nombre;
   final String descripcion;
-  final String comision;
+  final double comisionValor; // porcentaje numérico real, ej: 2.5
   final String estado;
 
   const MetodoPagoModel({
     required this.nombre,
     required this.descripcion,
-    required this.comision,
+    required this.comisionValor,
     required this.estado,
   });
+
+  String get comisionTexto {
+    // Si es entero (0, 2, 5...) no muestra decimales; si no, muestra 1 decimal.
+    final esEntero = comisionValor == comisionValor.roundToDouble();
+    final texto = esEntero
+        ? comisionValor.toStringAsFixed(0)
+        : comisionValor.toStringAsFixed(1);
+    return '$texto%';
+  }
 }
 
-final List<MetodoPagoModel> metodosPagoData = [
+// Datos iniciales (ya no son "const" con 0% fijo a fuerza; son el punto
+// de partida, y cada método nuevo que agregues define SU PROPIO %).
+final List<MetodoPagoModel> metodosPagoDataInicial = [
   const MetodoPagoModel(
     nombre: 'Efectivo',
     descripcion: 'Pago en efectivo en punto físico',
-    comision: '0%',
+    comisionValor: 0,
     estado: 'Activo',
   ),
   const MetodoPagoModel(
     nombre: 'Transferencia Bancaria',
     descripcion: 'Transferencia entre cuentas bancarias',
-    comision: '0%',
+    comisionValor: 0,
     estado: 'Activo',
   ),
   const MetodoPagoModel(
     nombre: 'Nequi',
     descripcion: 'Pago digital a través de la aplicación Nequi',
-    comision: '0%',
+    comisionValor: 0,
     estado: 'Activo',
   ),
   const MetodoPagoModel(
     nombre: 'Tarjeta Crédito/Débito',
     descripcion: 'Pago con tarjeta mediante datáfono o pasarela',
-    comision: '2.5%',
+    comisionValor: 2.5,
     estado: 'Activo',
   ),
 ];
 
-// ==================== PANTALLA PRINCIPAL ====================
-class MetodosPagoScreen extends StatelessWidget {
+// ==================== PANTALLA PRINCIPAL (AHORA STATEFUL) ====================
+class MetodosPagoScreen extends StatefulWidget {
   const MetodosPagoScreen({super.key});
 
-  int get _totalMetodos => metodosPagoData.length;
-  int get _activos =>
-      metodosPagoData.where((m) => m.estado == 'Activo').length;
+  @override
+  State<MetodosPagoScreen> createState() => _MetodosPagoScreenState();
+}
+
+class _MetodosPagoScreenState extends State<MetodosPagoScreen> {
+  // Esta lista vive en memoria mientras la app está abierta.
+  // Si necesitas que sobreviva a cerrar la app, aquí es donde
+  // conectarías shared_preferences/sqflite, o una API si varios
+  // dispositivos deben ver lo mismo.
+  final List<MetodoPagoModel> _metodos = List.of(metodosPagoDataInicial);
+
+  int get _totalMetodos => _metodos.length;
+  int get _activos => _metodos.where((m) => m.estado == 'Activo').length;
+
+  Future<void> _abrirFormulario({MetodoPagoModel? existente, int? index}) async {
+    final nombreCtrl = TextEditingController(text: existente?.nombre ?? '');
+    final descCtrl = TextEditingController(text: existente?.descripcion ?? '');
+    final comisionCtrl = TextEditingController(
+      text: existente != null ? existente.comisionValor.toString() : '',
+    );
+    String estadoSeleccionado = existente?.estado ?? 'Activo';
+
+    final resultado = await showDialog<MetodoPagoModel>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(existente == null
+                  ? 'Agregar método de pago'
+                  : 'Editar método de pago'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: nombreCtrl,
+                      decoration: const InputDecoration(labelText: 'Nombre'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: descCtrl,
+                      decoration: const InputDecoration(labelText: 'Descripción'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: comisionCtrl,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Comisión (%)',
+                        hintText: 'Ej: 2.5',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: estadoSeleccionado,
+                      decoration: const InputDecoration(labelText: 'Estado'),
+                      items: const [
+                        DropdownMenuItem(value: 'Activo', child: Text('Activo')),
+                        DropdownMenuItem(value: 'Inactivo', child: Text('Inactivo')),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) {
+                          setDialogState(() => estadoSeleccionado = v);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final nombre = nombreCtrl.text.trim();
+                    final comision =
+                        double.tryParse(comisionCtrl.text.trim().replaceAll(',', '.'));
+                    if (nombre.isEmpty || comision == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'Ingresa un nombre válido y una comisión numérica.'),
+                        ),
+                      );
+                      return;
+                    }
+                    Navigator.pop(
+                      context,
+                      MetodoPagoModel(
+                        nombre: nombre,
+                        descripcion: descCtrl.text.trim(),
+                        comisionValor: comision,
+                        estado: estadoSeleccionado,
+                      ),
+                    );
+                  },
+                  child: const Text('Guardar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (resultado != null) {
+      setState(() {
+        if (index != null) {
+          _metodos[index] = resultado;
+        } else {
+          _metodos.add(resultado);
+        }
+      });
+    }
+  }
+
+  void _eliminarMetodo(int index) {
+    setState(() => _metodos.removeAt(index));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.background,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+      child: Stack(
         children: [
-          const _PageHeaderCard(
-            eyebrow: 'CONTADORA - PAGOS',
-            title: 'Métodos de Pago',
-            subtitle: 'Canales de pago aceptados',
+          ListView(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 90),
+            children: [
+              const _PageHeaderCard(
+                eyebrow: 'CONTADORA - PAGOS',
+                title: 'Métodos de Pago',
+                subtitle: 'Canales de pago aceptados',
+              ),
+              const SizedBox(height: 14),
+              _buildStatsRow(),
+              const SizedBox(height: 14),
+              ..._metodos.asMap().entries.map(
+                    (entry) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _MetodoCard(
+                        metodo: entry.value,
+                        onEditar: () => _abrirFormulario(
+                          existente: entry.value,
+                          index: entry.key,
+                        ),
+                        onEliminar: () => _eliminarMetodo(entry.key),
+                      ),
+                    ),
+                  ),
+            ],
           ),
-          const SizedBox(height: 14),
-          _buildStatsRow(),
-          const SizedBox(height: 14),
-          ...metodosPagoData.map(
-            (m) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _MetodoCard(metodo: m),
+          Positioned(
+            right: 14,
+            bottom: 14,
+            child: FloatingActionButton.extended(
+              onPressed: () => _abrirFormulario(),
+              backgroundColor: AppColors.navy,
+              icon: const Icon(Icons.add, color: AppColors.gold),
+              label: const Text(
+                'Agregar método',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ),
         ],
@@ -139,8 +297,6 @@ class MetodosPagoScreen extends StatelessWidget {
 
 // ============================================================
 // TARJETA DE ENCABEZADO ESTILO "HISTORIAL DE PRECIOS"
-// Fondo azul marino oscuro, etiqueta dorada, título blanco,
-// subtítulo azul claro y dos estrellitas doradas.
 // ============================================================
 class _PageHeaderCard extends StatelessWidget {
   final String eyebrow;
@@ -161,6 +317,7 @@ class _PageHeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.navy,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,8 +363,6 @@ class _PageHeaderCard extends StatelessWidget {
 }
 
 // ==================== TARJETA DE ESTADÍSTICA ====================
-// Sin ícono decorativo: solo un filo de color arriba, valor grande
-// y etiqueta debajo, para que no se vea como un dashboard genérico.
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;
@@ -225,7 +380,7 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
@@ -261,12 +416,16 @@ class _StatCard extends StatelessWidget {
 }
 
 // ==================== TARJETA DE MÉTODO DE PAGO ====================
-// Reemplaza la tabla anterior por tarjetas individuales con una
-// franja de acento a la izquierda, igual al estilo de las imágenes.
 class _MetodoCard extends StatelessWidget {
   final MetodoPagoModel metodo;
+  final VoidCallback onEditar;
+  final VoidCallback onEliminar;
 
-  const _MetodoCard({required this.metodo});
+  const _MetodoCard({
+    required this.metodo,
+    required this.onEditar,
+    required this.onEliminar,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -274,7 +433,7 @@ class _MetodoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
@@ -287,7 +446,7 @@ class _MetodoCard extends StatelessWidget {
             Container(width: 4, color: AppColors.enlace),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+                padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -321,7 +480,7 @@ class _MetodoCard extends StatelessWidget {
                           style: TextStyle(fontSize: 10.5, color: AppColors.textGrey),
                         ),
                         Text(
-                          metodo.comision,
+                          metodo.comisionTexto,
                           style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,
@@ -333,6 +492,21 @@ class _MetodoCard extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textGrey),
+                  onPressed: onEditar,
+                  tooltip: 'Editar',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.rojo),
+                  onPressed: onEliminar,
+                  tooltip: 'Eliminar',
+                ),
+              ],
             ),
           ],
         ),

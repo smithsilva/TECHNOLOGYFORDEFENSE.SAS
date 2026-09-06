@@ -125,8 +125,9 @@ class EmpleadosScreen extends StatelessWidget {
 
 // ============================================================
 // TARJETA DE ENCABEZADO ESTILO "HISTORIAL DE PRECIOS"
-// Fondo azul marino oscuro, etiqueta dorada, título blanco
-// y subtítulo azul claro.
+// Fondo azul marino oscuro, borde dorado (igual que el botón
+// "Agregar dirección" de Direcciones Cliente), etiqueta dorada,
+// título blanco y subtítulo azul claro.
 // ============================================================
 class _PageHeaderCard extends StatelessWidget {
   final String eyebrow;
@@ -147,6 +148,7 @@ class _PageHeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.navy,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,7 +213,8 @@ class _EstadoBadge extends StatelessWidget {
 }
 
 // Tarjeta de empleado con franja de acento a la izquierda (color del
-// avatar), sin íconos decorativos, igual al estilo de tus capturas.
+// avatar) y borde dorado en todo el cuadro, igual al estilo de
+// Direcciones Cliente / Movimientos Contables.
 class _EmpleadoCard extends StatelessWidget {
   final EmpleadoModel empleado;
 
@@ -223,7 +226,7 @@ class _EmpleadoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
