@@ -1,13 +1,25 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'services/supabase_client.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/gerente/main_shell_gerente.dart';
 import 'screens/mecanico/mecanico_shell.dart';
 import 'screens/contadora/main_shell_contadora.dart';
 
-void main() {
+void main() async {
+  // Necesario porque llamamos código async (Supabase.initialize)
+  // antes de runApp().
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializa el cliente de Supabase UNA sola vez. Tu login sigue
+  // funcionando igual contra tu backend propio (AuthService + http);
+  // esto solo habilita las consultas directas a las tablas de Supabase
+  // (asignaciones_tareas, mantenimiento, notificaciones, etc.), igual
+  // que ya hace tu app en React.
+  await inicializarSupabase();
+
   runApp(const MyApp());
 }
 
