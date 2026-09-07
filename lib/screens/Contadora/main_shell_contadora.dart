@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../../widgets/t4d_sidebar.dart';
 import '../../widgets/contadora/contadora_appbar.dart';
+import '../../widgets/admin/notificaciones_bottom_sheet.dart';
+import '../admin/notificaciones_screen.dart' hide AppColors;
 import 'inventario_contadora_screen.dart' hide AppColors; // -> class InventarioContadoraScreen
-
-import 'Empleados screen.dart' hide AppColors; // -> class EmpleadosScreen
-import 'Historial precios screen.dart' hide AppColors; // -> class HistorialPreciosScreen
+import 'Movimientos_Contables_screen.dart' hide AppColors; // ->  class movimientos_contables
 import 'Metodos pago screen.dart' hide AppColors; // -> class MetodosPagoScreen
+import 'Historial precios screen.dart' hide AppColors; // -> class HistorialPreciosScreen
 import 'Proveedores screen.dart' hide AppColors; // -> class ProveedoresScreen
-import 'Reportes screen.dart' hide AppColors; // -> class ReportesFinancierosScreen
+import 'Empleados screen.dart' hide AppColors; // -> class EmpleadosScreen
 import 'Sucursales screen.dart' hide AppColors; // -> class SucursalesScreen
+import 'Reportes screen.dart' hide AppColors; // -> class ReportesFinancierosScreen
+
+
 
 class MainShellContadora extends StatefulWidget {
   final Map<String, dynamic>? usuario;
@@ -36,29 +40,52 @@ class _MainShellContadoraState extends State<MainShellContadora> {
 
   static const List<T4DMenuItem> _menu = [
     T4DMenuItem(icon: Icons.inventory_2_outlined, label: 'Inventario'),
-    T4DMenuItem(icon: Icons.badge_outlined, label: 'Empleados'),
+    T4DMenuItem(icon: Icons.account_balance_wallet_outlined, label: 'Movimientos contables'),
     T4DMenuItem(icon: Icons.payments_outlined, label: 'Métodos de pago'),
-    T4DMenuItem(icon: Icons.local_shipping_outlined, label: 'Proveedores'),
-    T4DMenuItem(icon: Icons.bar_chart_rounded, label: 'Reportes'),
-    T4DMenuItem(icon: Icons.store_outlined, label: 'Sucursales'),
     T4DMenuItem(icon: Icons.history_rounded, label: 'Historial de precios'),
+    T4DMenuItem(icon: Icons.local_shipping_outlined, label: 'Proveedores'),
+    T4DMenuItem(icon: Icons.badge_outlined, label: 'Empleados'),
+    T4DMenuItem(icon: Icons.store_outlined, label: 'Sucursales'),
+    T4DMenuItem(icon: Icons.bar_chart_rounded, label: 'Reportes'),
+    
+    
   ];
 
   // El orden debe coincidir 1 a 1 con _menu de arriba.
   late final List<Widget> _pantallas = [
     InventarioContadoraScreen(usuario: widget.usuario),
-    const EmpleadosScreen(),
+    const MovimientosContablesScreen(),
     const MetodosPagoScreen(),
-    const ProveedoresScreen(),
-    const ReportesFinancierosScreen(),
-    const SucursalesScreen(),
     const HistorialPreciosScreen(),
+    const ProveedoresScreen(),
+    const EmpleadosScreen(),
+    const SucursalesScreen(),
+    const ReportesFinancierosScreen(),
   ];
 
   void _cerrarSesion() {
     // Usa el callback centralizado en main.dart (limpia SharedPreferences
     // y vuelve a la vista 'login'), igual que MainShell y MainShellGerente.
     widget.onLogout?.call();
+  }
+
+  // Contadora no tiene pestaña propia de "Notificaciones" en el sidebar,
+  // así que "Ver todas" dentro del bottom sheet abre la pantalla completa
+  // encima (reutilizando la misma NotificacionesScreen de Admin).
+  void _abrirNotificacionesCompleto() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF13161F),
+            foregroundColor: Colors.white,
+            title: const Text('Notificaciones'),
+          ),
+          body: NotificacionesScreen(usuario: widget.usuario),
+        ),
+      ),
+    );
   }
 
   @override
@@ -141,7 +168,10 @@ class _MainShellContadoraState extends State<MainShellContadora> {
                             IconButton(
                               icon: const Icon(Icons.notifications_none,
                                   color: Colors.white),
-                              onPressed: () {},
+                              onPressed: () => mostrarNotificacionesBottomSheet(
+                                context,
+                                onVerTodas: _abrirNotificacionesCompleto,
+                              ),
                             ),
                           ],
                         ),
@@ -161,6 +191,10 @@ class _MainShellContadoraState extends State<MainShellContadora> {
           appBar: ContadoraAppBar(
             titulo: _menu[_indiceActual].label,
             nombreUsuario: nombre.toString(),
+            onNotificationsTap: () => mostrarNotificacionesBottomSheet(
+              context,
+              onVerTodas: _abrirNotificacionesCompleto,
+            ),
           ),
           drawer: Drawer(
             backgroundColor: Colors.transparent,

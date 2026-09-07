@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../screens/admin/inventario_screen.dart' hide AppColors;
+import '../../screens/admin/notificaciones_screen.dart' hide AppColors;
 import '../../widgets/t4d_sidebar.dart';
 import '../../widgets/gerente/gerente_appbar.dart';
+import '../../widgets/admin/notificaciones_bottom_sheet.dart';
 
 import 'Asignacion tareas screen.dart';
 import 'Direcciones cliente.dart';
@@ -65,7 +67,7 @@ class _MainShellGerenteState extends State<MainShellGerente> {
       visibleEnPanelPrincipal: true,
     ),
     _SeccionGerente(
-      item: const T4DMenuItem(icon: Icons.fact_check_outlined, label: 'Tareas'),
+      item: const T4DMenuItem(icon: Icons.fact_check_outlined, label: 'Asignacion de Tareas'),
       pantalla: const AsignacionTareasScreen(embedded: true),
       visibleEnPanelPrincipal: true,
     ),
@@ -92,6 +94,25 @@ class _MainShellGerenteState extends State<MainShellGerente> {
 
   void _cerrarSesion() {
     widget.onLogout?.call();
+  }
+
+  // Gerente no tiene pestaña propia de "Notificaciones", así que "Ver
+  // todas" abre la pantalla completa encima (misma NotificacionesScreen
+  // de Admin).
+  void _abrirNotificacionesCompleto() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF13202E),
+            foregroundColor: Colors.white,
+            title: const Text('Notificaciones'),
+          ),
+          body: NotificacionesScreen(usuario: widget.usuario),
+        ),
+      ),
+    );
   }
 
   @override
@@ -170,7 +191,10 @@ class _MainShellGerenteState extends State<MainShellGerente> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.notifications_none, color: Colors.white),
-                              onPressed: () {},
+                              onPressed: () => mostrarNotificacionesBottomSheet(
+                                context,
+                                onVerTodas: _abrirNotificacionesCompleto,
+                              ),
                             ),
                           ],
                         ),
@@ -190,6 +214,10 @@ class _MainShellGerenteState extends State<MainShellGerente> {
           appBar: GerenteAppBar(
             titulo: _menu[_indiceActual].label,
             nombreUsuario: nombre.toString(),
+            onNotificationsTap: () => mostrarNotificacionesBottomSheet(
+              context,
+              onVerTodas: _abrirNotificacionesCompleto,
+            ),
           ),
           drawer: Drawer(
             backgroundColor: Colors.transparent,

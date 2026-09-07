@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../admin/inventario_screen.dart';
+import '../admin/notificaciones_screen.dart' hide AppColors;
 import 'categorias_screen.dart';
 import 'mantenimientos_screen.dart';
 import '../../widgets/mecanico/mecanico_drawer.dart';
 import '../../widgets/compartido/inventario_header.dart';
+import '../../widgets/admin/notificaciones_bottom_sheet.dart';
 
 class MecanicoShell extends StatefulWidget {
   final Map<String, dynamic>? usuario;
@@ -36,6 +38,25 @@ class _MecanicoShellState extends State<MecanicoShell> {
     }
   }
 
+  // Mecánico no tiene pestaña propia de "Notificaciones", así que "Ver
+  // todas" abre la pantalla completa encima (misma NotificacionesScreen
+  // de Admin).
+  void _abrirNotificacionesCompleto() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF13202E),
+            foregroundColor: Colors.white,
+            title: const Text('Notificaciones'),
+          ),
+          body: NotificacionesScreen(usuario: widget.usuario),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,6 +64,10 @@ class _MecanicoShellState extends State<MecanicoShell> {
         titulo: _titulos[_indiceActual],
         usuario: widget.usuario,
         onLogout: widget.onLogout,
+        onNotificaciones: () => mostrarNotificacionesBottomSheet(
+          context,
+          onVerTodas: _abrirNotificacionesCompleto,
+        ),
         // onPerfil: se conecta cuando exista la pantalla de Perfil.
       ),
       drawer: MecanicoDrawer(
