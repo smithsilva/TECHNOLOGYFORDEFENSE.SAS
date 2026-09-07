@@ -4,17 +4,43 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // Este archivo expone la variable `supabase` ya inicializada en main.dart.
 import '../../services/supabase_client.dart';
 
-class AppColors {
-  static const dorado = Color(0xFFD4A743);
-  static const doradoOscuro = Color(0xFF8C6B3F);
-  static const doradoClaro = Color(0xFFE7C98A);
-  static const fondo = Color(0xFFF7F1E3);
-  static const verde = Color(0xFF1F9D55);
-  static const verdeFondo = Color(0xFFE3F7E9);
-  static const azul = Color(0xFF2563EB);
-  static const azulFondo = Color(0xFFE3EBFD);
+class _TareasColors {
+  static const dorado = Color(0xFFC9962E);
+  static const doradoOscuro = Color(0xFF8C6B2E);
+  static const doradoClaro = Color(0xFFE8C97A);
+  static const doradoMezcla = Color(0xFFAB812E);
+  static const fondo = Color(0xFFFAF3E4);
+
+  static const navyOscuro = Color(0xFF0F1B2E);
+  static const navyClaro = Color(0xFF16233A);
+  static const subtitulo = Color(0xFF8FA3C4);
+
+  static const verde = Color(0xFF2E9E5B);
+  static const verdeFondo = Color(0xFFDDF2E1);
+
+  static const naranja = Color(0xFFA17A2E);
+  static const naranjaFondo = Color(0xFFF5E3C3);
+
+  static const rojo = Color(0xFFC0293B);
+  static const rojoFondo = Color(0xFFFADCE0);
+
   static const textoMuted = Color(0xFF6B7280);
-  static const encabezado = Color(0xFF13202E);
+  static const enlace = Color(0xFF2563EB);
+
+  static const white = Color(0xFFFFFFFF);
+  static const gold = dorado;
+  static const grayText = textoMuted;
+  static const encabezado = navyOscuro;
+  static const headerBg = navyOscuro;
+
+  static const blue = enlace;
+  static const blueBg = Color(0xFFE1EEFE);
+  static const green = verde;
+  static const greenBg = verdeFondo;
+  static const orange = doradoOscuro;
+  static const orangeBg = Color(0xFFFDF3DA);
+
+  static const navy = encabezado;
 }
 
 // ============================================================
@@ -130,12 +156,53 @@ class Asignacion {
   }
 }
 
+String _fmtFecha(DateTime? f) {
+  if (f == null) return '—';
+  final dia = f.day.toString().padLeft(2, '0');
+  final mes = f.month.toString().padLeft(2, '0');
+  return '$dia/$mes/${f.year}';
+}
+
+String _fmtCOP(double v) {
+  final entero = v.round().toString();
+  final buffer = StringBuffer();
+  for (int i = 0; i < entero.length; i++) {
+    final posDesdeElFinal = entero.length - i;
+    buffer.write(entero[i]);
+    if (posDesdeElFinal > 1 && posDesdeElFinal % 3 == 1) buffer.write('.');
+  }
+  return '\$$buffer';
+}
+
+Color _colorEstado(String estado) {
+  switch (estado) {
+    case 'Finalizada':
+      return _TareasColors.green;
+    case 'En proceso':
+      return _TareasColors.blue;
+    default:
+      return _TareasColors.orange;
+  }
+}
+
+Color _colorEstadoBg(String estado) {
+  switch (estado) {
+    case 'Finalizada':
+      return _TareasColors.greenBg;
+    case 'En proceso':
+      return _TareasColors.blueBg;
+    default:
+      return _TareasColors.orangeBg;
+  }
+}
+
 // ============================================================
 // PANTALLA
 // ============================================================
 
 class MantenimientosScreen extends StatefulWidget {
-  /// Debe contener al menos 'id_usuario' (el id del mecánico logueado).
+  /// Debe contener al menos 'id_usuario' (el id del mecánico logueado)
+  /// y opcionalmente 'username' para saludarlo.
   final Map<String, dynamic>? usuario;
 
   const MantenimientosScreen({super.key, this.usuario});
@@ -150,10 +217,37 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
   List<Asignacion> _asignaciones = [];
   final Set<int> _procesando = {};
 
+  final TextEditingController _searchController = TextEditingController();
+  String _busqueda = '';
+  String _filtroEstado = ''; // '' = Todos
+
+  static const _tabsEstado = ['Todos', 'Pendiente', 'En proceso', 'Finalizada'];
+
   RealtimeChannel? _canalAsignaciones;
   RealtimeChannel? _canalNotificaciones;
 
   int? get _idMecanico => widget.usuario?['id_usuario'] as int?;
+
+  List<Asignacion> get _filtradas {
+    Iterable<Asignacion> lista = _asignaciones;
+    if (_filtroEstado.isNotEmpty) {
+      lista = lista.where((a) => a.estado == _filtroEstado);
+    }
+    if (_busqueda.trim().isNotEmpty) {
+      final q = _busqueda.toLowerCase();
+      lista = lista.where((a) {
+        final cli = a.cliente?.nombreCompleto.toLowerCase() ?? '';
+        return a.vehiculo.toLowerCase().contains(q) ||
+            a.tipoTrabajo.toLowerCase().contains(q) ||
+            cli.contains(q);
+      });
+    }
+    return lista.toList();
+  }
+
+  int get _pendientes => _asignaciones.where((a) => a.estado == 'Pendiente').length;
+  int get _enProceso => _asignaciones.where((a) => a.estado == 'En proceso').length;
+  int get _finalizadas => _asignaciones.where((a) => a.estado == 'Finalizada').length;
 
   @override
   void initState() {
@@ -164,6 +258,7 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     if (_canalAsignaciones != null) supabase.removeChannel(_canalAsignaciones!);
     if (_canalNotificaciones != null) {
       supabase.removeChannel(_canalNotificaciones!);
@@ -219,13 +314,6 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
     final idMec = _idMecanico;
     if (idMec == null) return;
 
-    // IMPORTANTE: en Supabase, la tabla 'asignaciones_tareas' y
-    // 'notificaciones' deben tener Realtime habilitado
-    // (Database > Replication en el panel de Supabase).
-
-    // 1) Cualquier cambio en asignaciones_tareas de este mecánico
-    //    (INSERT cuando el admin crea una nueva, UPDATE cuando cambia
-    //    de estado desde otro dispositivo, etc.) recarga la lista.
     _canalAsignaciones = supabase
         .channel('asignaciones_mec_$idMec')
         .onPostgresChanges(
@@ -241,8 +329,6 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
         )
         .subscribe();
 
-    // 2) Notificación nueva dirigida a este mecánico: mostramos un
-    //    aviso visual además de refrescar la lista.
     _canalNotificaciones = supabase
         .channel('notif_mec_$idMec')
         .onPostgresChanges(
@@ -259,10 +345,8 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  backgroundColor: AppColors.doradoOscuro,
-                  content: Text(
-                    (nuevo['titulo'] as String?) ?? 'Nueva asignación',
-                  ),
+                  backgroundColor: _TareasColors.doradoOscuro,
+                  content: Text((nuevo['titulo'] as String?) ?? 'Nueva asignación'),
                 ),
               );
             }
@@ -346,113 +430,79 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: esError ? Colors.red.shade700 : AppColors.verde,
+        backgroundColor: esError ? Colors.red.shade700 : _TareasColors.verde,
         content: Text(texto),
       ),
     );
   }
 
-  // ── Helpers de formato / estilo ───────────────────────────────
-  Map<String, dynamic> _estiloEstado(String estado) {
-    switch (estado) {
-      case 'Finalizada':
-        return {
-          'texto': 'Finalizada',
-          'color': AppColors.verde,
-          'fondo': AppColors.verdeFondo
-        };
-      case 'En proceso':
-        return {
-          'texto': 'En proceso',
-          'color': AppColors.azul,
-          'fondo': AppColors.azulFondo
-        };
-      default:
-        return {
-          'texto': 'Pendiente',
-          'color': AppColors.doradoOscuro,
-          'fondo': AppColors.doradoClaro.withValues(alpha: 0.35),
-        };
-    }
-  }
-
-  String _formatoFecha(DateTime? f) {
-    if (f == null) return '—';
-    final dia = f.day.toString().padLeft(2, '0');
-    final mes = f.month.toString().padLeft(2, '0');
-    return '$dia/$mes/${f.year}';
-  }
-
-  String _formatoCOP(double v) {
-    final entero = v.round().toString();
-    final buffer = StringBuffer();
-    for (int i = 0; i < entero.length; i++) {
-      final posDesdeElFinal = entero.length - i;
-      buffer.write(entero[i]);
-      if (posDesdeElFinal > 1 && posDesdeElFinal % 3 == 1) buffer.write('.');
-    }
-    return '\$$buffer';
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.fondo,
-      child: RefreshIndicator(
-        onRefresh: _cargarAsignaciones,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+    return Scaffold(
+      backgroundColor: _TareasColors.fondo,
+      body: SafeArea(
+        child: Column(
           children: [
-            _encabezado(),
-            const SizedBox(height: 14),
-            if (_cargando)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (_error != null)
-              _bloqueError()
-            else if (_asignaciones.isEmpty)
-              _bloqueVacio()
-            else
-              ..._asignaciones.map((a) => _tarjetaAsignacion(a)),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _cargarAsignaciones,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+                  children: [
+                    const _PageHeaderCard(),
+                    const SizedBox(height: 14),
+                    _StatsRow(
+                      pendientes: _pendientes,
+                      enProceso: _enProceso,
+                      finalizadas: _finalizadas,
+                      total: _asignaciones.length,
+                    ),
+                    const SizedBox(height: 14),
+                    _SearchBar(
+                      controller: _searchController,
+                      onChanged: (v) => setState(() => _busqueda = v),
+                    ),
+                    const SizedBox(height: 12),
+                    _FilterTabs(
+                      tabs: _tabsEstado,
+                      seleccionado: _filtroEstado.isEmpty ? 'Todos' : _filtroEstado,
+                      onSelected: (t) => setState(() => _filtroEstado = t == 'Todos' ? '' : t),
+                    ),
+                    const SizedBox(height: 14),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: Text(
+                        '${_filtradas.length} TAREAS',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: _TareasColors.grayText,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (_cargando)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 40),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (_error != null)
+                      _bloqueError()
+                    else if (_filtradas.isEmpty)
+                      _bloqueVacio()
+                    else
+                      ..._filtradas.map((a) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _tarjetaAsignacion(a),
+                          )),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _encabezado() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.doradoClaro),
-      ),
-      child: Row(
-        children: [
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Mis Mantenimientos',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                SizedBox(height: 4),
-                Text('Trabajos asignados y su estado',
-                    style: TextStyle(fontSize: 12, color: AppColors.textoMuted)),
-              ],
-            ),
-          ),
-          Text(
-            '${_asignaciones.length} tareas',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.doradoOscuro,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -467,12 +517,9 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
             const SizedBox(height: 8),
             Text(_error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textoMuted)),
+                style: const TextStyle(color: _TareasColors.grayText)),
             const SizedBox(height: 10),
-            TextButton(
-              onPressed: _cargarAsignaciones,
-              child: const Text('Reintentar'),
-            ),
+            TextButton(onPressed: _cargarAsignaciones, child: const Text('Reintentar')),
           ],
         ),
       ),
@@ -487,8 +534,10 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
           children: [
             Icon(Icons.build_outlined, size: 40, color: Colors.grey.shade400),
             const SizedBox(height: 8),
-            Text('No tienes mantenimientos asignados',
-                style: TextStyle(color: Colors.grey.shade600)),
+            Text(
+              _asignaciones.isEmpty ? 'No tienes mantenimientos asignados' : 'Sin resultados',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
           ],
         ),
       ),
@@ -496,22 +545,19 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
   }
 
   Widget _tarjetaAsignacion(Asignacion a) {
-    final estilo = _estiloEstado(a.estado);
     final bloqueado = _procesando.contains(a.idAsignacion);
     final online = a.metodoPago?.permiteOnline ?? false;
+    final colorEstado = _colorEstado(a.estado);
+    final bgEstado = _colorEstadoBg(a.estado);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.doradoClaro.withValues(alpha: 0.6)),
+        border: Border(left: BorderSide(color: colorEstado, width: 4)),
         boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -521,103 +567,100 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  a.vehiculo,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                child: Row(
+                  children: [
+                    const Icon(Icons.local_shipping_outlined, size: 15, color: _TareasColors.doradoOscuro),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(a.vehiculo,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                    ),
+                  ],
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: estilo['fondo'] as Color,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  estilo['texto'] as String,
-                  style: TextStyle(
-                    color: estilo['color'] as Color,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
-                  ),
-                ),
+                decoration: BoxDecoration(color: bgEstado, borderRadius: BorderRadius.circular(20)),
+                child: Text(a.estado,
+                    style: TextStyle(color: colorEstado, fontWeight: FontWeight.w700, fontSize: 11)),
               ),
             ],
           ),
-          const SizedBox(height: 2),
-          Text(a.tipoTrabajo,
-              style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.doradoOscuro)),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+            decoration: BoxDecoration(color: _TareasColors.blueBg, borderRadius: BorderRadius.circular(20)),
+            child: Text(a.tipoTrabajo,
+                style: const TextStyle(fontSize: 10.5, color: _TareasColors.blue, fontWeight: FontWeight.w600)),
+          ),
           if ((a.descripcion ?? '').isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(a.descripcion!,
-                style: const TextStyle(fontSize: 12, color: AppColors.textoMuted)),
+            const SizedBox(height: 6),
+            Text(a.descripcion!, style: const TextStyle(fontSize: 12, color: _TareasColors.grayText)),
           ],
 
-          // Cliente
           if (a.cliente != null) ...[
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.person_outline, size: 13, color: AppColors.textoMuted),
+                const Icon(Icons.person_outline, size: 13, color: _TareasColors.grayText),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     '${a.cliente!.nombreCompleto} · ${a.cliente!.tipoDocumento} ${a.cliente!.numeroDocumento}',
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11.5, color: AppColors.textoMuted),
+                    style: const TextStyle(fontSize: 11.5, color: _TareasColors.grayText),
                   ),
                 ),
               ],
             ),
           ],
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: [
-              Text(
-                _formatoCOP(a.costo),
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-              ),
+              Text(_fmtCOP(a.costo),
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
               const SizedBox(width: 10),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: online ? AppColors.azulFondo : AppColors.doradoClaro,
+                  color: online ? _TareasColors.blueBg : _TareasColors.naranjaFondo,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(
-                  online ? 'Online' : 'Presencial',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: online ? AppColors.azul : AppColors.doradoOscuro,
-                  ),
-                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(online ? Icons.cloud_done_rounded : Icons.storefront_rounded,
+                      size: 11, color: online ? _TareasColors.blue : _TareasColors.naranja),
+                  const SizedBox(width: 4),
+                  Text(online ? 'Online' : 'Presencial',
+                      style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          color: online ? _TareasColors.blue : _TareasColors.naranja)),
+                ]),
               ),
             ],
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textoMuted),
+              const Icon(Icons.calendar_today_outlined, size: 12, color: _TareasColors.grayText),
               const SizedBox(width: 4),
-              Text('Límite: ${_formatoFecha(a.fechaLimite)}',
-                  style: const TextStyle(fontSize: 11, color: AppColors.textoMuted)),
+              Text('Límite: ${_fmtFecha(a.fechaLimite)}',
+                  style: const TextStyle(fontSize: 11, color: _TareasColors.grayText)),
               const Spacer(),
               if (a.estado == 'Pendiente')
                 _botonAccion(
                   texto: 'Aceptar',
-                  color: AppColors.doradoOscuro,
+                  icono: Icons.check_rounded,
                   bloqueado: bloqueado,
                   onTap: () => _aceptarTarea(a),
                 ),
               if (a.estado == 'En proceso')
                 _botonAccion(
                   texto: 'Finalizar',
-                  color: AppColors.verde,
+                  icono: Icons.task_alt_rounded,
+                  colorSolido: _TareasColors.verde,
                   bloqueado: bloqueado,
                   onTap: () => _finalizarTarea(a),
                 ),
@@ -630,22 +673,210 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
 
   Widget _botonAccion({
     required String texto,
-    required Color color,
+    required IconData icono,
     required bool bloqueado,
     required VoidCallback onTap,
+    Color? colorSolido,
   }) {
-    return TextButton(
-      onPressed: bloqueado ? null : onTap,
-      style: TextButton.styleFrom(
-        backgroundColor: bloqueado ? color.withValues(alpha: 0.5) : color,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    return Material(
+      color: bloqueado
+          ? (colorSolido ?? _TareasColors.dorado).withValues(alpha: 0.5)
+          : (colorSolido ?? _TareasColors.dorado),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: bloqueado ? null : onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icono, size: 14, color: colorSolido != null ? Colors.white : _TareasColors.navyOscuro),
+            const SizedBox(width: 5),
+            Text(texto,
+                style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: colorSolido != null ? Colors.white : _TareasColors.navyOscuro)),
+          ]),
+        ),
       ),
-      child: Text(texto,
-          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+    );
+  }
+}
+
+// ============================================================
+// TARJETA OSCURA DE BIENVENIDA
+// ============================================================
+class _PageHeaderCard extends StatelessWidget {
+  const _PageHeaderCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(color: _TareasColors.navy, borderRadius: BorderRadius.circular(16)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('MECÁNICO · MIS TAREAS',
+                    style: TextStyle(
+                        color: _TareasColors.dorado, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6)),
+                const SizedBox(height: 6),
+                const Text('Mis\nMantenimientos',
+                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, height: 1.15)),
+                const SizedBox(height: 6),
+                const Text('Trabajos asignados y su estado',
+                    style: TextStyle(color: _TareasColors.subtitulo, fontSize: 12.5)),
+              ],
+            ),
+          ),
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(color: _TareasColors.dorado, shape: BoxShape.circle),
+            alignment: Alignment.center,
+            child: const Icon(Icons.build_rounded, color: _TareasColors.navyOscuro, size: 24),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================
+// FILA DE ESTADÍSTICAS COMPACTAS
+// ============================================================
+class _StatsRow extends StatelessWidget {
+  final int pendientes;
+  final int enProceso;
+  final int finalizadas;
+  final int total;
+
+  const _StatsRow({
+    required this.pendientes,
+    required this.enProceso,
+    required this.finalizadas,
+    required this.total,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Widget box(String valor, String label, Color color) => Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE9E1D0)),
+            ),
+            child: Column(
+              children: [
+                Text(valor, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: color)),
+                const SizedBox(height: 2),
+                Text(label,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 10, color: _TareasColors.grayText)),
+              ],
+            ),
+          ),
+        );
+
+    return Row(
+      children: [
+        box('$pendientes', 'Pendientes', _TareasColors.orange),
+        const SizedBox(width: 8),
+        box('$enProceso', 'En proceso', _TareasColors.blue),
+        const SizedBox(width: 8),
+        box('$finalizadas', 'Finalizadas', _TareasColors.green),
+        const SizedBox(width: 8),
+        box('$total', 'Total', _TareasColors.doradoOscuro),
+      ],
+    );
+  }
+}
+
+// ============================================================
+// BARRA DE BÚSQUEDA
+// ============================================================
+class _SearchBar extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  const _SearchBar({required this.controller, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      style: const TextStyle(fontSize: 13),
+      decoration: InputDecoration(
+        hintText: 'Buscar vehículo, tipo o cliente...',
+        hintStyle: const TextStyle(fontSize: 12.5, color: _TareasColors.grayText),
+        prefixIcon: const Icon(Icons.search_rounded, size: 18, color: _TareasColors.grayText),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: const BorderSide(color: Color(0xFFE9E1D0)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: const BorderSide(color: Color(0xFFE9E1D0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: const BorderSide(color: _TareasColors.dorado),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// PASTILLAS DE FILTRO
+// ============================================================
+class _FilterTabs extends StatelessWidget {
+  final List<String> tabs;
+  final String seleccionado;
+  final ValueChanged<String> onSelected;
+  const _FilterTabs({required this.tabs, required this.seleccionado, required this.onSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: tabs.map((t) {
+          final activo = t == seleccionado;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => onSelected(t),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: activo ? _TareasColors.dorado : const Color(0xFFE9E1D0), width: 1.4),
+                ),
+                child: Text(
+                  t,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: activo ? FontWeight.w700 : FontWeight.w500,
+                    color: activo ? _TareasColors.doradoOscuro : _TareasColors.grayText,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }
