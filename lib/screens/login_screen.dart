@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
+import 'forgot_password_screen.dart';
 
 // ==========================
 // Paleta de colores (equivalente al objeto C del JSX)
@@ -465,6 +466,34 @@ debugPrint('>>> rol crudo: ${usuarioBD['rol']}');
                               style: TextStyle(
                                 color: AppColors.placeholder,
                                 fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // ¿Olvidaste tu contraseña?
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ForgotPasswordScreen(),
+                                ),
+                              );
+                            },
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(50, 30),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text(
+                              '¿Olvidaste tu contraseña?',
+                              style: TextStyle(
+                                color: AppColors.dorado,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
