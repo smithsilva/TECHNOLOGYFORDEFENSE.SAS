@@ -2,14 +2,39 @@ import 'package:flutter/material.dart';
 
 // ==================== PALETA DE COLORES ====================
 class AppColors {
-  static const background = Color(0xFFF1EEE6);
-  static const navy = Color(0xFF13161F);
-  static const gold = Color(0xFFE0A93B);
-  static const goldDark = Color(0xFFC8901E);
-  static const green = Color(0xFF33B76A);
-  static const greenBg = Color(0xFFE3F7EA);
-  static const textDark = Color(0xFF1C1E2A);
-  static const textGrey = Color(0xFF8C8FA0);
+  static const dorado = Color(0xFFC9962E);
+  static const doradoOscuro = Color(0xFF8C6B2E);
+  static const doradoClaro = Color(0xFFE8C97A);
+  static const doradoMezcla = Color(0xFFAB812E); // punto medio dorado/doradoOscuro
+  static const fondo = Color(0xFFFAF3E4);
+
+  static const navyOscuro = Color(0xFF0F1B2E);
+  static const navyClaro = Color(0xFF16233A);
+  static const subtitulo = Color(0xFF8FA3C4);
+
+  static const verde = Color(0xFF2E9E5B);
+  static const verdeFondo = Color(0xFFDDF2E1);
+
+  static const naranja = Color(0xFFA17A2E);
+  static const naranjaFondo = Color(0xFFF5E3C3);
+
+  static const rojo = Color(0xFFC0293B);
+  static const rojoFondo = Color(0xFFFADCE0);
+
+  static const textoMuted = Color(0xFF6B7280);
+  static const enlace = Color(0xFF2563EB);
+
+  // Alias usados en esta pantalla, ahora apuntando a la paleta nueva.
+  static const background = fondo;
+  static const navy = navyOscuro;
+  static const gold = dorado;
+  static const goldDark = doradoOscuro;
+  static const green = verde;
+  static const greenBg = verdeFondo;
+  static const textDark = Color(0xFF111827);
+  static const textGrey = textoMuted;
+  static const white = Colors.white;
+  static const cardBorder = Color(0xFFEFEFF2);
   static const cardShadow = Color(0x14000000);
 }
 
@@ -36,10 +61,12 @@ class EmpleadoModel {
   });
 }
 
+// Colores de avatar tomados de tu paleta (antes eran morado/naranja/
+// rosado genéricos, ahora usan dorado oscuro, azul "enlace" y rojo).
 final List<EmpleadoModel> empleadosData = [
   const EmpleadoModel(
     initials: 'CG',
-    avatarColor: Color(0xFF8B7FE8),
+    avatarColor: AppColors.enlace,
     nombre: 'Camilo García',
     cargo: 'Mecánico',
     correo: 'camilo@t4d.com',
@@ -49,7 +76,7 @@ final List<EmpleadoModel> empleadosData = [
   ),
   const EmpleadoModel(
     initials: 'JP',
-    avatarColor: Color(0xFFF2994A),
+    avatarColor: AppColors.doradoOscuro,
     nombre: 'Juan Pérez',
     cargo: 'Admin',
     correo: 'juan@t4d.com',
@@ -59,10 +86,10 @@ final List<EmpleadoModel> empleadosData = [
   ),
   const EmpleadoModel(
     initials: 'CT',
-    avatarColor: Color(0xFFE85D9E),
+    avatarColor: AppColors.rojo,
     nombre: 'Contadora T4D',
     cargo: 'Contadora',
-    correo: 'contadora@t4d.com',
+    correo: 'contadora@gmail.com',
     telefono: '310 555 6666',
     salario: '\$4.200.000',
     estado: 'Activo',
@@ -80,7 +107,11 @@ class EmpleadosScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
         children: [
-          _buildHeaderCard(),
+          _PageHeaderCard(
+            eyebrow: 'CONTADORA - EMPLEADOS',
+            title: 'Empleados',
+            subtitle: '${empleadosData.length} empleados registrados',
+          ),
           const SizedBox(height: 14),
           ...empleadosData.map((e) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -90,37 +121,63 @@ class EmpleadosScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildHeaderCard() {
+// ============================================================
+// TARJETA DE ENCABEZADO ESTILO "HISTORIAL DE PRECIOS"
+// Fondo azul marino oscuro, borde dorado (igual que el botón
+// "Agregar dirección" de Direcciones Cliente), etiqueta dorada,
+// título blanco y subtítulo azul claro.
+// ============================================================
+class _PageHeaderCard extends StatelessWidget {
+  final String eyebrow;
+  final String title;
+  final String subtitle;
+
+  const _PageHeaderCard({
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(color: AppColors.cardShadow, blurRadius: 10, offset: Offset(0, 4)),
-        ],
+        color: AppColors.navy,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Empleados',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.navy,
+          Text(
+            eyebrow.toUpperCase(),
+            style: const TextStyle(
+              color: AppColors.gold,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Container(width: 26, height: 2.4, color: AppColors.gold),
-              const SizedBox(width: 4),
-              const Icon(Icons.star, size: 10, color: AppColors.gold),
-              const SizedBox(width: 4),
-              Container(width: 26, height: 2.4, color: AppColors.gold),
-            ],
+          const SizedBox(height: 6),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: AppColors.subtitulo,
+              fontSize: 12.5,
+            ),
           ),
         ],
       ),
@@ -147,7 +204,7 @@ class _EstadoBadge extends StatelessWidget {
         estado,
         style: TextStyle(
           color: activo ? AppColors.green : AppColors.textGrey,
-          fontSize: 11,
+          fontSize: 10.5,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -155,6 +212,9 @@ class _EstadoBadge extends StatelessWidget {
   }
 }
 
+// Tarjeta de empleado con franja de acento a la izquierda (color del
+// avatar) y borde dorado en todo el cuadro, igual al estilo de
+// Direcciones Cliente / Movimientos Contables.
 class _EmpleadoCard extends StatelessWidget {
   final EmpleadoModel empleado;
 
@@ -163,79 +223,100 @@ class _EmpleadoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: empleado.avatarColor,
-            child: Text(
-              empleado.initials,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(width: 4, color: empleado.avatarColor),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: empleado.avatarColor,
+                      child: Text(
+                        empleado.initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  empleado.nombre,
+                                  style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                              ),
+                              _EstadoBadge(estado: empleado.estado),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            empleado.cargo,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: AppColors.goldDark,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            empleado.correo,
+                            style: const TextStyle(fontSize: 10.5, color: AppColors.textGrey),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                empleado.telefono,
+                                style: const TextStyle(fontSize: 10.5, color: AppColors.textGrey),
+                              ),
+                              Text(
+                                empleado.salario,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  empleado.nombre,
-                  style: const TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  empleado.cargo,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.goldDark,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  empleado.correo,
-                  style: const TextStyle(fontSize: 11.5, color: AppColors.textGrey),
-                ),
-                Text(
-                  empleado.telefono,
-                  style: const TextStyle(fontSize: 11.5, color: AppColors.textGrey),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                empleado.salario,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 6),
-              _EstadoBadge(estado: empleado.estado),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

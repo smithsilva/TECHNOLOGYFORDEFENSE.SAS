@@ -20,15 +20,16 @@ class PanelDrawer extends StatelessWidget {
     this.onLogout,
   });
 
-  static const _items = [
-    {'key': 'inventario', 'label': 'Inventario', 'icon': Icons.inventory_2_outlined},
-    {'key': 'movimientos', 'label': 'Movimientos', 'icon': Icons.swap_horiz},
-    {'key': 'historial', 'label': 'Historial de Precios', 'icon': Icons.history},
-    {'key': 'notificaciones', 'label': 'Notificaciones', 'icon': Icons.notifications_none},
-    {'key': 'reportes', 'label': 'Reportes', 'icon': Icons.bar_chart},
-    {'key': 'usuarios', 'label': 'Usuarios', 'icon': Icons.people_outline},
-    {'key': 'registro', 'label': 'Registro', 'icon': Icons.person_add_alt},
-  ];
+ static const _items = [
+  {'key': 'inventario', 'label': 'Inventario', 'icon': Icons.inventory_2_outlined},
+  {'key': 'categorias', 'label': 'Categorías', 'icon': Icons.category_outlined}, // ← agrega esta
+  {'key': 'movimientos', 'label': 'Movimientos', 'icon': Icons.swap_horiz},
+  {'key': 'historial', 'label': 'Historial de Precios', 'icon': Icons.history},
+  {'key': 'notificaciones', 'label': 'Notificaciones', 'icon': Icons.notifications_none},
+  {'key': 'reportes', 'label': 'Reportes', 'icon': Icons.bar_chart},
+  {'key': 'usuarios', 'label': 'Usuarios', 'icon': Icons.people_outline},
+  {'key': 'registro', 'label': 'Registro', 'icon': Icons.person_add_alt},
+];
 
   Future<void> _confirmarCerrarSesion(BuildContext context) async {
     final confirmar = await showDialog<bool>(
