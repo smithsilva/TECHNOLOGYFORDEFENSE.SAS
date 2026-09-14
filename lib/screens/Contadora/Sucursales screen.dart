@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/sucursal.dart';
-import '../services/sucursales_service.dart';
+import '../../models/sucursal.dart';
+import '../../services/sucursales_service.dart';
 
 // ==================== PALETA DE COLORES ====================
 class AppColors {
@@ -211,7 +211,7 @@ class _ErrorState extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.rojo.withOpacity(0.4)),
+        border: Border.all(color: AppColors.rojo.withValues(alpha: 0.4)),
       ),
       child: Column(
         children: [
