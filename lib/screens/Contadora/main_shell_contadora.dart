@@ -52,15 +52,22 @@ class _MainShellContadoraState extends State<MainShellContadora> {
   ];
 
   // El orden debe coincidir 1 a 1 con _menu de arriba.
+  //
+  // FIX: HistorialPreciosScreen no estaba recibiendo `usuario`, por lo
+  // que dentro de esa pantalla `widget.usuario` era null, `rolCrudo`
+  // quedaba como cadena vacía y `esSoloLectura` daba `false` — la
+  // Contadora veía el botón de eliminar igual que el Admin. Se agrega
+  // `usuario: widget.usuario` (y se quita el `const`, ya que ahora
+  // recibe un valor que no es constante en tiempo de compilación).
   late final List<Widget> _pantallas = [
     InventarioContadoraScreen(usuario: widget.usuario),
     const MovimientosContablesScreen(),
     const MetodosPagoScreen(),
-    const HistorialPreciosScreen(),
+    HistorialPreciosScreen(usuario: widget.usuario),
     const ProveedoresScreen(),
     const EmpleadosScreen(),
     const SucursalesScreen(),
-    const ReportesFinancierosScreen(),
+    const ReportesScreen(),
   ];
 
   void _cerrarSesion() {

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class MovimientosService {
-  static const String _baseUrl = 'http://192.168.2.24:5000';
+  static const String _baseUrl = 'http://192.168.2.11:5000';
   static const String _apiKey = 'pollo'; // debe coincidir con X_API_KEY en tu .env
 
   Future<List<Map<String, dynamic>>> obtenerMovimientos(String token) async {

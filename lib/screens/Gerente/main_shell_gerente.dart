@@ -57,15 +57,15 @@ class _MainShellGerenteState extends State<MainShellGerente> {
       visibleEnPanelPrincipal: true, // ← Gerente ya puede ver, crear y editar inventario
     ),
     _SeccionGerente(
-      item: const T4DMenuItem(icon: Icons.swap_horiz_rounded, label: 'Movimientos'),
-      pantalla: const MovimientosScreen(embedded: true),
-      visibleEnPanelPrincipal: true,
-    ),
+  item: const T4DMenuItem(icon: Icons.swap_horiz_rounded, label: 'Movimientos'),
+  pantalla: MovimientosScreen(usuario: widget.usuario),
+  visibleEnPanelPrincipal: true,
+),
     _SeccionGerente(
-      item: const T4DMenuItem(icon: Icons.history_rounded, label: 'Historial de Precios'),
-      pantalla: const HistorialPreciosScreen(embedded: true),
-      visibleEnPanelPrincipal: true,
-    ),
+  item: const T4DMenuItem(icon: Icons.history_rounded, label: 'Historial de Precios'),
+  pantalla: HistorialPreciosScreen(usuario: widget.usuario),
+  visibleEnPanelPrincipal: true,
+),
     _SeccionGerente(
       item: const T4DMenuItem(icon: Icons.fact_check_outlined, label: 'Asignacion de Tareas'),
       pantalla: const AsignacionTareasScreen(embedded: true),

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../models/sucursal.dart';
+import '../../services/sucursales_service.dart';
 
 // ==================== PALETA DE COLORES ====================
 class AppColors {
   static const dorado = Color(0xFFC9962E);
   static const doradoOscuro = Color(0xFF8C6B2E);
   static const doradoClaro = Color(0xFFE8C97A);
-  static const doradoMezcla = Color(0xFFAB812E); // punto medio dorado/doradoOscuro
+  static const doradoMezcla = Color(0xFFAB812E);
   static const fondo = Color(0xFFFAF3E4);
 
   static const navyOscuro = Color(0xFF0F1B2E);
@@ -24,12 +27,9 @@ class AppColors {
   static const textoMuted = Color(0xFF6B7280);
   static const enlace = Color(0xFF2563EB);
 
-  // Tono rosa-mauve para las etiquetas (Ciudad / Dirección / Encargado)
   static const rosaMuted = Color(0xFFB98CA0);
-  // Azul oscuro para los valores (Bogotá, direcciones, encargados)
   static const azulValor = Color(0xFF1B4F91);
 
-  // Alias usados en las pantallas
   static const background = fondo;
   static const navy = navyOscuro;
   static const gold = dorado;
@@ -43,150 +43,201 @@ class AppColors {
   static const cardShadow = Color(0x14000000);
 }
 
-// ==================== MODELO ====================
-class SucursalModel {
-  final String numero;
-  final String codigo;
-  final String nombre;
-  final String ciudad;
-  final String direccion;
-  final String encargado;
-  final String estado;
-
-  const SucursalModel({
-    required this.numero,
-    required this.codigo,
-    required this.nombre,
-    required this.ciudad,
-    required this.direccion,
-    required this.encargado,
-    required this.estado,
-  });
-}
-
-final List<SucursalModel> sucursalesData = [
-  const SucursalModel(
-    numero: '#1',
-    codigo: 'SUC-001',
-    nombre: 'Sucursal Norte',
-    ciudad: 'Bogotá',
-    direccion: 'Calle 100 # 15-20',
-    encargado: 'Carlos R.',
-    estado: 'Activa',
-  ),
-  const SucursalModel(
-    numero: '#2',
-    codigo: 'SUC-002',
-    nombre: 'Sucursal Sur',
-    ciudad: 'Bogotá',
-    direccion: 'Cra 50 # 80-10',
-    encargado: 'María P.',
-    estado: 'Activa',
-  ),
-  const SucursalModel(
-    numero: '#3',
-    codigo: 'SUC-003',
-    nombre: 'Sucursal Centro',
-    ciudad: 'Bogotá',
-    direccion: 'Av 19 # 30-45',
-    encargado: 'Juan S.',
-    estado: 'Activa',
-  ),
-  const SucursalModel(
-    numero: '#4',
-    codigo: 'SUC-004',
-    nombre: 'Sucursal Principal',
-    ciudad: 'Bogotá',
-    direccion: 'Av El Dorado # 59-70',
-    encargado: 'Director',
-    estado: 'Activa',
-  ),
-  const SucursalModel(
-    numero: '#5',
-    codigo: 'SUC-005',
-    nombre: 'Sucursal Medellín',
-    ciudad: 'Medellín',
-    direccion: 'Cra 43A # 1-50',
-    encargado: 'Pedro A.',
-    estado: 'Activa',
-  ),
-  const SucursalModel(
-    numero: '#6',
-    codigo: 'SUC-006',
-    nombre: 'Sucursal Cali',
-    ciudad: 'Cali',
-    direccion: 'Calle 5 # 39-45',
-    encargado: 'Laura M.',
-    estado: 'Activa',
-  ),
-  const SucursalModel(
-    numero: '#7',
-    codigo: 'SUC-007',
-    nombre: 'Sucursal Cúcuta',
-    ciudad: 'Cúcuta',
-    direccion: 'Av 0 # 10-85',
-    encargado: 'Miguel T.',
-    estado: 'Activa',
-  ),
-];
-
 // ==================== PANTALLA PRINCIPAL ====================
-class SucursalesScreen extends StatelessWidget {
+class SucursalesScreen extends StatefulWidget {
   const SucursalesScreen({super.key});
 
   @override
+  State<SucursalesScreen> createState() => _SucursalesScreenState();
+}
+
+class _SucursalesScreenState extends State<SucursalesScreen> {
+  final SucursalesService _service = SucursalesService();
+
+  List<Sucursal> _sucursales = [];
+  bool _cargando = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarSucursales();
+  }
+
+  Future<void> _cargarSucursales() async {
+    setState(() {
+      _cargando = true;
+      _error = null;
+    });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        setState(() {
+          _error = 'Sesión no encontrada. Vuelve a iniciar sesión.';
+          _cargando = false;
+        });
+        return;
+      }
+
+      final datos = await _service.obtenerSucursales(token);
+      setState(() {
+        _sucursales = datos;
+        _cargando = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString().replaceFirst('Exception: ', '');
+        _cargando = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final total = sucursalesData.length;
-    final activas =
-        sucursalesData.where((s) => s.estado.toLowerCase() == 'activa').length;
+    final total = _sucursales.length;
+    final activas = _sucursales.where((s) => s.activo).length;
 
     return Container(
       color: AppColors.background,
-      child: ListView(
+      child: RefreshIndicator(
+        onRefresh: _cargarSucursales,
+        color: AppColors.gold,
+        child: _buildBody(total, activas),
+      ),
+    );
+  }
+
+  Widget _buildBody(int total, int activas) {
+    if (_cargando) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.only(top: 120),
+          child: CircularProgressIndicator(color: AppColors.gold),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return ListView(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
         children: [
           _PageHeaderCard(
             eyebrow: 'CONTADORA - SUCURSALES',
             title: 'Sucursales',
-            subtitle: '$total sucursales registradas',
+            subtitle: 'No se pudieron cargar los datos',
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _StatCard(
-                  valor: '$total',
-                  label: 'Total',
-                  color: AppColors.gold,
-                ),
+          const SizedBox(height: 24),
+          _ErrorState(mensaje: _error!, onReintentar: _cargarSucursales),
+        ],
+      );
+    }
+
+    if (_sucursales.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+        children: [
+          _PageHeaderCard(
+            eyebrow: 'CONTADORA - SUCURSALES',
+            title: 'Sucursales',
+            subtitle: '0 sucursales registradas',
+          ),
+          const SizedBox(height: 40),
+          const Center(
+            child: Text(
+              'No hay sucursales registradas todavía.',
+              style: TextStyle(color: AppColors.textGrey, fontSize: 13),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+      children: [
+        _PageHeaderCard(
+          eyebrow: 'CONTADORA - SUCURSALES',
+          title: 'Sucursales',
+          subtitle: '$total sucursales registradas',
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                valor: '$total',
+                label: 'Total',
+                color: AppColors.gold,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _StatCard(
-                  valor: '$activas',
-                  label: 'Activas',
-                  color: AppColors.green,
-                ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                valor: '$activas',
+                label: 'Activas',
+                color: AppColors.green,
               ),
-            ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        ...List.generate(_sucursales.length, (index) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _SucursalCard(
+              numero: '#${index + 1}',
+              sucursal: _sucursales[index],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+// ==================== ESTADO DE ERROR ====================
+class _ErrorState extends StatelessWidget {
+  final String mensaje;
+  final VoidCallback onReintentar;
+
+  const _ErrorState({required this.mensaje, required this.onReintentar});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.rojo.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.error_outline, color: AppColors.rojo, size: 32),
+          const SizedBox(height: 10),
+          Text(
+            mensaje,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textGrey, fontSize: 13),
           ),
           const SizedBox(height: 14),
-          ...sucursalesData.map((s) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _SucursalCard(sucursal: s),
-              )),
+          ElevatedButton(
+            onPressed: onReintentar,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.navy,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Reintentar'),
+          ),
         ],
       ),
     );
   }
 }
 
-// ============================================================
-// TARJETA DE ENCABEZADO ESTILO "HISTORIAL DE PRECIOS"
-// Fondo azul marino oscuro, borde dorado (igual que el botón
-// "Agregar dirección" de Direcciones Cliente), etiqueta dorada,
-// título blanco y subtítulo azul claro.
-// ============================================================
+// ==================== TARJETA DE ENCABEZADO ====================
 class _PageHeaderCard extends StatelessWidget {
   final String eyebrow;
   final String title;
@@ -243,9 +294,7 @@ class _PageHeaderCard extends StatelessWidget {
   }
 }
 
-// ==================== TARJETA DE ESTADÍSTICA (Total / Activas) ====================
-// Borde dorado en todo el cuadro (antes usaba el color del acento
-// con opacidad; ahora siempre es dorado, igual al resto de la app).
+// ==================== TARJETA DE ESTADÍSTICA ====================
 class _StatCard extends StatelessWidget {
   final String valor;
   final String label;
@@ -294,25 +343,24 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ==================== WIDGETS AUXILIARES ====================
+// ==================== BADGE DE ESTADO (activo) ====================
 class _EstadoBadge extends StatelessWidget {
-  final String estado;
+  final bool activo;
 
-  const _EstadoBadge({required this.estado});
+  const _EstadoBadge({required this.activo});
 
   @override
   Widget build(BuildContext context) {
-    final bool activa = estado.toLowerCase() == 'activa';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: activa ? AppColors.greenBg : const Color(0xFFF1F1F5),
+        color: activo ? AppColors.greenBg : const Color(0xFFF1F1F5),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        estado,
+        activo ? 'Activa' : 'Inactiva',
         style: TextStyle(
-          color: activa ? AppColors.green : AppColors.textGrey,
+          color: activo ? AppColors.green : AppColors.textGrey,
           fontSize: 10.5,
           fontWeight: FontWeight.w700,
         ),
@@ -321,7 +369,7 @@ class _EstadoBadge extends StatelessWidget {
   }
 }
 
-// Fila etiqueta / valor (Ciudad, Dirección, Encargado)
+// ==================== FILA ETIQUETA / VALOR ====================
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
@@ -343,12 +391,15 @@ class _InfoRow extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.azulValor,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: AppColors.azulValor,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -357,16 +408,23 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-// Tarjeta de sucursal con franja de acento a la izquierda (verde si
-// está activa) y borde dorado en todo el cuadro.
+// ==================== TARJETA DE SUCURSAL ====================
 class _SucursalCard extends StatelessWidget {
-  final SucursalModel sucursal;
+  final String numero;
+  final Sucursal sucursal;
 
-  const _SucursalCard({required this.sucursal});
+  const _SucursalCard({required this.numero, required this.sucursal});
+
+  String get _horario {
+    final apertura = sucursal.horarioApertura;
+    final cierre = sucursal.horarioCierre;
+    if (apertura == null && cierre == null) return '—';
+    return '${apertura ?? '—'} - ${cierre ?? '—'}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final bool activa = sucursal.estado.toLowerCase() == 'activa';
+    final bool activa = sucursal.activo;
 
     return Container(
       decoration: BoxDecoration(
@@ -400,7 +458,7 @@ class _SucursalCard extends StatelessWidget {
                             text: TextSpan(
                               children: [
                                 TextSpan(
-                                  text: '${sucursal.numero} ',
+                                  text: '$numero ',
                                   style: const TextStyle(
                                     color: AppColors.gold,
                                     fontSize: 13.5,
@@ -419,12 +477,12 @@ class _SucursalCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        _EstadoBadge(estado: sucursal.estado),
+                        _EstadoBadge(activo: activa),
                       ],
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      sucursal.codigo,
+                      'ID: ${sucursal.id}',
                       style: const TextStyle(
                         color: AppColors.textGrey,
                         fontSize: 10.5,
@@ -433,9 +491,10 @@ class _SucursalCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     const Divider(height: 1, color: AppColors.cardBorder),
                     const SizedBox(height: 6),
-                    _InfoRow(label: 'Ciudad', value: sucursal.ciudad),
-                    _InfoRow(label: 'Dirección', value: sucursal.direccion),
-                    _InfoRow(label: 'Encargado', value: sucursal.encargado),
+                    _InfoRow(label: 'Ciudad', value: sucursal.ciudad ?? '—'),
+                    _InfoRow(label: 'Dirección', value: sucursal.direccion ?? '—'),
+                    _InfoRow(label: 'Teléfono', value: sucursal.telefono ?? '—'),
+                    _InfoRow(label: 'Horario', value: _horario),
                   ],
                 ),
               ),

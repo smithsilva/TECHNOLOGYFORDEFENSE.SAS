@@ -163,17 +163,7 @@ class ProductoCard extends StatelessWidget {
                             Colors.black87,
                           ),
                           const Spacer(),
-                          // Ver — mismo estilo dorado claro que "Editar" (igual al Historial de Precios)
-                          _accionBoton(Icons.remove_red_eye_outlined, AppColors.doradoOscuro,
-                              const Color(0xFFFBF1DD), onVer),
-                          const SizedBox(width: 8),
-                          // Editar — dorado claro
-                          _accionBoton(Icons.edit_outlined, AppColors.doradoOscuro,
-                              const Color(0xFFFBF1DD), onEditar),
-                          const SizedBox(width: 8),
-                          // Eliminar — rojo
-                          _accionBoton(Icons.delete_outline, const Color(0xFFD64545),
-                              const Color(0xFFFBE3E3), onEliminar),
+                          ..._buildAcciones(),
                         ],
                       ),
                     ],
@@ -185,6 +175,43 @@ class ProductoCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Construye la lista de botones de acción SOLO para los callbacks
+  // que no sean null. Así, si onEditar/onEliminar vienen en null
+  // (por ejemplo, para el rol Contadora), esos botones simplemente
+  // no se dibujan — no solo quedan deshabilitados.
+  List<Widget> _buildAcciones() {
+    final botones = <Widget>[];
+
+    if (onVer != null) {
+      botones.add(_accionBoton(
+        Icons.remove_red_eye_outlined,
+        AppColors.doradoOscuro,
+        const Color(0xFFFBF1DD),
+        onVer,
+      ));
+    }
+    if (onEditar != null) {
+      if (botones.isNotEmpty) botones.add(const SizedBox(width: 8));
+      botones.add(_accionBoton(
+        Icons.edit_outlined,
+        AppColors.doradoOscuro,
+        const Color(0xFFFBF1DD),
+        onEditar,
+      ));
+    }
+    if (onEliminar != null) {
+      if (botones.isNotEmpty) botones.add(const SizedBox(width: 8));
+      botones.add(_accionBoton(
+        Icons.delete_outline,
+        const Color(0xFFD64545),
+        const Color(0xFFFBE3E3),
+        onEliminar,
+      ));
+    }
+
+    return botones;
   }
 
   Widget _badge(String texto, Color color, Color fondo) {
@@ -231,6 +258,10 @@ class ProductoCard extends StatelessWidget {
   }
 
   Widget _accionBoton(IconData icon, Color color, Color fondo, VoidCallback? onTap) {
+    // Si no hay callback, no se dibuja nada (ni siquiera un botón
+    // deshabilitado). Esto es lo que faltaba en el original.
+    if (onTap == null) return const SizedBox.shrink();
+
     return InkWell(
       borderRadius: BorderRadius.circular(10),
       onTap: onTap,
