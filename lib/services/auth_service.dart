@@ -2,29 +2,16 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-<<<<<<< HEAD
-<<<<<<< HEAD
-  static const String apiUrl = 'http://localhost:5000';
-  // cambie su IP del computador por la de ustedes 
-=======
-
-  static const String apiUrl = 'http://192.168.2.24:5000'; 
-=======
-  static const String apiUrl = 'http://localhost:5000'; 
-
->>>>>>> fe9f43ab137b9976fdf0d65f801607d4737b3824
-=======
-  // URL activa (cambia según el entorno en el que estés probando)
-  static const String apiUrl = wifiApiUrl;
-
->>>>>>> nicol-zuñiga
-  static const String apiKey = 'pollo';
-
   // Servidor por Wi-Fi
-  static const String wifiApiUrl = 'http://192.168.137.84:5000';
+  static const String wifiApiUrl = 'http://192.168.2.14:5000';
 
   // Servidor mediante USB + adb reverse
   static const String usbApiUrl = 'http://localhost:5000';
+
+  // URL activa (cambia según el entorno en el que estés probando)
+  static const String apiUrl = wifiApiUrl;
+
+  static const String apiKey = 'pollo';
 
   Future<Map<String, dynamic>> login({
     required String email,
