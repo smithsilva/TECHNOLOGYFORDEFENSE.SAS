@@ -102,7 +102,9 @@ class SucursalesService {
       String mensaje = 'Error en la solicitud (${response.statusCode})';
       try {
         final body = jsonDecode(response.body);
-        mensaje = body['error']?.toString() ?? mensaje;
+        // El backend de sucursales devuelve { mensaje: error.message },
+        // otros endpoints usan { error: '...' } — cubrimos ambos.
+        mensaje = (body['mensaje'] ?? body['error'])?.toString() ?? mensaje;
       } catch (_) {}
       throw Exception(mensaje);
     }

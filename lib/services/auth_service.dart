@@ -2,22 +2,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-<<<<<<< HEAD
-<<<<<<< HEAD
+  // Servidor local
   static const String apiUrl = 'http://localhost:5000';
-  // cambie su IP del computador por la de ustedes 
-=======
 
-  static const String apiUrl = 'http://192.168.2.24:5000'; 
-=======
-  static const String apiUrl = 'http://localhost:5000'; 
-
->>>>>>> fe9f43ab137b9976fdf0d65f801607d4737b3824
-=======
-  // URL activa (cambia según el entorno en el que estés probando)
-  static const String apiUrl = wifiApiUrl;
-
->>>>>>> nicol-zuñiga
   static const String apiKey = 'pollo';
 
   // Servidor por Wi-Fi
