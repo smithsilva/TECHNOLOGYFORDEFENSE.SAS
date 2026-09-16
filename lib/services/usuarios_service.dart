@@ -60,7 +60,46 @@ class UsuariosService {
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return UsuarioLista.fromJson(jsonDecode(response.body));
+      // El éxito lo determina el statusCode, no la forma del body.
+      // Así evitamos que un body vacío o distinto rompa el registro
+      // aunque el usuario ya se haya creado en el backend.
+      if (response.body.trim().isEmpty) {
+        return UsuarioLista(
+          id: 0,
+          nombre: username,
+          correo: email,
+          rol: idRol.toString(),
+          activo: true,
+        );
+      }
+
+      try {
+        final decoded = jsonDecode(response.body);
+        final data = decoded is Map<String, dynamic>
+            ? (decoded['usuario'] ?? decoded['data'] ?? decoded)
+            : null;
+
+        if (data is Map<String, dynamic>) {
+          return UsuarioLista.fromJson(data);
+        }
+        // El body no vino como objeto de usuario (ej: solo un mensaje)
+        return UsuarioLista(
+          id: 0,
+          nombre: username,
+          correo: email,
+          rol: idRol.toString(),
+          activo: true,
+        );
+      } catch (_) {
+        // Body no era JSON válido; el usuario ya se creó (statusCode lo confirma)
+        return UsuarioLista(
+          id: 0,
+          nombre: username,
+          correo: email,
+          rol: idRol.toString(),
+          activo: true,
+        );
+      }
     } else {
       throw Exception(
           'Error al crear usuario (${response.statusCode}): ${response.body}');

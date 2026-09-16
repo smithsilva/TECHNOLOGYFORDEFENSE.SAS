@@ -15,7 +15,7 @@ class UsuarioLista {
 
   factory UsuarioLista.fromJson(Map<String, dynamic> json) {
     return UsuarioLista(
-      id: json['id_usuario'] ?? json['id'],
+      id: (json['id_usuario'] ?? json['id'] ?? 0) as int,
       nombre: json['username'] ?? json['nombre'] ?? '',
       correo: json['email'] ?? json['correo'] ?? '',
       rol: json['rol'] ?? json['nombre_rol'] ?? json['id_rol']?.toString() ?? '',
