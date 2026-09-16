@@ -3,14 +3,14 @@ import 'package:http/http.dart' as http;
 
 class AuthService {
   // Servidor por Wi-Fi
-  static const String wifiApiUrl = 'http://192.168.2.14:5000';
+  static const String wifiApiUrl = 'http://localhost:5000';
 
   // Servidor mediante USB + adb reverse
   static const String usbApiUrl = 'http://localhost:5000';
 
   // URL activa
   // Para usar Wi-Fi:
-  static const String apiUrl = wifiApiUrl;
+  static const String apiUrl = wifiApiUrl; 
 
   // Para usar USB + adb reverse, cambia la línea anterior por:
   // static const String apiUrl = usbApiUrl;

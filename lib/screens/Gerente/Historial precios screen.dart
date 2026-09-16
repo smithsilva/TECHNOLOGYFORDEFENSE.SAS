@@ -4,27 +4,32 @@ import '../../models/historial_precio.dart';
 import '../../models/producto.dart';
 import '../../services/historial_precios_service.dart';
 
+// ==================== COLORES ====================
 class AppColors {
-  static const dorado = Color(0xFFD4A743);
-  static const doradoOscuro = Color(0xFF8C6B3F);
-  static const doradoClaro = Color(0xFFE7C98A);
-  static const fondo = Color(0xFFF7F1E3);
-  static const navyOscuro = Color(0xFF0F1B2E);
-  static const navyClaro = Color(0xFF16233A);
-  static const verde = Color(0xFF1F9D55);
-  static const verdeFondo = Color(0xFFE3F7E9);
-  static const rojo = Color(0xFFC0392B);
-  static const rojoFondo = Color(0xFFFBE2DF);
-  static const gris = Color(0xFF6B7280);
-  static const grisFondo = Color(0xFFF0F0F0);
-  static const textoMuted = Color(0xFF6B7280);
+  static const background = Color(0xFFF7EFDD);
+  static const navy = Color(0xFF101B33);
+  static const gold = Color(0xFFC9A24A);
+  static const goldDark = Color(0xFF8A6D1F);
+  static const goldText = Color(0xFFD2A03C);
+  static const lightBlue = Color(0xFF9FB4DE);
+  static const inputBg = Color(0xFFEFE4CB);
+  static const iconBg = Color(0xFFF0E3BE);
+  static const cardBorder = Color(0xFFECE0BD);
+
+  static const green = Color(0xFF2E9E4E);
+  static const greenBg = Color(0xFFDCF2E3);
+  static const olive = Color(0xFF8B7920);
+  static const oliveBg = Color(0xFFF3ECD2);
+  static const red = Color(0xFFC24555);
+  static const redBg = Color(0xFFF8DCE0);
 }
 
-/// Historial de precios para el GERENTE.
-/// Ve el mismo historial real que el admin, pero su única acción posible es
-/// "Actualizar precio" de un producto (llama a editarProducto con
-/// precioNuevo + motivo). No puede eliminar registros ni editar el nombre
-/// del producto.
+/// Historial de precios.
+/// Muestra el historial real de cambios de precio de cada producto. La
+/// única acción de edición disponible es "Actualizar precio" de un
+/// producto (llama a editarProducto con precioNuevo + motivo), accesible
+/// desde el detalle de cada registro. No permite eliminar registros ni
+/// editar el nombre del producto.
 class HistorialPreciosScreen extends StatefulWidget {
   final Map<String, dynamic>? usuario;
 
@@ -40,6 +45,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
 
   DateTime? _fechaFiltro;
   bool _cargando = false;
+  bool _filtrosExpandidos = true;
   String? _error;
 
   List<HistorialPrecio> _registros = [];
@@ -134,7 +140,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
 
   int get _totalAumentos => _registros.where((r) => r.tipoVariacion == 'aumento').length;
   int get _totalReducciones => _registros.where((r) => r.tipoVariacion == 'reduccion').length;
-  int get _totalSinCambio => _registros.where((r) => r.tipoVariacion == 'sin_cambio').length;
+  int get _totalIniciales => _registros.where((r) => r.tipoVariacion == 'inicial').length;
 
   void _limpiarFiltros() {
     setState(() {
@@ -184,12 +190,48 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     );
   }
 
+  // Devuelve color, fondo, ícono y texto de la insignia de variación,
+  // incluyendo el caso especial de precio inicial (precioAnterior == 0).
+  ({Color color, Color fondo, IconData? icono, String texto}) _estiloVariacion(
+    HistorialPrecio r,
+  ) {
+    switch (r.tipoVariacion) {
+      case 'aumento':
+        return (
+          color: AppColors.red,
+          fondo: AppColors.redBg,
+          icono: Icons.arrow_upward,
+          texto: '+${r.variacionPorcentaje!.toStringAsFixed(2)}%',
+        );
+      case 'reduccion':
+        return (
+          color: AppColors.green,
+          fondo: AppColors.greenBg,
+          icono: Icons.arrow_downward,
+          texto: '${r.variacionPorcentaje!.toStringAsFixed(2)}%',
+        );
+      case 'inicial':
+        return (
+          color: AppColors.navy,
+          fondo: AppColors.iconBg,
+          icono: null,
+          texto: 'Inicial',
+        );
+      default:
+        return (
+          color: AppColors.olive,
+          fondo: AppColors.oliveBg,
+          icono: Icons.remove,
+          texto: 'Sin cambio',
+        );
+    }
+  }
+
   // =======================================================================
-  // ACTUALIZAR PRECIO — única acción disponible para el gerente.
+  // ACTUALIZAR PRECIO — única acción de edición disponible.
   // Si se llama con un producto preseleccionado (desde una tarjeta del
-  // historial), el selector queda fijo en ese producto. Si se llama desde
-  // el botón del encabezado, el gerente elige cualquier producto de la
-  // lista.
+  // historial), el selector queda fijo en ese producto. Si se llama sin
+  // parámetros, se puede elegir cualquier producto de la lista.
   // =======================================================================
   Future<void> _abrirCambioPrecio({
     int? idPreseleccionado,
@@ -221,13 +263,16 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                   children: [
                     Container(
                       padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [AppColors.navyOscuro, AppColors.navyClaro],
+                          colors: [
+                            AppColors.navy,
+                            Color.lerp(AppColors.navy, AppColors.lightBlue, 0.18)!,
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,10 +281,10 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: AppColors.dorado.withValues(alpha: 0.18),
+                              color: AppColors.gold.withValues(alpha: 0.18),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.sell_outlined, color: AppColors.dorado, size: 22),
+                            child: const Icon(Icons.sell_outlined, color: AppColors.gold, size: 22),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -255,7 +300,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                                   esFijo
                                       ? nombreSeleccionado ?? ''
                                       : 'Elige un producto y su nuevo precio',
-                                  style: const TextStyle(color: Color(0xFF8FA3C4), fontSize: 12),
+                                  style: const TextStyle(color: AppColors.lightBlue, fontSize: 12),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ],
@@ -275,11 +320,11 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                               isExpanded: true,
                               decoration: InputDecoration(
                                 labelText: 'Producto',
-                                labelStyle: const TextStyle(fontSize: 13, color: AppColors.textoMuted),
+                                labelStyle: const TextStyle(fontSize: 13, color: AppColors.olive),
                                 prefixIcon: const Icon(Icons.inventory_2_outlined,
-                                    size: 19, color: AppColors.doradoOscuro),
+                                    size: 19, color: AppColors.goldDark),
                                 filled: true,
-                                fillColor: AppColors.fondo,
+                                fillColor: AppColors.background,
                                 isDense: true,
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                                 border: OutlineInputBorder(
@@ -314,7 +359,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                                 padding: EdgeInsets.only(top: 6, left: 4),
                                 child: Text(
                                   'No hay productos disponibles.',
-                                  style: TextStyle(fontSize: 11, color: AppColors.rojo),
+                                  style: TextStyle(fontSize: 11, color: AppColors.red),
                                 ),
                               ),
                             const SizedBox(height: 14),
@@ -324,13 +369,13 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                               margin: const EdgeInsets.only(bottom: 14),
                               decoration: BoxDecoration(
-                                color: AppColors.fondo,
+                                color: AppColors.background,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
                                 children: [
                                   const Icon(Icons.inventory_2_outlined,
-                                      size: 19, color: AppColors.doradoOscuro),
+                                      size: 19, color: AppColors.goldDark),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
@@ -348,10 +393,10 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                             style: const TextStyle(fontSize: 14),
                             decoration: InputDecoration(
                               labelText: 'Precio nuevo',
-                              labelStyle: const TextStyle(fontSize: 13, color: AppColors.textoMuted),
-                              prefixIcon: const Icon(Icons.attach_money, size: 19, color: AppColors.doradoOscuro),
+                              labelStyle: const TextStyle(fontSize: 13, color: AppColors.olive),
+                              prefixIcon: const Icon(Icons.attach_money, size: 19, color: AppColors.goldDark),
                               filled: true,
-                              fillColor: AppColors.fondo,
+                              fillColor: AppColors.background,
                               isDense: true,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                               border: OutlineInputBorder(
@@ -367,10 +412,10 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                             style: const TextStyle(fontSize: 14),
                             decoration: InputDecoration(
                               labelText: 'Motivo del cambio',
-                              labelStyle: const TextStyle(fontSize: 13, color: AppColors.textoMuted),
-                              prefixIcon: const Icon(Icons.notes_outlined, size: 19, color: AppColors.doradoOscuro),
+                              labelStyle: const TextStyle(fontSize: 13, color: AppColors.olive),
+                              prefixIcon: const Icon(Icons.notes_outlined, size: 19, color: AppColors.goldDark),
                               filled: true,
-                              fillColor: AppColors.fondo,
+                              fillColor: AppColors.background,
                               isDense: true,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                               border: OutlineInputBorder(
@@ -393,10 +438,10 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 13),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                side: BorderSide(color: Colors.grey.shade300),
+                                side: BorderSide(color: AppColors.cardBorder),
                               ),
                               child: const Text('Cancelar',
-                                  style: TextStyle(color: AppColors.textoMuted, fontWeight: FontWeight.w600)),
+                                  style: TextStyle(color: AppColors.olive, fontWeight: FontWeight.w600)),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -404,22 +449,22 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                             child: ElevatedButton(
                               onPressed: () {
                                 if (idSeleccionado == null) {
-                                  _mostrarSnack('Selecciona un producto', color: AppColors.rojo);
+                                  _mostrarSnack('Selecciona un producto', color: AppColors.red);
                                   return;
                                 }
                                 if (double.tryParse(precioCtrl.text.trim()) == null) {
-                                  _mostrarSnack('El precio no es válido', color: AppColors.rojo);
+                                  _mostrarSnack('El precio no es válido', color: AppColors.red);
                                   return;
                                 }
                                 if (motivoCtrl.text.trim().isEmpty) {
-                                  _mostrarSnack('El motivo es obligatorio', color: AppColors.rojo);
+                                  _mostrarSnack('El motivo es obligatorio', color: AppColors.red);
                                   return;
                                 }
                                 Navigator.of(ctx).pop(true);
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.dorado,
-                                foregroundColor: Colors.white,
+                                backgroundColor: AppColors.gold,
+                                foregroundColor: AppColors.navy,
                                 padding: const EdgeInsets.symmetric(vertical: 13),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 elevation: 0,
@@ -451,11 +496,11 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
         precioNuevo: double.parse(precioCtrl.text.trim()),
         motivo: motivoCtrl.text.trim(),
       );
-      _mostrarSnack('Precio actualizado', color: AppColors.verde);
+      _mostrarSnack('Precio actualizado', color: AppColors.green);
       _cargarRegistros();
       _cargarProductos();
     } catch (e) {
-      _mostrarSnack('No se pudo actualizar el precio: $e', color: AppColors.rojo);
+      _mostrarSnack('No se pudo actualizar el precio: $e', color: AppColors.red);
     }
   }
 
@@ -488,13 +533,16 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   }) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.navyOscuro, AppColors.navyClaro],
+          colors: [
+            AppColors.navy,
+            Color.lerp(AppColors.navy, AppColors.lightBlue, 0.18)!,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,10 +551,10 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppColors.dorado.withValues(alpha: 0.18),
+              color: AppColors.gold.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppColors.dorado, size: 22),
+            child: Icon(icon, color: AppColors.gold, size: 22),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -520,7 +568,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                   maxLines: 2,
                 ),
                 const SizedBox(height: 3),
-                Text(subtitulo, style: const TextStyle(color: Color(0xFF8FA3C4), fontSize: 12)),
+                Text(subtitulo, style: const TextStyle(color: AppColors.lightBlue, fontSize: 12)),
               ],
             ),
           ),
@@ -536,18 +584,18 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: AppColors.doradoOscuro),
+          Icon(icon, size: 16, color: AppColors.goldDark),
           const SizedBox(width: 10),
           Expanded(
             flex: 4,
-            child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textoMuted)),
+            child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.olive)),
           ),
           Expanded(
             flex: 5,
             child: Text(
               valor,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.navy),
             ),
           ),
         ],
@@ -558,7 +606,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   Widget _cajaStat(String label, String valor, Color color, IconData icon) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-      decoration: BoxDecoration(color: AppColors.fondo, borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(14)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -569,7 +617,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(fontSize: 10, color: AppColors.textoMuted, fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontSize: 10, color: AppColors.olive, fontWeight: FontWeight.w600),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -590,28 +638,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   // DIÁLOGO: VER DETALLE — solo "Cerrar" y "Editar precio".
   // =======================================================================
   void _verDetalle(HistorialPrecio r) {
-    final tipo = r.tipoVariacion;
-    Color colorVariacion;
-    Color fondoVariacion;
-    String textoVariacion;
-    IconData iconoVariacion;
-
-    if (tipo == 'aumento') {
-      colorVariacion = AppColors.rojo;
-      fondoVariacion = AppColors.rojoFondo;
-      iconoVariacion = Icons.arrow_upward;
-      textoVariacion = '+${r.variacionPorcentaje!.toStringAsFixed(2)}%';
-    } else if (tipo == 'reduccion') {
-      colorVariacion = AppColors.verde;
-      fondoVariacion = AppColors.verdeFondo;
-      iconoVariacion = Icons.arrow_downward;
-      textoVariacion = '${r.variacionPorcentaje!.toStringAsFixed(2)}%';
-    } else {
-      colorVariacion = AppColors.gris;
-      fondoVariacion = AppColors.grisFondo;
-      iconoVariacion = Icons.remove;
-      textoVariacion = 'Sin cambio';
-    }
+    final estilo = _estiloVariacion(r);
 
     _mostrarDialogoBase(
       child: Column(
@@ -623,14 +650,14 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
             subtitulo: '#${r.id} · ID Producto ${r.idProducto}',
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: fondoVariacion, borderRadius: BorderRadius.circular(20)),
+              decoration: BoxDecoration(color: estilo.fondo, borderRadius: BorderRadius.circular(20)),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(iconoVariacion, size: 11, color: colorVariacion),
-                  const SizedBox(width: 3),
-                  Text(textoVariacion,
-                      style: TextStyle(color: colorVariacion, fontSize: 11, fontWeight: FontWeight.bold)),
+                  if (estilo.icono != null) Icon(estilo.icono, size: 11, color: estilo.color),
+                  if (estilo.icono != null) const SizedBox(width: 3),
+                  Text(estilo.texto,
+                      style: TextStyle(color: estilo.color, fontSize: 11, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -647,17 +674,17 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                   r.motivo.isEmpty ? 'Sin motivo registrado' : r.motivo,
                 ),
                 const SizedBox(height: 6),
-                const Divider(height: 1),
+                Divider(height: 1, color: AppColors.cardBorder),
                 const SizedBox(height: 14),
                 Row(
                   children: [
                     Expanded(
                       child: _cajaStat('Precio Anterior', '\$${_formatoMiles(r.precioAnterior)}',
-                          AppColors.dorado, Icons.arrow_back),
+                          AppColors.gold, Icons.arrow_back),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: _cajaStat('Precio Nuevo', '\$${_formatoMiles(r.precioNuevo)}', AppColors.verde,
+                      child: _cajaStat('Precio Nuevo', '\$${_formatoMiles(r.precioNuevo)}', AppColors.green,
                           Icons.arrow_forward),
                     ),
                   ],
@@ -675,10 +702,10 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      side: BorderSide(color: Colors.grey.shade300),
+                      side: BorderSide(color: AppColors.cardBorder),
                     ),
                     child: const Text('Cerrar',
-                        style: TextStyle(color: AppColors.textoMuted, fontWeight: FontWeight.w600)),
+                        style: TextStyle(color: AppColors.olive, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -693,8 +720,8 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.dorado,
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.gold,
+                      foregroundColor: AppColors.navy,
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
@@ -712,41 +739,44 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final rolCrudo = (widget.usuario?['rol'] ?? 'administrador').toString().toLowerCase();
+
     return Container(
-      color: AppColors.fondo,
+      color: AppColors.background,
       child: RefreshIndicator(
+        color: AppColors.gold,
         onRefresh: _cargarRegistros,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _encabezado(),
+            _encabezado(rolCrudo),
             const SizedBox(height: 14),
 
             if (_error != null) ...[
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: AppColors.rojoFondo, borderRadius: BorderRadius.circular(10)),
-                child: Text(_error!, style: const TextStyle(color: AppColors.rojo, fontSize: 13)),
+                decoration: BoxDecoration(color: AppColors.redBg, borderRadius: BorderRadius.circular(10)),
+                child: Text(_error!, style: const TextStyle(color: AppColors.red, fontSize: 13)),
               ),
               const SizedBox(height: 14),
             ],
 
             Row(
               children: [
-                Expanded(child: _tarjetaResumen('Total', '${_registros.length}', AppColors.dorado)),
-                const SizedBox(width: 10),
-                Expanded(child: _tarjetaResumen('Aumentos', '$_totalAumentos', AppColors.rojo)),
-                const SizedBox(width: 10),
-                Expanded(child: _tarjetaResumen('Reduc.', '$_totalReducciones', AppColors.verde)),
-                const SizedBox(width: 10),
-                Expanded(child: _tarjetaResumen('Sin cambio', '$_totalSinCambio', AppColors.gris)),
+                Expanded(child: _tarjetaResumen('Total', '${_registros.length}', AppColors.gold)),
+                const SizedBox(width: 8),
+                Expanded(child: _tarjetaResumen('Aumentos', '$_totalAumentos', AppColors.red)),
+                const SizedBox(width: 8),
+                Expanded(child: _tarjetaResumen('Reduc.', '$_totalReducciones', AppColors.green)),
+                const SizedBox(width: 8),
+                Expanded(child: _tarjetaResumen('Iniciales', '$_totalIniciales', AppColors.navy)),
               ],
             ),
             const SizedBox(height: 14),
 
-            _buscador(),
-            const SizedBox(height: 18),
+            _panelFiltros(),
+            const SizedBox(height: 16),
 
             _separadorConteo(_filtrados.length),
             const SizedBox(height: 12),
@@ -754,7 +784,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
             if (_cargando)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
               )
             else if (_filtrados.isEmpty)
               Padding(
@@ -762,9 +792,9 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(Icons.history, size: 40, color: Colors.grey.shade400),
+                      Icon(Icons.history, size: 40, color: AppColors.goldDark.withValues(alpha: 0.5)),
                       const SizedBox(height: 8),
-                      Text('No se encontraron registros', style: TextStyle(color: Colors.grey.shade600)),
+                      const Text('No se encontraron registros', style: TextStyle(color: AppColors.olive)),
                     ],
                   ),
                 ),
@@ -777,188 +807,184 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     );
   }
 
-  Widget _encabezado() {
+  Widget _encabezado(String rolCrudo) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F1B2E), Color(0xFF16233A)],
+        gradient: LinearGradient(
+          colors: [
+            AppColors.navy,
+            Color.lerp(AppColors.navy, AppColors.lightBlue, 0.18)!,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'GERENTE · HISTORIAL DE PRECIOS',
-                  style: TextStyle(
-                    color: AppColors.dorado,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.0,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Historial de Precios',
-                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Actualiza el precio de tus productos',
-                  style: TextStyle(color: Color(0xFF8FA3C4), fontSize: 12),
-                ),
-              ],
+          Text(
+            '${rolCrudo.toUpperCase()} · PRECIOS',
+            style: const TextStyle(
+              color: AppColors.goldText,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.0,
             ),
           ),
-          const SizedBox(width: 10),
-          ElevatedButton.icon(
-            onPressed: () => _abrirCambioPrecio(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.dorado,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: const StadiumBorder(),
-              elevation: 0,
-            ),
-            icon: const Icon(Icons.sell_outlined, size: 16),
-            label: const Text('Actualizar precio', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          const Text(
+            'Historial de Precios',
+            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Rastrea y analiza cada cambio de precio',
+            style: TextStyle(color: AppColors.lightBlue, fontSize: 12),
           ),
         ],
       ),
     );
   }
 
-  Widget _buscador() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        TextField(
-          controller: _busquedaCtrl,
-          onChanged: (_) => setState(() {}),
-          decoration: InputDecoration(
-            hintText: 'Buscar por producto, ID o motivo...',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-            prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(vertical: 0),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: const BorderSide(color: AppColors.dorado),
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
+  Widget _panelFiltros() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder, width: 0.6),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _elegirFecha,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  side: BorderSide(color: AppColors.doradoClaro),
-                ),
-                icon: const Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.doradoOscuro),
-                label: Text(
-                  _fechaFiltro == null ? 'Filtrar por fecha' : _formatoFechaLarga(_fechaFiltro!),
-                  style: const TextStyle(fontSize: 12, color: AppColors.doradoOscuro),
-                ),
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _filtrosExpandidos = !_filtrosExpandidos;
+                });
+              },
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.gold),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Filtros y Búsqueda',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.navy),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _filtrosExpandidos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: AppColors.goldDark,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 8),
-            TextButton.icon(
-              onPressed: _limpiarFiltros,
-              icon: const Icon(Icons.close, size: 14),
-              label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
-              style: TextButton.styleFrom(foregroundColor: AppColors.textoMuted),
-            ),
+
+            if (_filtrosExpandidos) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _busquedaCtrl,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(color: AppColors.navy, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por producto, ID o motivo...',
+                  hintStyle: TextStyle(color: AppColors.navy.withValues(alpha: 0.45), fontSize: 13),
+                  prefixIcon: Icon(Icons.search, size: 20, color: AppColors.navy.withValues(alpha: 0.45)),
+                  filled: true,
+                  // CAMBIO: fondo del buscador más claro para que se note mejor el texto/ícono
+                  fillColor: Color.lerp(AppColors.inputBg, Colors.white, 0.85),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: AppColors.gold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _elegirFecha,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        side: const BorderSide(color: AppColors.cardBorder),
+                      ),
+                      icon: const Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.goldDark),
+                      label: Text(
+                        _fechaFiltro == null ? 'Filtrar por fecha' : _formatoFechaLarga(_fechaFiltro!),
+                        style: const TextStyle(fontSize: 12, color: AppColors.goldDark),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: _limpiarFiltros,
+                    icon: const Icon(Icons.close, size: 14),
+                    label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(foregroundColor: AppColors.olive),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
-      ],
+      ),
     );
   }
 
   Widget _tarjetaResumen(String titulo, String valor, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border(top: BorderSide(color: color, width: 3)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
-        ],
       ),
       child: Column(
         children: [
-          Text(valor, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+          Text(valor, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
           const SizedBox(height: 2),
-          Text(titulo, style: const TextStyle(fontSize: 11, color: AppColors.textoMuted)),
+          Text(
+            titulo,
+            style: const TextStyle(fontSize: 10, color: AppColors.olive),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
   }
 
   Widget _separadorConteo(int cantidad) {
-    return Row(
-      children: [
-        Expanded(child: Divider(color: AppColors.verde.withValues(alpha: 0.4), thickness: 1.2)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Text(
-            '$cantidad ${cantidad == 1 ? 'REGISTRO' : 'REGISTROS'}',
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textoMuted,
-              letterSpacing: 0.5,
-            ),
-          ),
+    return Center(
+      child: Text(
+        '$cantidad ${cantidad == 1 ? 'REGISTRO' : 'REGISTROS'}',
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: AppColors.olive,
+          letterSpacing: 0.5,
         ),
-        Expanded(child: Divider(color: AppColors.verde.withValues(alpha: 0.4), thickness: 1.2)),
-      ],
+      ),
     );
   }
 
   Widget _tarjetaRegistro(HistorialPrecio r) {
-    final tipo = r.tipoVariacion;
-    Color colorVariacion;
-    Color fondoVariacion;
-    String textoVariacion;
-    IconData? iconoVariacion;
-
-    if (tipo == 'aumento') {
-      colorVariacion = AppColors.rojo;
-      fondoVariacion = AppColors.rojoFondo;
-      iconoVariacion = Icons.arrow_upward;
-      textoVariacion = '+${r.variacionPorcentaje!.toStringAsFixed(2)}%';
-    } else if (tipo == 'reduccion') {
-      colorVariacion = AppColors.verde;
-      fondoVariacion = AppColors.verdeFondo;
-      iconoVariacion = Icons.arrow_downward;
-      textoVariacion = '${r.variacionPorcentaje!.toStringAsFixed(2)}%';
-    } else {
-      colorVariacion = AppColors.gris;
-      fondoVariacion = AppColors.grisFondo;
-      iconoVariacion = null;
-      textoVariacion = 'Sin cambio';
-    }
+    final estilo = _estiloVariacion(r);
 
     return InkWell(
       borderRadius: BorderRadius.circular(14),
@@ -968,10 +994,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           color: Colors.white,
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
-          ],
+          border: Border.all(color: AppColors.cardBorder, width: 0.6),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(13),
@@ -979,7 +1002,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(width: 4, color: colorVariacion),
+                Container(width: 4, color: estilo.color),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(14),
@@ -992,17 +1015,17 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                             Expanded(
                               child: RichText(
                                 text: TextSpan(
-                                  style: const TextStyle(fontSize: 14, color: Colors.black),
+                                  style: const TextStyle(fontSize: 14, color: AppColors.navy),
                                   children: [
                                     TextSpan(
                                       text: '#${r.id}  ',
                                       style: const TextStyle(
-                                          color: AppColors.doradoOscuro, fontWeight: FontWeight.bold, fontSize: 12),
+                                          color: AppColors.gold, fontWeight: FontWeight.bold, fontSize: 12),
                                     ),
                                     TextSpan(
                                       text: r.nombreProducto,
                                       style: const TextStyle(
-                                          fontWeight: FontWeight.w700, fontSize: 15, color: Colors.black),
+                                          fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.navy),
                                     ),
                                   ],
                                 ),
@@ -1010,121 +1033,97 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                             ),
                             _accionBoton(
                               Icons.remove_red_eye_outlined,
-                              AppColors.doradoOscuro,
-                              const Color(0xFFFBF1DD),
+                              AppColors.navy,
+                              Color.lerp(AppColors.lightBlue, Colors.white, 0.55)!,
                               () => _verDetalle(r),
-                            ),
-                            const SizedBox(width: 8),
-                            // Única acción de edición del gerente: cambiar precio.
-                            _accionBoton(
-                              Icons.sell_outlined,
-                              AppColors.doradoOscuro,
-                              const Color(0xFFFBF1DD),
-                              () => _abrirCambioPrecio(
-                                idPreseleccionado: r.idProducto,
-                                nombrePreseleccionado: r.nombreProducto,
-                                precioActualPreseleccionado: r.precioActual,
-                              ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 4),
-                        Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              'ID: ${r.idProducto} · Actual: \$${_formatoMiles(r.precioActual)}  ',
-                              style: const TextStyle(fontSize: 12, color: AppColors.textoMuted),
-                            ),
-                            if (r.activo)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration:
-                                    BoxDecoration(color: AppColors.verdeFondo, borderRadius: BorderRadius.circular(20)),
-                                child: const Text(
-                                  'Activo',
-                                  style: TextStyle(color: AppColors.verde, fontWeight: FontWeight.w600, fontSize: 10),
-                                ),
-                              ),
-                          ],
+                        Text(
+                          'ID Prod: ${r.idProducto} · ${_formatoFechaLarga(r.fecha)}',
+                          style: const TextStyle(fontSize: 11, color: AppColors.olive),
                         ),
                         const SizedBox(height: 10),
-                        const Divider(height: 1),
-                        const SizedBox(height: 10),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Precio Anterior', style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
-                                  Text(
-                                    '\$${_formatoMiles(r.precioAnterior)}',
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.dorado),
-                                  ),
-                                ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            // CAMBIO: fondo blanco (antes AppColors.background) + borde sutil
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.cardBorder, width: 0.6),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Anterior',
+                                        style: TextStyle(fontSize: 9, color: AppColors.olive)),
+                                    Text(
+                                      '\$${_formatoMiles(r.precioAnterior)}',
+                                      style: const TextStyle(
+                                          fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.gold),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const Icon(Icons.arrow_forward, size: 16, color: AppColors.textoMuted),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Precio Nuevo', style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
-                                  Text(
-                                    '\$${_formatoMiles(r.precioNuevo)}',
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.verde),
-                                  ),
-                                ],
+                              const Icon(Icons.arrow_forward, size: 14, color: AppColors.gold),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    const Text('Nuevo',
+                                        style: TextStyle(fontSize: 9, color: AppColors.olive)),
+                                    Text(
+                                      '\$${_formatoMiles(r.precioNuevo)}',
+                                      style: const TextStyle(
+                                          fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.green),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                const Text('Variación', style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
-                                const SizedBox(height: 2),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration:
-                                      BoxDecoration(color: fondoVariacion, borderRadius: BorderRadius.circular(20)),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (iconoVariacion != null) Icon(iconoVariacion, size: 11, color: colorVariacion),
-                                      if (iconoVariacion != null) const SizedBox(width: 2),
-                                      Text(
-                                        textoVariacion,
-                                        style:
-                                            TextStyle(color: colorVariacion, fontWeight: FontWeight.w600, fontSize: 11),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    const Text('Variación',
+                                        style: TextStyle(fontSize: 9, color: AppColors.olive)),
+                                    const SizedBox(height: 2),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                          color: estilo.fondo, borderRadius: BorderRadius.circular(20)),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (estilo.icono != null)
+                                            Icon(estilo.icono, size: 10, color: estilo.color),
+                                          if (estilo.icono != null) const SizedBox(width: 2),
+                                          Text(
+                                            estilo.texto,
+                                            style: TextStyle(
+                                                color: estilo.color, fontWeight: FontWeight.w600, fontSize: 10),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                                if (tipo != 'sin_cambio')
-                                  Text(
-                                    '${r.variacionAbsoluta > 0 ? '+' : ''}\$${_formatoMiles(r.variacionAbsoluta)}',
-                                    style: const TextStyle(fontSize: 10, color: AppColors.textoMuted),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Text(_formatoFechaLarga(r.fecha), style: const TextStyle(fontSize: 11, color: AppColors.textoMuted)),
-                            const Spacer(),
-                            Flexible(
-                              child: Text(
-                                r.motivo,
-                                textAlign: TextAlign.right,
-                                style: const TextStyle(fontSize: 11, color: AppColors.textoMuted, fontStyle: FontStyle.italic),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
+                        if (r.motivo.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            r.motivo,
+                            style: const TextStyle(
+                                fontSize: 11, color: AppColors.olive, fontStyle: FontStyle.italic),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -1139,12 +1138,14 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
 
   Widget _accionBoton(IconData icon, Color color, Color fondo, VoidCallback? onTap) {
     return InkWell(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(20),
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: fondo, borderRadius: BorderRadius.circular(10)),
-        child: Icon(icon, size: 17, color: color),
+        width: 30,
+        height: 30,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: fondo, shape: BoxShape.circle),
+        child: Icon(icon, size: 15, color: color),
       ),
     );
   }

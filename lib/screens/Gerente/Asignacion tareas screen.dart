@@ -4,43 +4,68 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // Este archivo expone la variable `supabase` ya inicializada en main.dart.
 import '../../services/supabase_client.dart';
 
+// ==================== COLORES (paleta compartida de la app) ====================
+class AppColors {
+  static const background = Color(0xFFF7EFDD);
+  static const navy = Color(0xFF101B33);
+  static const gold = Color(0xFFC9A24A);
+  static const goldDark = Color(0xFF8A6D1F);
+  static const goldText = Color(0xFFD2A03C);
+  static const lightBlue = Color(0xFF9FB4DE);
+  static const inputBg = Color(0xFFEFE4CB);
+  static const iconBg = Color(0xFFF0E3BE);
+  static const cardBorder = Color(0xFFECE0BD);
+
+  static const green = Color(0xFF2E9E4E);
+  static const greenBg = Color(0xFFDCF2E3);
+  static const olive = Color(0xFF8B7920);
+  static const oliveBg = Color(0xFFF3ECD2);
+  static const red = Color(0xFFC24555);
+  static const redBg = Color(0xFFF8DCE0);
+}
+
+// Colores derivados de AppColors, usados en esta pantalla.
+// Se mantiene el mismo alcance de nombres que antes (_TareasColors) para no
+// tener que tocar el resto de los widgets.
 class _TareasColors {
-  static const dorado = Color(0xFFC9962E);
-  static const doradoOscuro = Color(0xFF8C6B2E);
-  static const doradoClaro = Color(0xFFE8C97A);
-  static const doradoMezcla = Color(0xFFAB812E);
-  static const fondo = Color(0xFFFAF3E4);
+  static const dorado = AppColors.gold;
+  static const doradoOscuro = AppColors.goldDark;
+  static final doradoClaro = Color.lerp(AppColors.gold, Colors.white, 0.35)!;
+  static const doradoMezcla = AppColors.goldText;
+  static const fondo = AppColors.background;
 
-  static const navyOscuro = Color(0xFF0F1B2E);
-  static const navyClaro = Color(0xFF16233A);
-  static const subtitulo = Color(0xFF8FA3C4);
+  static const navyOscuro = AppColors.navy;
+  static final navyClaro = Color.lerp(AppColors.navy, AppColors.lightBlue, 0.18)!;
+  static const subtitulo = AppColors.lightBlue;
 
-  static const verde = Color(0xFF2E9E5B);
-  static const verdeFondo = Color(0xFFDDF2E1);
+  static const verde = AppColors.green;
+  static const verdeFondo = AppColors.greenBg;
 
-  static const naranja = Color(0xFFA17A2E);
-  static const naranjaFondo = Color(0xFFF5E3C3);
+  static const naranja = AppColors.goldDark;
+  static const naranjaFondo = AppColors.oliveBg;
 
-  static const rojo = Color(0xFFC0293B);
-  static const rojoFondo = Color(0xFFFADCE0);
+  static const rojo = AppColors.red;
+  static const rojoFondo = AppColors.redBg;
 
-  static const textoMuted = Color(0xFF6B7280);
-  static const enlace = Color(0xFF2563EB);
+  static const textoMuted = AppColors.olive;
+  static final enlace = Color.lerp(AppColors.navy, AppColors.lightBlue, 0.55)!;
 
-  static const white = Color(0xFFFFFFFF);
+  static const white = Colors.white;
   static const gold = dorado;
   static const grayText = textoMuted;
   static const encabezado = navyOscuro;
   static const headerBg = navyOscuro;
 
-  static const blue = enlace;
-  static const blueBg = Color(0xFFE1EEFE);
+  static const blue = navy2; // placeholder, se define abajo
+  static final blueBg = Color.lerp(AppColors.lightBlue, Colors.white, 0.7)!;
   static const green = verde;
   static const greenBg = verdeFondo;
   static const orange = doradoOscuro;
-  static const orangeBg = Color(0xFFFDF3DA);
+  static const orangeBg = naranjaFondo;
 
   static const navy = encabezado;
+  static const navy2 = Color(0xFF185FA5); // azul legible para "En proceso" / enlaces
+  static const borde = AppColors.cardBorder;
 }
 
 // ============================================================
@@ -227,7 +252,7 @@ Color _colorPrioridadBg(String p) {
     case 'Media':
       return _TareasColors.doradoClaro;
     default:
-      return const Color(0xFFE5E7EB);
+      return AppColors.oliveBg;
   }
 }
 
@@ -251,6 +276,7 @@ class _AsignacionTareasScreenState extends State<AsignacionTareasScreen> {
   String _busqueda = '';
   String _filtroEstado = ''; // '' = Todos
   RealtimeChannel? _canal;
+  bool _filtrosExpandidos = true;
 
   static const _tabsEstado = ['Todos', 'Pendiente', 'En proceso', 'Finalizada'];
 
@@ -349,6 +375,56 @@ class _AsignacionTareasScreenState extends State<AsignacionTareasScreen> {
     }
   }
 
+  Widget _panelFiltros() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _TareasColors.borde, width: 0.6),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _filtrosExpandidos = !_filtrosExpandidos),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_alt_outlined, size: 18, color: _TareasColors.dorado),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Filtros y Búsqueda',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _TareasColors.navyOscuro),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _filtrosExpandidos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: _TareasColors.doradoOscuro,
+                  ),
+                ],
+              ),
+            ),
+            if (_filtrosExpandidos) ...[
+              const SizedBox(height: 12),
+              _SearchBar(
+                controller: _searchController,
+                onChanged: (v) => setState(() => _busqueda = v),
+              ),
+              const SizedBox(height: 10),
+              _FilterTabs(
+                tabs: _tabsEstado,
+                seleccionado: _filtroEstado.isEmpty ? 'Todos' : _filtroEstado,
+                onSelected: (t) => setState(() => _filtroEstado = t == 'Todos' ? '' : t),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildContent(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
@@ -362,16 +438,7 @@ class _AsignacionTareasScreenState extends State<AsignacionTareasScreen> {
           altaPrioridad: altaPrioridad,
         ),
         const SizedBox(height: 14),
-        _SearchBar(
-          controller: _searchController,
-          onChanged: (v) => setState(() => _busqueda = v),
-        ),
-        const SizedBox(height: 12),
-        _FilterTabs(
-          tabs: _tabsEstado,
-          seleccionado: _filtroEstado.isEmpty ? 'Todos' : _filtroEstado,
-          onSelected: (t) => setState(() => _filtroEstado = t == 'Todos' ? '' : t),
-        ),
+        _panelFiltros(),
         const SizedBox(height: 14),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -390,7 +457,7 @@ class _AsignacionTareasScreenState extends State<AsignacionTareasScreen> {
         if (_cargando)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 40),
-            child: Center(child: CircularProgressIndicator()),
+            child: Center(child: CircularProgressIndicator(color: _TareasColors.dorado)),
           )
         else if (_error != null)
           Padding(
@@ -400,7 +467,7 @@ class _AsignacionTareasScreenState extends State<AsignacionTareasScreen> {
                 children: [
                   Text(_error!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red)),
+                      style: const TextStyle(color: _TareasColors.rojo)),
                   const SizedBox(height: 8),
                   TextButton(onPressed: _cargarAsignaciones, child: const Text('Reintentar')),
                 ],
@@ -461,7 +528,7 @@ class _TopHeader extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             child: const Padding(
               padding: EdgeInsets.all(6),
-              child: Icon(Icons.menu_rounded, color: Colors.white, size: 22),
+              child: Icon(Icons.menu, color: Colors.white, size: 22),
             ),
           ),
           const SizedBox(width: 6),
@@ -491,7 +558,7 @@ class _TopHeader extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.notifications_none_rounded, color: Colors.white70, size: 20),
+          const Icon(Icons.notifications_outlined, color: Colors.white70, size: 20),
           const SizedBox(width: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
@@ -505,7 +572,7 @@ class _TopHeader extends StatelessWidget {
                 CircleAvatar(
                   radius: 9,
                   backgroundColor: _TareasColors.dorado,
-                  child: Icon(Icons.person_rounded, size: 11, color: _TareasColors.navyOscuro),
+                  child: Icon(Icons.person, size: 11, color: _TareasColors.navyOscuro),
                 ),
                 SizedBox(width: 5),
                 Text('Gerente', style: TextStyle(color: Colors.white, fontSize: 11.5)),
@@ -551,7 +618,7 @@ class _PageHeaderCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          _GoldButton(icon: Icons.add_rounded, label: 'Nueva Asignación', onTap: onNuevaAsignacion),
+          _GoldButton(icon: Icons.add, label: 'Nueva Asignación', onTap: onNuevaAsignacion),
         ],
       ),
     );
@@ -617,17 +684,10 @@ class _StatsRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               border: Border(
                 top: BorderSide(color: color, width: 3),
-                left: const BorderSide(color: Color(0xFFE9E1D0)),
-                right: const BorderSide(color: Color(0xFFE9E1D0)),
-                bottom: const BorderSide(color: Color(0xFFE9E1D0)),
+                left: BorderSide(color: _TareasColors.borde),
+                right: BorderSide(color: _TareasColors.borde),
+                bottom: BorderSide(color: _TareasColors.borde),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
             child: Column(
               children: [
@@ -668,21 +728,22 @@ class _SearchBar extends StatelessWidget {
     return TextField(
       controller: controller,
       onChanged: onChanged,
-      style: const TextStyle(fontSize: 13),
+      style: const TextStyle(fontSize: 13, color: _TareasColors.navyOscuro),
       decoration: InputDecoration(
         hintText: 'Buscar vehículo, mecánico, cliente...',
         hintStyle: const TextStyle(fontSize: 12.5, color: _TareasColors.grayText),
-        prefixIcon: const Icon(Icons.search_rounded, size: 18, color: _TareasColors.grayText),
+        prefixIcon: const Icon(Icons.search, size: 18, color: _TareasColors.grayText),
         filled: true,
+        // Fondo más claro que el de las tarjetas para que se note bien el texto.
         fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: Color(0xFFE9E1D0)),
+          borderSide: BorderSide(color: _TareasColors.borde),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: Color(0xFFE9E1D0)),
+          borderSide: BorderSide(color: _TareasColors.borde),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
@@ -702,6 +763,19 @@ class _FilterTabs extends StatelessWidget {
   final ValueChanged<String> onSelected;
   const _FilterTabs({required this.tabs, required this.seleccionado, required this.onSelected});
 
+  Color _colorTab(String t) {
+    switch (t) {
+      case 'Pendiente':
+        return _TareasColors.navyOscuro;
+      case 'En proceso':
+        return _TareasColors.blue;
+      case 'Finalizada':
+        return _TareasColors.green;
+      default:
+        return _TareasColors.dorado;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -709,6 +783,7 @@ class _FilterTabs extends StatelessWidget {
       child: Row(
         children: tabs.map((t) {
           final activo = t == seleccionado;
+          final color = _colorTab(t);
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
@@ -718,14 +793,14 @@ class _FilterTabs extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: activo ? _TareasColors.dorado : const Color(0xFFE9E1D0), width: 1.4),
+                  border: Border.all(color: color, width: activo ? 1.6 : 1.1),
                 ),
                 child: Text(
                   t,
                   style: TextStyle(
                     fontSize: 12.5,
-                    fontWeight: activo ? FontWeight.w700 : FontWeight.w500,
-                    color: activo ? _TareasColors.doradoOscuro : _TareasColors.grayText,
+                    fontWeight: activo ? FontWeight.w700 : FontWeight.w600,
+                    color: color,
                   ),
                 ),
               ),
@@ -760,9 +835,6 @@ class _AssignmentCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border(left: BorderSide(color: colorEstado, width: 4)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -776,7 +848,7 @@ class _AssignmentCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
-                    color: a.cliente != null ? const Color(0xFF111827) : _TareasColors.grayText,
+                    color: a.cliente != null ? _TareasColors.navyOscuro : _TareasColors.grayText,
                     fontStyle: a.cliente != null ? FontStyle.normal : FontStyle.italic,
                   ),
                 ),
@@ -797,18 +869,18 @@ class _AssignmentCard extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.local_shipping_outlined, size: 14, color: _TareasColors.grayText),
+              const Icon(Icons.directions_car_outlined, size: 15, color: _TareasColors.grayText),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(a.vehiculo,
-                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF374151))),
+                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: _TareasColors.navyOscuro)),
               ),
               const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                 decoration: BoxDecoration(color: _TareasColors.blueBg, borderRadius: BorderRadius.circular(20)),
                 child: Text(a.tipoTrabajo,
-                    style: const TextStyle(fontSize: 10.5, color: _TareasColors.blue, fontWeight: FontWeight.w600)),
+                    style: TextStyle(fontSize: 10.5, color: _TareasColors.blue, fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -818,7 +890,7 @@ class _AssignmentCard extends StatelessWidget {
           ],
           const SizedBox(height: 10),
           Text(fmtCOP(a.costo),
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF111827))),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _TareasColors.navyOscuro)),
           const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -852,8 +924,8 @@ class _AssignmentCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(online ? Icons.cloud_done_rounded : Icons.storefront_rounded,
-                      size: 11, color: online ? _TareasColors.blue : _TareasColors.naranja),
+                  Icon(online ? Icons.wifi : Icons.storefront_outlined,
+                      size: 12, color: online ? _TareasColors.blue : _TareasColors.naranja),
                   const SizedBox(width: 4),
                   Text(online ? 'Online' : 'Presencial',
                       style: TextStyle(
@@ -987,7 +1059,7 @@ class _NuevaAsignacionDialogState extends State<_NuevaAsignacionDialog> {
 
   void _alerta(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red.shade700),
+      SnackBar(content: Text(msg), backgroundColor: _TareasColors.rojo),
     );
   }
 
@@ -1103,7 +1175,8 @@ class _NuevaAsignacionDialogState extends State<_NuevaAsignacionDialog> {
 
   Widget _label(String texto) => Padding(
         padding: const EdgeInsets.only(bottom: 4, top: 2),
-        child: Text(texto, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280), fontWeight: FontWeight.w600)),
+        child: Text(texto,
+            style: const TextStyle(fontSize: 12, color: _TareasColors.grayText, fontWeight: FontWeight.w600)),
       );
 
   @override
@@ -1137,7 +1210,7 @@ class _NuevaAsignacionDialogState extends State<_NuevaAsignacionDialog> {
                         height: 42,
                         decoration: BoxDecoration(color: _TareasColors.dorado, shape: BoxShape.circle),
                         alignment: Alignment.center,
-                        child: const Icon(Icons.local_shipping_outlined, color: _TareasColors.navyOscuro, size: 20),
+                        child: const Icon(Icons.assignment_outlined, color: _TareasColors.navyOscuro, size: 20),
                       ),
                       const SizedBox(width: 12),
                       const Expanded(
@@ -1168,7 +1241,7 @@ class _NuevaAsignacionDialogState extends State<_NuevaAsignacionDialog> {
                     child: _cargandoOpciones
                         ? const SizedBox(
                             height: 200,
-                            child: Center(child: CircularProgressIndicator()),
+                            child: Center(child: CircularProgressIndicator(color: _TareasColors.dorado)),
                           )
                         : _errorCarga != null
                             ? SizedBox(
@@ -1190,8 +1263,8 @@ class _NuevaAsignacionDialogState extends State<_NuevaAsignacionDialog> {
                                   children: [
                                     _label('Mecánico asignado'),
                                     if (_mecanicos.isEmpty)
-                                      const Text('No se encontraron mecánicos activos',
-                                          style: TextStyle(color: Colors.red, fontSize: 12))
+                                      Text('No se encontraron mecánicos activos',
+                                          style: TextStyle(color: _TareasColors.rojo, fontSize: 12))
                                     else
                                       DropdownButtonFormField<int>(
                                         initialValue: _idMecanico,
@@ -1245,7 +1318,7 @@ class _NuevaAsignacionDialogState extends State<_NuevaAsignacionDialog> {
                                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                             Text(
                                                 '${clienteSel.first.tipoDocumento} · ${clienteSel.first.numeroDocumento}',
-                                                style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                                                style: const TextStyle(fontSize: 12, color: _TareasColors.grayText)),
                                           ],
                                         ),
                                       ),
@@ -1348,16 +1421,16 @@ class _NuevaAsignacionDialogState extends State<_NuevaAsignacionDialog> {
                                       Container(
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFF0FDF4),
-                                          border: Border.all(color: const Color(0xFF86EFAC)),
+                                          color: AppColors.greenBg,
+                                          border: Border.all(color: AppColors.green.withValues(alpha: 0.4)),
                                           borderRadius: BorderRadius.circular(10),
                                         ),
                                         child: Text(
-                                          '✓ Se registrará en movimientos contables: $_tipoTrabajo'
+                                          'Se registrará en movimientos contables: $_tipoTrabajo'
                                           '${_vehiculoCtrl.text.isNotEmpty ? ' — ${_vehiculoCtrl.text}' : ''}'
                                           '${clienteSel.isNotEmpty ? ' — Cliente: ${clienteSel.first.nombreCompleto}' : ''}'
                                           ' · ${fmtCOP(double.tryParse(_costoCtrl.text))}',
-                                          style: const TextStyle(fontSize: 11.5, color: Color(0xFF166534)),
+                                          style: const TextStyle(fontSize: 11.5, color: AppColors.green),
                                         ),
                                       ),
                                     ],
@@ -1368,7 +1441,11 @@ class _NuevaAsignacionDialogState extends State<_NuevaAsignacionDialog> {
                                         Expanded(
                                           child: OutlinedButton(
                                             onPressed: _guardando ? null : () => Navigator.of(context).pop(false),
-                                            child: const Text('Cancelar'),
+                                            style: OutlinedButton.styleFrom(
+                                              side: const BorderSide(color: _TareasColors.borde),
+                                            ),
+                                            child: const Text('Cancelar',
+                                                style: TextStyle(color: _TareasColors.grayText)),
                                           ),
                                         ),
                                         const SizedBox(width: 10),
@@ -1380,6 +1457,7 @@ class _NuevaAsignacionDialogState extends State<_NuevaAsignacionDialog> {
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: _TareasColors.dorado,
                                               foregroundColor: _TareasColors.navyOscuro,
+                                              elevation: 0,
                                             ),
                                             child: Text(
                                               _guardando

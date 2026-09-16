@@ -1,40 +1,42 @@
 import 'package:flutter/material.dart';
 
+// ============================================================
+// PALETA — tomada de las maquetas
+// ============================================================
 class AppColorsDir {
-  // ---- Paleta nueva ----
-  static const dorado = Color(0xFFC9962E);
-  static const doradoOscuro = Color(0xFF8C6B2E);
-  static const doradoClaro = Color(0xFFE8C97A);
-  static const doradoMezcla = Color(0xFFAB812E); // punto medio dorado/doradoOscuro
-  static const fondo = Color(0xFFFAF3E4);
+  static const fondo = Color(0xFFF7EFDD); // crema de fondo
+  static const navy = Color(0xFF101B33); // header oscuro
+  static const navyTexto = Color(0xFF16233F); // títulos
+  static const subtitulo = Color(0xFF8D9CBB); // subtítulo del header
 
-  static const navyOscuro = Color(0xFF0F1B2E);
-  static const navyClaro = Color(0xFF16233A);
-  static const subtitulo = Color(0xFF8FA3C4);
+  static const dorado = Color(0xFFC9A24A); // botones / acentos
+  static const doradoOscuro = Color(0xFF8A6D1F); // texto sobre crema
+  static const doradoSuave = Color(0xFFF6EDD8); // fondo de pastillas/acciones
+  static const doradoBorde = Color(0xFFECE0BD); // divisores
 
-  static const verde = Color(0xFF2E9E5B);
-  static const verdeFondo = Color(0xFFDDF2E1);
+  static const azul = Color(0xFF2F6BE4); // acento de "Direcciones"
+  static const verde = Color(0xFF22A45D); // acento de "Principales"
+  static const verdeFondo = Color(0xFFDCF2E3);
+  static const verdeTexto = Color(0xFF1E7A3D);
 
-  static const naranja = Color(0xFFA17A2E);
-  static const naranjaFondo = Color(0xFFF5E3C3);
+  static const rojo = Color(0xFFE05B66);
+  static const rojoSuave = Color(0xFFFBE9EA);
 
-  static const rojo = Color(0xFFC0293B);
-  static const rojoFondo = Color(0xFFFADCE0);
+  static const rosa = Color(0xFFE8548B); // ícono de teléfono
+  static const gris = Color(0xFF8A8F98); // etiquetas
+  static const grisTexto = Color(0xFF6B7280);
+  static const inputBg = Color(0xFFEFE4CB); // fondo del buscador
+  static const filaTinte = Color(0xFFFBF8F1); // fila de dirección principal
 
-  static const textoMuted = Color(0xFF6B7280);
-  static const enlace = Color(0xFF2563EB);
-
-  // Alias usados en el resto del archivo (no cambian nombres para
-  // no tener que tocar cada referencia). Ahora apuntan a la paleta nueva.
-  static const encabezado = navyOscuro; // header + texto oscuro
-  static const verdeFondoAlias = verdeFondo;
-  static const grisTexto = textoMuted;
+  // Alias conservados
+  static const navyOscuro = navy;
+  static const encabezado = navy;
+  static const doradoClaro = doradoBorde;
+  static const doradoTexto = dorado;
+  static const textoMuted = grisTexto;
 }
 
 // ==================== MODELOS ====================
-// NOTA: los campos dejaron de ser "final" (excepto el id de la
-// dirección, que es su identificador) para poder editarlos y
-// eliminarlos en tiempo real desde la UI.
 class AddressModel {
   final String id;
   String street;
@@ -84,26 +86,19 @@ class ClientModel {
 }
 
 // ==================== DATOS ====================
+// Todos los clientes tienen ahora sus dos direcciones registradas.
 final List<ClientModel> clientsData = [
   ClientModel(
     initials: 'CT',
-    avatarColor: const Color(0xFF8B7FE8),
+    avatarColor: const Color(0xFF7F77DD),
     name: 'Camila Torres',
     idType: 'CC',
     idNumber: '110278588',
-    status: 'Active',
+    status: 'Activo',
     date: '19/05/2026',
     phone: '35267894',
     email: 'camilatorrez@gmail.com',
     addresses: [
-      AddressModel(
-        id: '#2',
-        street: 'Calle 10 #45-90 Casa 2',
-        city: 'Medellín',
-        neighborhood: 'Belén',
-        status: 'Activa',
-        note: 'Casa color blanco frente al parque',
-      ),
       AddressModel(
         id: '#29',
         street: 'Calle 72 #15-30 Oficina 401',
@@ -113,6 +108,14 @@ final List<ClientModel> clientsData = [
         note: 'Edificio azul, piso 4',
         isPrincipal: true,
       ),
+      AddressModel(
+        id: '#2',
+        street: 'Calle 10 #45-90 Casa 2',
+        city: 'Medellín',
+        neighborhood: 'Belén',
+        status: 'Activa',
+        note: 'Casa color blanco frente al parque',
+      ),
     ],
   ),
   ClientModel(
@@ -121,19 +124,11 @@ final List<ClientModel> clientsData = [
     name: 'Andrés Martínez',
     idType: 'CC',
     idNumber: '112233445',
-    status: 'Active',
+    status: 'Activo',
     date: '19/05/2026',
     phone: '3204567890',
     email: 'andresmartinez@yahoo.com',
     addresses: [
-      AddressModel(
-        id: '#17',
-        street: 'Calle 50 #12-40',
-        city: 'Bogotá',
-        neighborhood: 'Suba',
-        status: 'Activa',
-        note: 'Casa esquinera',
-      ),
       AddressModel(
         id: '#30',
         street: 'Diagonal 25G #95A-55',
@@ -143,6 +138,14 @@ final List<ClientModel> clientsData = [
         note: 'Bloque 4 apartamento 203',
         isPrincipal: true,
       ),
+      AddressModel(
+        id: '#17',
+        street: 'Calle 50 #12-40',
+        city: 'Bogotá',
+        neighborhood: 'Suba',
+        status: 'Activa',
+        note: 'Casa esquinera',
+      ),
     ],
   ),
   ClientModel(
@@ -151,7 +154,7 @@ final List<ClientModel> clientsData = [
     name: 'Sofía Rodríguez',
     idType: 'CE',
     idNumber: '334455987',
-    status: 'Active',
+    status: 'Activo',
     date: '19/05/2026',
     phone: '3107891234',
     email: 'sofiarodriguez@gmail.com',
@@ -181,21 +184,37 @@ final List<ClientModel> clientsData = [
     name: 'Paula Sánchez',
     idType: 'CC',
     idNumber: '1033445566',
-    status: 'Active',
+    status: 'Activo',
     date: '25/06/2026',
     phone: '3259012346',
     email: 'paula.sanchez@email.com',
-    addresses: [],
+    addresses: [
+      AddressModel(
+        id: '#51',
+        street: 'Calle 26 #68-35',
+        city: 'Bogotá',
+        neighborhood: 'Salitre',
+        status: 'Activa',
+        note: 'Torre 1, apto 704',
+        isPrincipal: true,
+      ),
+      AddressModel(
+        id: '#52',
+        street: 'Carrera 15 #93-60',
+        city: 'Bogotá',
+        neighborhood: 'Chicó',
+        status: 'Activa',
+        note: 'Oficina 302',
+      ),
+    ],
   ),
-
-  // ---------------- CLIENTES NUEVOS AGREGADOS ----------------
   ClientModel(
     initials: 'CF',
     avatarColor: const Color(0xFF16A085),
     name: 'Carlos Fernández',
     idType: 'Pasaporte',
     idNumber: '445566778',
-    status: 'Active',
+    status: 'Activo',
     date: '19/05/2026',
     phone: '3012345678',
     email: 'carlosfernandez@hotmail.com',
@@ -206,7 +225,7 @@ final List<ClientModel> clientsData = [
         city: 'Cali',
         neighborhood: 'Granada',
         status: 'Activa',
-        note: 'Torre 3 apartamento 601.',
+        note: 'Torre 3 apartamento 601',
         isPrincipal: true,
       ),
       AddressModel(
@@ -215,7 +234,7 @@ final List<ClientModel> clientsData = [
         city: 'Cartagena',
         neighborhood: 'Manga',
         status: 'Activa',
-        note: 'Recepción principal.',
+        note: 'Recepción principal',
       ),
     ],
   ),
@@ -225,14 +244,14 @@ final List<ClientModel> clientsData = [
     name: 'Cristian Muñoz',
     idType: 'CC',
     idNumber: '1099887766',
-    status: 'Active',
+    status: 'Activo',
     date: '25/06/2026',
     phone: '3226895675',
     email: 'cristianm@gmail.com',
     addresses: [
       AddressModel(
         id: '#31',
-        street: 'Calle 10 # 15-20',
+        street: 'Calle 10 #15-20',
         city: 'Bogotá',
         neighborhood: 'Chapinero',
         status: 'Activa',
@@ -241,7 +260,7 @@ final List<ClientModel> clientsData = [
       ),
       AddressModel(
         id: '#32',
-        street: 'Carrera 18 # 45-67',
+        street: 'Carrera 18 #45-67',
         city: 'Bogotá',
         neighborhood: 'Teusaquillo',
         status: 'Activa',
@@ -255,27 +274,27 @@ final List<ClientModel> clientsData = [
     name: 'Juan Esteban Gómez',
     idType: 'CE',
     idNumber: '1023456789',
-    status: 'Active',
+    status: 'Activo',
     date: '25/06/2026',
     phone: '3104567890',
     email: 'juan.gomez@gmail.com',
     addresses: [
       AddressModel(
-        id: '#33',
-        street: 'Calle 40 # 20-55',
-        city: 'Cúcuta',
-        neighborhood: 'Caobos',
-        status: 'Activa',
-        note: 'Frente al supermercado',
-      ),
-      AddressModel(
         id: '#34',
-        street: 'Carrera 8 # 15-99',
+        street: 'Carrera 8 #15-99',
         city: 'Cúcuta',
         neighborhood: 'La Playa',
         status: 'Activa',
         note: 'Timbre rojo',
         isPrincipal: true,
+      ),
+      AddressModel(
+        id: '#33',
+        street: 'Calle 40 #20-55',
+        city: 'Cúcuta',
+        neighborhood: 'Caobos',
+        status: 'Activa',
+        note: 'Frente al supermercado',
       ),
     ],
   ),
@@ -285,14 +304,14 @@ final List<ClientModel> clientsData = [
     name: 'Miguel Ángel Rojas',
     idType: 'NIT',
     idNumber: '205667788',
-    status: 'Active',
+    status: 'Activo',
     date: '25/06/2026',
     phone: '3126789012',
     email: 'miguel.rojas@gmail.com',
     addresses: [
       AddressModel(
         id: '#35',
-        street: 'Calle 18 # 7-40',
+        street: 'Calle 18 #7-40',
         city: 'Pereira',
         neighborhood: 'Cuba',
         status: 'Activa',
@@ -301,7 +320,7 @@ final List<ClientModel> clientsData = [
       ),
       AddressModel(
         id: '#36',
-        street: 'Carrera 11 # 24-33',
+        street: 'Carrera 11 #24-33',
         city: 'Pereira',
         neighborhood: 'Álamos',
         status: 'Activa',
@@ -315,27 +334,27 @@ final List<ClientModel> clientsData = [
     name: 'Natalia Ramírez',
     idType: 'Pasaporte',
     idNumber: 'P44556677',
-    status: 'Active',
+    status: 'Activo',
     date: '25/06/2026',
     phone: '3137890123',
     email: 'natalia.ramirez@gmail.com',
     addresses: [
       AddressModel(
-        id: '#37',
-        street: 'Calle 48 # 19-22',
-        city: 'Manizales',
-        neighborhood: 'Palermo',
-        status: 'Activa',
-        note: 'Apartamento 503',
-      ),
-      AddressModel(
         id: '#38',
-        street: 'Carrera 30 # 12-18',
+        street: 'Carrera 30 #12-18',
         city: 'Manizales',
         neighborhood: 'La Francia',
         status: 'Activa',
         note: 'Casa blanca',
         isPrincipal: true,
+      ),
+      AddressModel(
+        id: '#37',
+        street: 'Calle 48 #19-22',
+        city: 'Manizales',
+        neighborhood: 'Palermo',
+        status: 'Activa',
+        note: 'Apartamento 503',
       ),
     ],
   ),
@@ -345,27 +364,27 @@ final List<ClientModel> clientsData = [
     name: 'Felipe Torres',
     idType: 'CC',
     idNumber: '1122334455',
-    status: 'Active',
+    status: 'Activo',
     date: '25/06/2026',
     phone: '3148901234',
     email: 'felipe.torres@gmail.com',
     addresses: [
       AddressModel(
-        id: '#40',
-        street: 'Carrera 5 # 38-42',
-        city: 'Ibagué',
-        neighborhood: 'Piedra Pintada',
-        status: 'Activa',
-        note: 'Portón café',
-      ),
-      AddressModel(
         id: '#39',
-        street: 'Calle 16 # 14-50',
+        street: 'Calle 16 #14-50',
         city: 'Ibagué',
         neighborhood: 'Cádiz',
         status: 'Activa',
         note: 'Frente al parqueadero',
         isPrincipal: true,
+      ),
+      AddressModel(
+        id: '#40',
+        street: 'Carrera 5 #38-42',
+        city: 'Ibagué',
+        neighborhood: 'Piedra Pintada',
+        status: 'Activa',
+        note: 'Portón café',
       ),
     ],
   ),
@@ -375,14 +394,14 @@ final List<ClientModel> clientsData = [
     name: 'María Fernanda López',
     idType: 'CC',
     idNumber: '1002345678',
-    status: 'Active',
+    status: 'Activo',
     date: '25/06/2026',
     phone: '3159012345',
     email: 'maria.lopez@gmail.com',
     addresses: [
       AddressModel(
         id: '#41',
-        street: 'Calle 70 # 90-15',
+        street: 'Calle 70 #90-15',
         city: 'Bogotá',
         neighborhood: 'Suba',
         status: 'Activa',
@@ -391,7 +410,7 @@ final List<ClientModel> clientsData = [
       ),
       AddressModel(
         id: '#42',
-        street: 'Carrera 92 # 128-44',
+        street: 'Carrera 92 #128-44',
         city: 'Bogotá',
         neighborhood: 'Suba',
         status: 'Activa',
@@ -405,27 +424,27 @@ final List<ClientModel> clientsData = [
     name: 'Sara Jiménez',
     idType: 'CE',
     idNumber: '105566778',
-    status: 'Active',
+    status: 'Activo',
     date: '25/06/2026',
     phone: '3171234567',
     email: 'sara.jimenez@gmail.com',
     addresses: [
       AddressModel(
-        id: '#43',
-        street: 'Calle 140 # 19-50',
-        city: 'Bogotá',
-        neighborhood: 'Cedritos',
-        status: 'Activa',
-        note: 'Casa de fachada amarilla',
-      ),
-      AddressModel(
         id: '#44',
-        street: 'Carrera 7 # 170-22',
+        street: 'Carrera 7 #170-22',
         city: 'Bogotá',
         neighborhood: 'Usaquén',
         status: 'Activa',
         note: 'Portería, preguntar apto 504',
         isPrincipal: true,
+      ),
+      AddressModel(
+        id: '#43',
+        street: 'Calle 140 #19-50',
+        city: 'Bogotá',
+        neighborhood: 'Cedritos',
+        status: 'Activa',
+        note: 'Casa de fachada amarilla',
       ),
     ],
   ),
@@ -435,27 +454,27 @@ final List<ClientModel> clientsData = [
     name: 'Andrés Cárdenas',
     idType: 'Pasaporte',
     idNumber: 'P99887766',
-    status: 'Active',
+    status: 'Activo',
     date: '25/06/2026',
     phone: '3248901235',
     email: 'andres.cardenas@gmail.com',
     addresses: [
       AddressModel(
-        id: '#45',
-        street: 'Calle 5 # 66-40',
-        city: 'Cali',
-        neighborhood: 'San Fernando',
-        status: 'Activa',
-        note: 'Casa de rejas blancas',
-      ),
-      AddressModel(
         id: '#46',
-        street: 'Carrera 80 # 14-56',
+        street: 'Carrera 80 #14-56',
         city: 'Cali',
         neighborhood: 'Ciudad Jardín',
         status: 'Activa',
         note: 'Portería principal',
         isPrincipal: true,
+      ),
+      AddressModel(
+        id: '#45',
+        street: 'Calle 5 #66-40',
+        city: 'Cali',
+        neighborhood: 'San Fernando',
+        status: 'Activa',
+        note: 'Casa de rejas blancas',
       ),
     ],
   ),
@@ -465,14 +484,14 @@ final List<ClientModel> clientsData = [
     name: 'Daniela Herrera',
     idType: 'CC',
     idNumber: '1009876543',
-    status: 'Active',
+    status: 'Activo',
     date: '25/06/2026',
     phone: '3215678902',
     email: 'daniela.herrera@gmail.com',
     addresses: [
       AddressModel(
         id: '#47',
-        street: 'Carrera 27 # 61-15',
+        street: 'Carrera 27 #61-15',
         city: 'Barranquilla',
         neighborhood: 'Alto Prado',
         status: 'Activa',
@@ -481,7 +500,7 @@ final List<ClientModel> clientsData = [
       ),
       AddressModel(
         id: '#48',
-        street: 'Carrera 46 # 74-12',
+        street: 'Carrera 46 #74-12',
         city: 'Barranquilla',
         neighborhood: 'Boston',
         status: 'Activa',
@@ -495,14 +514,14 @@ final List<ClientModel> clientsData = [
     name: 'Alejandro Martínez',
     idType: 'CE',
     idNumber: '208765432',
-    status: 'Active',
+    status: 'Activo',
     date: '25/06/2026',
     phone: '3226789013',
     email: 'alejandro.martinez@gmail.com',
     addresses: [
       AddressModel(
         id: '#49',
-        street: 'Calle 30 # 21-45',
+        street: 'Calle 30 #21-45',
         city: 'Cartagena',
         neighborhood: 'Bocagrande',
         status: 'Activa',
@@ -511,7 +530,7 @@ final List<ClientModel> clientsData = [
       ),
       AddressModel(
         id: '#50',
-        street: 'Calle 12 # 8-25',
+        street: 'Calle 12 #8-25',
         city: 'Cartagena',
         neighborhood: 'Getsemaní',
         status: 'Activa',
@@ -525,11 +544,29 @@ final List<ClientModel> clientsData = [
     name: 'Nicolás Castro',
     idType: 'CE',
     idNumber: '201234567',
-    status: 'Active',
+    status: 'Activo',
     date: '25/06/2026',
     phone: '3260123457',
     email: 'nicolas.castro@gmail.com',
-    addresses: [],
+    addresses: [
+      AddressModel(
+        id: '#53',
+        street: 'Calle 9 #43-18',
+        city: 'Bucaramanga',
+        neighborhood: 'Cabecera',
+        status: 'Activa',
+        note: 'Edificio Portal, apto 803',
+        isPrincipal: true,
+      ),
+      AddressModel(
+        id: '#54',
+        street: 'Carrera 33 #52-70',
+        city: 'Bucaramanga',
+        neighborhood: 'Sotomayor',
+        status: 'Activa',
+        note: 'Casa con portón negro',
+      ),
+    ],
   ),
   ClientModel(
     initials: 'JM',
@@ -537,19 +574,35 @@ final List<ClientModel> clientsData = [
     name: 'Juliana Moreno',
     idType: 'Pasaporte',
     idNumber: 'P66778899',
-    status: 'Active',
+    status: 'Activo',
     date: '25/06/2026',
     phone: '3282345679',
     email: 'juliana.moreno@gmail.com',
-    addresses: [],
+    addresses: [
+      AddressModel(
+        id: '#55',
+        street: 'Calle 22 #6-40',
+        city: 'Villavicencio',
+        neighborhood: 'Barzal',
+        status: 'Activa',
+        note: 'Casa de dos pisos, reja blanca',
+        isPrincipal: true,
+      ),
+      AddressModel(
+        id: '#56',
+        street: 'Carrera 40 #26-11',
+        city: 'Villavicencio',
+        neighborhood: 'La Esperanza',
+        status: 'Activa',
+        note: 'Local 2, al lado de la panadería',
+      ),
+    ],
   ),
 ];
 
+
 // ==================== PANTALLA PRINCIPAL ====================
 class DireccionesClienteScreen extends StatefulWidget {
-  // Si embedded = true, no dibuja su propio Scaffold/AppBar (se usa
-  // así dentro de main_shell_gerente.dart, que ya provee el único
-  // encabezado "BIENVENIDO" compartido por todas las pantallas).
   final bool embedded;
 
   const DireccionesClienteScreen({super.key, this.embedded = false});
@@ -561,14 +614,10 @@ class DireccionesClienteScreen extends StatefulWidget {
 class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+  bool _filtrosAbiertos = true;
 
-  // Lista mutable en memoria (para que agregar/editar/eliminar
-  // funcione en tiempo real dentro de la pantalla).
   late List<ClientModel> _clients;
-
-  // Contador para generar IDs de direcciones nuevas (sigue después
-  // del ID más alto ya usado en los datos de ejemplo, #50).
-  int _addressIdCounter = 50;
+  int _addressIdCounter = 56;
 
   @override
   void initState() {
@@ -596,14 +645,14 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
   }
 
   // ============================================================
-  // ACCIONES (100% funcionales)
+  // ACCIONES
   // ============================================================
 
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg, style: const TextStyle(fontSize: 13)),
-        backgroundColor: AppColorsDir.encabezado,
+        backgroundColor: AppColorsDir.navy,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -624,23 +673,23 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
       labelText: label,
       labelStyle: const TextStyle(color: AppColorsDir.grisTexto, fontSize: 13),
       filled: true,
-      fillColor: AppColorsDir.fondo,
+      fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColorsDir.doradoClaro),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColorsDir.doradoBorde, width: 1.2),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColorsDir.dorado, width: 1.4),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColorsDir.dorado, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: AppColorsDir.rojo),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColorsDir.rojo, width: 1.4),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColorsDir.rojo, width: 1.5),
       ),
     );
   }
@@ -654,59 +703,45 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
-      style: const TextStyle(fontSize: 13, color: AppColorsDir.encabezado),
+      style: const TextStyle(fontSize: 13, color: AppColorsDir.navyTexto),
       decoration: _dialogDecoration(label),
       validator: required ? (v) => (v == null || v.trim().isEmpty) ? 'Campo requerido' : null : null,
     );
   }
 
-  // ------------------------------------------------------------
-  // Encabezado navy reutilizable para los diálogos de dirección
-  // (Agregar / Editar / Eliminar), con ícono circular dorado,
-  // título, subtítulo con el nombre del cliente y botón de cerrar.
-  // ------------------------------------------------------------
   Widget _dialogHeader({
     required BuildContext dialogContext,
     required IconData icon,
     required String title,
-    required String clientName,
+    required String subtitle,
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
-      decoration: const BoxDecoration(
-        color: AppColorsDir.navyOscuro,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(17),
-          topRight: Radius.circular(17),
-        ),
-      ),
+      padding: const EdgeInsets.fromLTRB(18, 18, 14, 18),
+      color: AppColorsDir.navy,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: AppColorsDir.dorado, width: 1.5),
+              color: AppColorsDir.dorado.withValues(alpha: 0.18),
             ),
-            child: Icon(icon, color: AppColorsDir.dorado, size: 18),
+            child: Icon(icon, color: AppColorsDir.dorado, size: 19),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  'Cliente: $clientName',
-                  style: const TextStyle(color: AppColorsDir.doradoClaro, fontSize: 12),
-                ),
+                Text(subtitle, style: const TextStyle(color: AppColorsDir.subtitulo, fontSize: 12.5)),
               ],
             ),
           ),
@@ -715,7 +750,7 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
             borderRadius: BorderRadius.circular(20),
             child: const Padding(
               padding: EdgeInsets.all(2),
-              child: Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+              child: Icon(Icons.close, color: Colors.white70, size: 20),
             ),
           ),
         ],
@@ -723,36 +758,47 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
     );
   }
 
-  // Botón "Cancelar" con borde dorado claro, usado en los diálogos
-  // de dirección rediseñados.
-  Widget _dialogCancelButton(VoidCallback onTap) {
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColorsDir.grisTexto,
-        side: const BorderSide(color: AppColorsDir.doradoClaro),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  Widget _dialogShell({required Widget child, double maxHeight = 640}) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Container(
+        constraints: BoxConstraints(maxWidth: 420, maxHeight: maxHeight),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+        clipBehavior: Clip.antiAlias,
+        child: child,
       ),
-      icon: const Icon(Icons.close_rounded, size: 16),
-      label: const Text('Cancelar'),
     );
   }
 
-  // Botón dorado principal, usado en los diálogos de dirección
-  // rediseñados (Guardar / Eliminar).
-  Widget _dialogConfirmButton({required String label, required VoidCallback onTap}) {
-    return ElevatedButton.icon(
+  Widget _dialogCancelButton(VoidCallback onTap) {
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColorsDir.grisTexto,
+        side: const BorderSide(color: AppColorsDir.doradoBorde),
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: const Text('Cancelar', style: TextStyle(fontWeight: FontWeight.w600)),
+    );
+  }
+
+  Widget _dialogConfirmButton({
+    required String label,
+    required VoidCallback onTap,
+    Color background = AppColorsDir.dorado,
+  }) {
+    return ElevatedButton(
       onPressed: onTap,
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColorsDir.dorado,
-        foregroundColor: AppColorsDir.encabezado,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: background,
+        foregroundColor: background == AppColorsDir.dorado ? AppColorsDir.navy : Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 0,
       ),
-      icon: const Icon(Icons.check_rounded, size: 16),
-      label: Text(label),
+      child: Text(label, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
     );
   }
 
@@ -767,115 +813,72 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
 
     final saved = await showDialog<bool>(
       context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            return Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 420),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColorsDir.dorado, width: 1.5),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => _dialogShell(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _dialogHeader(
+                  dialogContext: ctx,
+                  icon: Icons.manage_accounts_outlined,
+                  title: 'Editar cliente',
+                  subtitle: client.name,
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
-                        decoration: const BoxDecoration(
-                          color: AppColorsDir.navyOscuro,
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(17),
-                            topRight: Radius.circular(17),
-                          ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _dialogField(label: 'Nombre completo', controller: nameCtrl),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: idType,
+                          decoration: _dialogDecoration('Tipo de documento'),
+                          items: const ['CC', 'CE', 'NIT', 'Pasaporte']
+                              .map((t) => DropdownMenuItem(
+                                    value: t,
+                                    child: Text(t, style: const TextStyle(fontSize: 13)),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => setDialogState(() => idType = v ?? idType),
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        const SizedBox(height: 12),
+                        _dialogField(label: 'Número de documento', controller: idNumberCtrl),
+                        const SizedBox(height: 12),
+                        _dialogField(label: 'Teléfono', controller: phoneCtrl, keyboardType: TextInputType.phone),
+                        const SizedBox(height: 12),
+                        _dialogField(
+                            label: 'Correo electrónico',
+                            controller: emailCtrl,
+                            keyboardType: TextInputType.emailAddress),
+                        const SizedBox(height: 16),
+                        Row(
                           children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: AppColorsDir.dorado, width: 1.5),
-                              ),
-                              child: const Icon(Icons.manage_accounts_rounded, color: AppColorsDir.dorado, size: 18),
-                            ),
+                            Expanded(child: _dialogCancelButton(() => Navigator.pop(ctx, false))),
                             const SizedBox(width: 10),
-                            const Expanded(
-                              child: Text(
-                                'Editar cliente',
-                                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            InkWell(
-                              onTap: () => Navigator.pop(ctx, false),
-                              borderRadius: BorderRadius.circular(20),
-                              child: const Padding(
-                                padding: EdgeInsets.all(2),
-                                child: Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                            Expanded(
+                              child: _dialogConfirmButton(
+                                label: 'Guardar',
+                                onTap: () {
+                                  if (formKey.currentState!.validate()) Navigator.pop(ctx, true);
+                                },
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-                        child: Form(
-                          key: formKey,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _dialogField(label: 'Nombre completo', controller: nameCtrl),
-                              const SizedBox(height: 12),
-                              DropdownButtonFormField<String>(
-                                value: idType,
-                                decoration: _dialogDecoration('Tipo de documento'),
-                                items: const ['CC', 'CE', 'NIT', 'Pasaporte']
-                                    .map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 13))))
-                                    .toList(),
-                                onChanged: (v) => setDialogState(() => idType = v ?? idType),
-                              ),
-                              const SizedBox(height: 12),
-                              _dialogField(label: 'Número de documento', controller: idNumberCtrl),
-                              const SizedBox(height: 12),
-                              _dialogField(label: 'Teléfono', controller: phoneCtrl, keyboardType: TextInputType.phone),
-                              const SizedBox(height: 12),
-                              _dialogField(label: 'Correo electrónico', controller: emailCtrl, keyboardType: TextInputType.emailAddress),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(child: _dialogCancelButton(() => Navigator.pop(ctx, false))),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: _dialogConfirmButton(
-                                      label: 'Guardar',
-                                      onTap: () {
-                                        if (formKey.currentState!.validate()) Navigator.pop(ctx, true);
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
-        );
-      },
+              ],
+            ),
+          ),
+        ),
+      ),
     );
 
     if (saved == true) {
@@ -892,9 +895,6 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
   }
 
   // -------- Agregar / editar dirección --------
-  // Diálogo rediseñado: encabezado navy con ícono circular dorado,
-  // nombre del cliente y botón de cierre; cuerpo blanco; borde
-  // exterior dorado igual al del botón "Guardar dirección".
   Future<void> _showAddressDialog(ClientModel client, {AddressModel? existing}) async {
     final isEditing = existing != null;
     final streetCtrl = TextEditingController(text: existing?.street ?? '');
@@ -907,105 +907,89 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
 
     final saved = await showDialog<bool>(
       context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            return Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 420),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColorsDir.dorado, width: 1.5),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => _dialogShell(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _dialogHeader(
+                  dialogContext: ctx,
+                  icon: isEditing ? Icons.edit_location_alt_outlined : Icons.add_location_alt_outlined,
+                  title: isEditing ? 'Editar dirección' : 'Agregar dirección',
+                  subtitle: 'Cliente: ${client.name}',
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _dialogHeader(
-                        dialogContext: ctx,
-                        icon: isEditing ? Icons.edit_location_alt_rounded : Icons.add_location_alt_rounded,
-                        title: isEditing ? 'Editar dirección' : 'Agregar dirección',
-                        clientName: client.name,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-                        child: Form(
-                          key: formKey,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _dialogField(label: 'Dirección completa', controller: streetCtrl),
-                              const SizedBox(height: 12),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(child: _dialogField(label: 'Ciudad', controller: cityCtrl)),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: _dialogField(
-                                      label: 'Barrio',
-                                      controller: neighborhoodCtrl,
-                                      required: false,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              _dialogField(label: 'Indicaciones de entrega', controller: noteCtrl, required: false),
-                              const SizedBox(height: 12),
-                              DropdownButtonFormField<String>(
-                                value: status,
-                                decoration: _dialogDecoration('Estado'),
-                                items: const ['Activa', 'Inactiva']
-                                    .map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13))))
-                                    .toList(),
-                                onChanged: (v) => setDialogState(() => status = v ?? status),
-                              ),
-                              const SizedBox(height: 2),
-                              CheckboxListTile(
-                                value: isPrincipal,
-                                onChanged: (v) => setDialogState(() => isPrincipal = v ?? false),
-                                title: const Text(
-                                  'Marcar como dirección principal',
-                                  style: TextStyle(fontSize: 12.5, color: AppColorsDir.encabezado),
-                                ),
-                                activeColor: AppColorsDir.dorado,
-                                controlAffinity: ListTileControlAffinity.leading,
-                                contentPadding: EdgeInsets.zero,
-                                dense: true,
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(child: _dialogCancelButton(() => Navigator.pop(ctx, false))),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: _dialogConfirmButton(
-                                      label: isEditing ? 'Guardar cambios' : 'Guardar dirección',
-                                      onTap: () {
-                                        if (formKey.currentState!.validate()) Navigator.pop(ctx, true);
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _dialogField(label: 'Dirección completa', controller: streetCtrl),
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _dialogField(label: 'Ciudad', controller: cityCtrl)),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _dialogField(
+                                  label: 'Barrio', controller: neighborhoodCtrl, required: false),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 12),
+                        _dialogField(label: 'Indicaciones de entrega', controller: noteCtrl, required: false),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: status,
+                          decoration: _dialogDecoration('Estado'),
+                          items: const ['Activa', 'Inactiva']
+                              .map((s) => DropdownMenuItem(
+                                    value: s,
+                                    child: Text(s, style: const TextStyle(fontSize: 13)),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => setDialogState(() => status = v ?? status),
+                        ),
+                        CheckboxListTile(
+                          value: isPrincipal,
+                          onChanged: (v) => setDialogState(() => isPrincipal = v ?? false),
+                          title: const Text(
+                            'Marcar como dirección principal',
+                            style: TextStyle(fontSize: 12.5, color: AppColorsDir.navyTexto),
+                          ),
+                          activeColor: AppColorsDir.dorado,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(child: _dialogCancelButton(() => Navigator.pop(ctx, false))),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _dialogConfirmButton(
+                                label: isEditing ? 'Guardar' : 'Guardar',
+                                onTap: () {
+                                  if (formKey.currentState!.validate()) Navigator.pop(ctx, true);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
-        );
-      },
+              ],
+            ),
+          ),
+        ),
+      ),
     );
 
     if (saved == true) {
@@ -1040,58 +1024,47 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
   }
 
   // -------- Eliminar dirección --------
-  // Mismo estilo de encabezado navy + borde dorado que el diálogo
-  // de agregar/editar dirección.
   Future<void> _confirmDeleteAddress(ClientModel client, AddressModel address) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 420),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColorsDir.dorado, width: 1.5),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _dialogHeader(
-                dialogContext: ctx,
-                icon: Icons.delete_outline_rounded,
-                title: 'Eliminar dirección',
-                clientName: client.name,
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '¿Seguro que deseas eliminar la dirección "${address.street}"? Esta acción no se puede deshacer.',
-                      style: const TextStyle(fontSize: 13, color: AppColorsDir.grisTexto, height: 1.4),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(child: _dialogCancelButton(() => Navigator.pop(ctx, false))),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _dialogConfirmButton(
-                            label: 'Eliminar',
-                            onTap: () => Navigator.pop(ctx, true),
-                          ),
+      builder: (ctx) => _dialogShell(
+        maxHeight: 340,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _dialogHeader(
+              dialogContext: ctx,
+              icon: Icons.delete_outline,
+              title: 'Eliminar dirección',
+              subtitle: 'Cliente: ${client.name}',
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '¿Seguro que deseas eliminar la dirección "${address.street}"? Esta acción no se puede deshacer.',
+                    style: const TextStyle(fontSize: 13.5, color: AppColorsDir.grisTexto, height: 1.4),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(child: _dialogCancelButton(() => Navigator.pop(ctx, false))),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _dialogConfirmButton(
+                          label: 'Eliminar',
+                          background: AppColorsDir.rojo,
+                          onTap: () => Navigator.pop(ctx, true),
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1102,7 +1075,102 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
     }
   }
 
-  // -------- Actualizar --------
+  // -------- Menú de acciones del cliente (editar / actualizar) --------
+  Future<void> _showClientMenu(ClientModel client) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColorsDir.doradoBorde,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.manage_accounts_outlined, color: AppColorsDir.dorado),
+              title: const Text('Editar cliente', style: TextStyle(fontSize: 14, color: AppColorsDir.navyTexto)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showEditClientDialog(client);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.refresh, color: AppColorsDir.dorado),
+              title: const Text('Actualizar datos', style: TextStyle(fontSize: 14, color: AppColorsDir.navyTexto)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _actualizarCliente(client);
+              },
+            ),
+            const SizedBox(height: 6),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // -------- Selector de cliente para agregar dirección --------
+  Future<void> _showAddClientAddressPicker() async {
+    if (_clients.isEmpty) return;
+    final selected = await showDialog<ClientModel>(
+      context: context,
+      builder: (ctx) => _dialogShell(
+        maxHeight: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _dialogHeader(
+              dialogContext: ctx,
+              icon: Icons.add_location_alt_outlined,
+              title: 'Agregar dirección',
+              subtitle: 'Selecciona el cliente',
+            ),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                itemCount: _clients.length,
+                separatorBuilder: (_, __) =>
+                    const Divider(height: 1, thickness: 0.6, color: AppColorsDir.doradoBorde),
+                itemBuilder: (ctx2, i) {
+                  final c = _clients[i];
+                  return ListTile(
+                    leading: CircleAvatar(
+                      radius: 17,
+                      backgroundColor: c.avatarColor,
+                      child: Text(
+                        c.initials,
+                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    title: Text(c.name,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600, color: AppColorsDir.navyTexto)),
+                    subtitle: Text('${c.idType} — ${c.idNumber}',
+                        style: const TextStyle(fontSize: 11.5, color: AppColorsDir.gris)),
+                    onTap: () => Navigator.pop(ctx, c),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (selected != null) await _showAddressDialog(selected);
+  }
+
   void _actualizarCliente(ClientModel client) {
     setState(() {});
     _showSnack('Datos de ${client.name} actualizados');
@@ -1119,32 +1187,34 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
 
   Widget _buildContent(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       children: [
-        _buildTituloYAcciones(),
+        _buildHeaderCard(),
         const SizedBox(height: 16),
         _buildStatsRow(),
         const SizedBox(height: 16),
-        _buildSearchBar(),
-        const SizedBox(height: 16),
-        Text(
-          'Clientes (${_filteredClients.length})',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColorsDir.encabezado,
+        _buildSearchCard(),
+        const SizedBox(height: 20),
+        Center(
+          child: Text(
+            '${_filteredClients.length} CLIENTES',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.6,
+              color: AppColorsDir.gris,
+            ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         ..._filteredClients.map((c) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: 16),
               child: ClientCard(
                 client: c,
                 onAddAddress: () => _showAddressDialog(c),
                 onEditAddress: (a) => _showAddressDialog(c, existing: a),
                 onDeleteAddress: (a) => _confirmDeleteAddress(c, a),
-                onEditClient: () => _showEditClientDialog(c),
-                onActualizar: () => _actualizarCliente(c),
+                onMenu: () => _showClientMenu(c),
               ),
             )),
       ],
@@ -1153,9 +1223,7 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.embedded) {
-      return _buildContent(context);
-    }
+    if (widget.embedded) return _buildContent(context);
 
     return Scaffold(
       backgroundColor: AppColorsDir.fondo,
@@ -1164,18 +1232,13 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
     );
   }
 
-  // ------------------------------------------------------------
-  // ÚNICO ENCABEZADO (mismo estilo T4D que Movimientos). Solo se
-  // dibuja cuando la pantalla NO está embebida, para que no se
-  // repita junto con el header del shell principal.
-  // ------------------------------------------------------------
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: AppColorsDir.encabezado,
+      backgroundColor: AppColorsDir.navy,
       elevation: 0,
       titleSpacing: 0,
       leading: IconButton(
-        icon: const Icon(Icons.menu_rounded, color: Colors.white),
+        icon: const Icon(Icons.menu_outlined, color: Colors.white),
         onPressed: () {},
       ),
       title: Row(
@@ -1185,18 +1248,11 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
             height: 34,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: AppColorsDir.dorado, width: 1.5),
-              color: AppColorsDir.encabezado,
+              color: AppColorsDir.dorado.withValues(alpha: 0.18),
             ),
             child: const Center(
-              child: Text(
-                'T4D',
-                style: TextStyle(
-                  color: AppColorsDir.dorado,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: Text('T4D',
+                  style: TextStyle(color: AppColorsDir.dorado, fontSize: 9, fontWeight: FontWeight.bold)),
             ),
           ),
           const SizedBox(width: 10),
@@ -1204,90 +1260,68 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'BIENVENIDO',
-                style: TextStyle(
-                  color: AppColorsDir.doradoClaro,
-                  fontSize: 10,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              Text(
-                'Direcciones Cliente',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('BIENVENIDO',
+                  style: TextStyle(color: AppColorsDir.subtitulo, fontSize: 10, letterSpacing: 0.6)),
+              Text('Direcciones Cliente',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
             ],
           ),
         ],
       ),
       actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
-          onPressed: () {},
-        ),
+        IconButton(icon: const Icon(Icons.notifications_none, color: Colors.white), onPressed: () {}),
       ],
     );
   }
 
-  // ------------------------------------------------------------
-  // CUADRO "Direcciones del cliente" — recuadro navy con borde
-  // dorado, título, subtítulo, estrellas y botones.
-  // ------------------------------------------------------------
-  Widget _buildTituloYAcciones() {
+  // ---------- Encabezado navy ----------
+  Widget _buildHeaderCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(22, 22, 22, 24),
       decoration: BoxDecoration(
-        color: AppColorsDir.navyOscuro,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColorsDir.dorado, width: 1.2),
+        color: AppColorsDir.navy,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Direcciones del cliente',
+            'GERENTE · DIRECCIONES',
             style: TextStyle(
-              fontSize: 18,
+              color: AppColorsDir.dorado,
+              fontSize: 11,
               fontWeight: FontWeight.bold,
-              color: AppColorsDir.doradoClaro,
+              letterSpacing: 1.6,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 10),
           const Text(
-            'Gestión y administración de direcciones registradas por los clientes',
-            style: TextStyle(fontSize: 12.5, color: AppColorsDir.subtitulo, height: 1.35),
+            'Direcciones\nde Clientes',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 27,
+              fontWeight: FontWeight.bold,
+              height: 1.15,
+            ),
           ),
-          const SizedBox(height: 8),
-          const Row(
-            children: [
-              Icon(Icons.star_rounded, size: 16, color: AppColorsDir.dorado),
-              Icon(Icons.star_rounded, size: 16, color: AppColorsDir.dorado),
-            ],
+          const SizedBox(height: 12),
+          const Text(
+            'Gestión y administración de direcciones registradas',
+            style: TextStyle(color: AppColorsDir.subtitulo, fontSize: 13, height: 1.35),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 18),
           Row(
             children: [
               Expanded(
                 child: _GoldButton(
-                  icon: Icons.add_location_alt_rounded,
+                  icon: Icons.add_location_alt_outlined,
                   label: 'Agregar dirección',
-                  onTap: () {
-                    if (_clients.isNotEmpty) {
-                      _showAddressDialog(_clients.first);
-                    }
-                  },
-                  expand: true,
+                  onTap: _showAddClientAddressPicker,
                 ),
               ),
               const SizedBox(width: 10),
-              Expanded(
-                child: _ActualizarButtonOscuro(onTap: _actualizarTodos),
-              ),
+              Expanded(child: _GhostButton(onTap: _actualizarTodos)),
             ],
           ),
         ],
@@ -1295,84 +1329,100 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
     );
   }
 
-  // ------------------------------------------------------------
-  // TARJETAS DE ESTADÍSTICAS (borde dorado)
-  // ------------------------------------------------------------
+  // ---------- Estadísticas con línea de color arriba ----------
+  // IntrinsicHeight es obligatorio aquí: este Row vive directo dentro
+  // de un ListView (altura infinita) y usa crossAxisAlignment.stretch,
+  // así que necesita que algo le calcule una altura concreta antes de
+  // poder "estirar" las tres tarjetas a la misma altura.
   Widget _buildStatsRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: _StatCard(
-            icon: Icons.groups_rounded,
-            value: '$_totalClientes',
-            label: 'Total clientes',
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _StatCard(accent: AppColorsDir.dorado, value: '$_totalClientes', label: 'Clientes'),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _StatCard(
-            icon: Icons.location_on_rounded,
-            value: '$_totalDirecciones',
-            label: 'Total direcciones',
+          const SizedBox(width: 10),
+          Expanded(
+            child: _StatCard(accent: AppColorsDir.azul, value: '$_totalDirecciones', label: 'Direcciones'),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _StatCard(
-            icon: Icons.star_rounded,
-            value: '$_totalPrincipales',
-            label: 'Direcciones\nprincipales',
+          const SizedBox(width: 10),
+          Expanded(
+            child: _StatCard(accent: AppColorsDir.verde, value: '$_totalPrincipales', label: 'Principales'),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  // ------------------------------------------------------------
-  // BUSCADOR (borde dorado, mismo estilo que Movimientos)
-  // ------------------------------------------------------------
-  Widget _buildSearchBar() {
+  // ---------- Filtros y búsqueda (desplegable) ----------
+  Widget _buildSearchCard() {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColorsDir.dorado, width: 1.2),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
-              Icon(Icons.manage_search_rounded, color: AppColorsDir.dorado, size: 18),
-              SizedBox(width: 6),
-              Text(
-                'Buscar cliente',
-                style: TextStyle(fontWeight: FontWeight.bold, color: AppColorsDir.encabezado),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _searchController,
-            onChanged: (v) => setState(() => _query = v),
-            decoration: InputDecoration(
-              hintText: 'Buscar por nombre o documento...',
-              hintStyle: const TextStyle(fontSize: 13, color: AppColorsDir.grisTexto),
-              prefixIcon: const Icon(Icons.search_rounded, color: AppColorsDir.grisTexto),
-              filled: true,
-              fillColor: AppColorsDir.fondo,
-              contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: AppColorsDir.doradoClaro),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: AppColorsDir.dorado),
-              ),
+          InkWell(
+            onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+            child: Row(
+              children: [
+                const Icon(Icons.filter_alt_outlined, color: AppColorsDir.dorado, size: 19),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Filtros y Búsqueda',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 15.5, color: AppColorsDir.navyTexto),
+                  ),
+                ),
+                Icon(
+                  _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  color: AppColorsDir.gris,
+                  size: 22,
+                ),
+              ],
             ),
           ),
+          if (_filtrosAbiertos) ...[
+            const SizedBox(height: 14),
+            TextField(
+              controller: _searchController,
+              onChanged: (v) => setState(() => _query = v),
+              style: const TextStyle(fontSize: 14, color: AppColorsDir.navyTexto),
+              decoration: InputDecoration(
+                hintText: 'Buscar por nombre o documento...',
+                hintStyle: const TextStyle(fontSize: 14, color: Color(0xFFA79B85)),
+                prefixIcon: const Icon(Icons.search, size: 21, color: Color(0xFFA79B85)),
+                filled: true,
+                fillColor: AppColorsDir.inputBg,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColorsDir.dorado, width: 1.4),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1382,124 +1432,49 @@ class _DireccionesClienteScreenState extends State<DireccionesClienteScreen> {
 // ==================== WIDGETS AUXILIARES ====================
 
 class _StatCard extends StatelessWidget {
-  final IconData icon;
+  final Color accent;
   final String value;
   final String label;
 
-  const _StatCard({required this.icon, required this.value, required this.label});
+  const _StatCard({required this.accent, required this.value, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColorsDir.dorado, width: 1.2),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColorsDir.doradoOscuro.withOpacity(0.08),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppColorsDir.encabezado, size: 20),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColorsDir.encabezado),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 10.5, color: AppColorsDir.grisTexto, height: 1.2),
+          Container(height: 4, color: accent),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 14, 4, 14),
+            child: Column(
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: accent),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: AppColorsDir.gris),
+                ),
+              ],
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _OutlineButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _OutlineButton({required this.icon, required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColorsDir.doradoClaro),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 13, color: AppColorsDir.encabezado),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  label,
-                  style: const TextStyle(color: AppColorsDir.encabezado, fontWeight: FontWeight.w600, fontSize: 11.5),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Botón de borde blanco para usar SOLO dentro del recuadro navy nuevo,
-// así el _OutlineButton original (usado en "Editar cliente") no cambia.
-class _ActualizarButtonOscuro extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _ActualizarButtonOscuro({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.white54),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.refresh_rounded, size: 16, color: Colors.white),
-              SizedBox(width: 6),
-              Text(
-                'Actualizar',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -1509,30 +1484,29 @@ class _GoldButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final bool expand;
 
-  const _GoldButton({required this.icon, required this.label, required this.onTap, this.expand = false});
+  const _GoldButton({required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final button = Material(
+    return Material(
       color: AppColorsDir.dorado,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 13),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 14, color: AppColorsDir.encabezado),
-              const SizedBox(width: 5),
+              Icon(icon, size: 16, color: AppColorsDir.navy),
+              const SizedBox(width: 6),
               Flexible(
                 child: Text(
                   label,
-                  style: const TextStyle(color: AppColorsDir.encabezado, fontWeight: FontWeight.w700, fontSize: 11.5),
+                  style: const TextStyle(color: AppColorsDir.navy, fontWeight: FontWeight.bold, fontSize: 12.5),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),
@@ -1542,46 +1516,106 @@ class _GoldButton extends StatelessWidget {
         ),
       ),
     );
-    return expand ? SizedBox(width: double.infinity, child: button) : button;
   }
 }
 
-// ------------------------------------------------------------
-// BADGE — el texto va dentro de un FittedBox (BoxFit.scaleDown)
-// para que, si el espacio disponible es más angosto que el texto,
-// se achique en vez de desbordarse (evita el error de Flutter de
-// franjas amarillas/negras + texto rojo de overflow).
-// ------------------------------------------------------------
-class _Badge extends StatelessWidget {
-  final String text;
-  final Color bg;
-  final Color fg;
+class _GhostButton extends StatelessWidget {
+  final VoidCallback onTap;
 
-  const _Badge({required this.text, required this.bg, required this.fg});
+  const _GhostButton({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          text,
-          maxLines: 1,
-          style: TextStyle(color: fg, fontSize: 10.5, fontWeight: FontWeight.w700),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.refresh, size: 16, color: Colors.white),
+              SizedBox(width: 6),
+              Text('Actualizar',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12.5)),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ==================== TARJETA DE CLIENTE (borde dorado) ====================
+class _Pill extends StatelessWidget {
+  final String text;
+  final Color bg;
+  final Color fg;
+  final IconData? icon;
+  final bool dot;
+
+  const _Pill({required this.text, required this.bg, required this.fg, this.icon, this.dot = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (dot) ...[
+            Container(width: 6, height: 6, decoration: BoxDecoration(color: fg, shape: BoxShape.circle)),
+            const SizedBox(width: 5),
+          ],
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: fg),
+            const SizedBox(width: 4),
+          ],
+          Text(text, style: TextStyle(color: fg, fontSize: 11.5, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionIcon extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final Color bg;
+  final VoidCallback onTap;
+
+  const _ActionIcon({required this.icon, required this.color, required this.bg, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(11),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(11),
+        onTap: onTap,
+        child: SizedBox(
+          width: 34,
+          height: 34,
+          child: Icon(icon, size: 17, color: color),
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== TARJETA DE CLIENTE ====================
 class ClientCard extends StatelessWidget {
   final ClientModel client;
   final VoidCallback onAddAddress;
-  final VoidCallback onEditClient;
-  final VoidCallback onActualizar;
+  final VoidCallback onMenu;
   final void Function(AddressModel address) onEditAddress;
   final void Function(AddressModel address) onDeleteAddress;
 
@@ -1589,8 +1623,7 @@ class ClientCard extends StatelessWidget {
     super.key,
     required this.client,
     required this.onAddAddress,
-    required this.onEditClient,
-    required this.onActualizar,
+    required this.onMenu,
     required this.onEditAddress,
     required this.onDeleteAddress,
   });
@@ -1600,213 +1633,166 @@ class ClientCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColorsDir.dorado, width: 1.2),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppColorsDir.doradoOscuro.withOpacity(0.06),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: client.avatarColor,
-                  child: Text(
-                    client.initials,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        client.name,
-                        style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppColorsDir.encabezado),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${client.idType} — ${client.idNumber}',
-                        style: const TextStyle(fontSize: 11.5, color: AppColorsDir.grisTexto),
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Row(
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(width: 4, color: AppColorsDir.azul),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ---- Encabezado del cliente ----
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 14, 14),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _Badge(text: '• ${client.status}', bg: AppColorsDir.verdeFondo, fg: AppColorsDir.verde),
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(shape: BoxShape.circle, color: client.avatarColor),
+                          alignment: Alignment.center,
+                          child: Text(
+                            client.initials,
+                            style: const TextStyle(
+                                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                client.name,
+                                style: const TextStyle(
+                                    fontSize: 16.5, fontWeight: FontWeight.bold, color: AppColorsDir.navyTexto),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${client.idType} — ${client.idNumber}',
+                                style: const TextStyle(fontSize: 12.5, color: AppColorsDir.gris),
+                              ),
+                              const SizedBox(height: 5),
+                              Row(
+                                children: [
+                                  const Icon(Icons.phone, size: 14, color: AppColorsDir.rosa),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      client.phone,
+                                      style: const TextStyle(
+                                          fontSize: 13.5,
+                                          color: AppColorsDir.navyTexto,
+                                          fontWeight: FontWeight.w500),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                         const SizedBox(width: 6),
-                        _Badge(
-                          text: '${client.dirCount} dir.',
-                          bg: AppColorsDir.doradoClaro.withOpacity(0.4),
-                          fg: AppColorsDir.doradoOscuro,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            _Pill(
+                              text: client.status,
+                              bg: AppColorsDir.verdeFondo,
+                              fg: AppColorsDir.verdeTexto,
+                              dot: true,
+                            ),
+                            const SizedBox(height: 6),
+                            _Pill(
+                              text: '${client.dirCount} dir.',
+                              bg: AppColorsDir.doradoSuave,
+                              fg: AppColorsDir.doradoOscuro,
+                            ),
+                            const SizedBox(height: 4),
+                            InkWell(
+                              onTap: onMenu,
+                              borderRadius: BorderRadius.circular(16),
+                              child: const Padding(
+                                padding: EdgeInsets.all(4),
+                                child: Icon(Icons.more_horiz, size: 20, color: AppColorsDir.gris),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    Row(
+                  ),
+
+                  // ---- Direcciones ----
+                  if (client.addresses.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      decoration: const BoxDecoration(
+                        border: Border(top: BorderSide(color: AppColorsDir.doradoBorde, width: 1)),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      child: const Text(
+                        'Sin direcciones registradas',
+                        style: TextStyle(
+                            fontSize: 13, fontStyle: FontStyle.italic, color: AppColorsDir.gris),
+                      ),
+                    )
+                  else
+                    Column(
                       children: [
-                        const Icon(Icons.event_rounded, size: 11, color: AppColorsDir.grisTexto),
-                        const SizedBox(width: 3),
-                        Text(client.date, style: const TextStyle(fontSize: 10.5, color: AppColorsDir.grisTexto)),
+                        for (final a in client.addresses)
+                          _AddressRow(
+                            address: a,
+                            onEdit: () => onEditAddress(a),
+                            onDelete: () => onDeleteAddress(a),
+                          ),
                       ],
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Wrap(
-              spacing: 16,
-              runSpacing: 4,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.call_rounded, size: 13, color: AppColorsDir.grisTexto),
-                    const SizedBox(width: 4),
-                    Text(client.phone, style: const TextStyle(fontSize: 12, color: AppColorsDir.encabezado)),
-                  ],
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.mail_outline_rounded, size: 13, color: AppColorsDir.grisTexto),
-                    const SizedBox(width: 4),
-                    Text(client.email, style: const TextStyle(fontSize: 12, color: AppColorsDir.encabezado)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          if (client.addresses.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Center(
-                child: Text(
-                  'Sin direcciones registradas',
-                  style: TextStyle(fontSize: 12.5, fontStyle: FontStyle.italic, color: AppColorsDir.grisTexto),
-                ),
-              ),
-            )
-          else
-            _AddressTable(
-              addresses: client.addresses,
-              onEdit: onEditAddress,
-              onDelete: onDeleteAddress,
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _GoldButton(
-                    icon: Icons.add_location_alt_rounded,
-                    label: 'Agregar dirección',
-                    onTap: onAddAddress,
-                    expand: true,
+
+                  // ---- Botón principal ----
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Material(
+                        color: AppColorsDir.dorado,
+                        borderRadius: BorderRadius.circular(14),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: onAddAddress,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 15),
+                            child: Text(
+                              '+ Agregar dirección',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  color: AppColorsDir.navy, fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: _OutlineButton(
-                    icon: Icons.manage_accounts_rounded,
-                    label: 'Editar cliente',
-                    onTap: onEditClient,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: _OutlineButton(
-                    icon: Icons.refresh_rounded,
-                    label: 'Actualizar',
-                    onTap: onActualizar,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ==================== TABLA DE DIRECCIONES ====================
-// Ancho total fijo de la tabla. En pantallas angostas, el usuario puede
-// deslizar el dedo hacia los lados para ver todas las columnas, en vez
-// de que el ID y la Dirección se corten y solo se vea Barrio/Est/Acc.
-const double _tableWidth = 468;
-const double _colId = 40;
-const double _colDireccion = 190;
-const double _colBarrio = 100;
-const double _colEstado = 70;
-const double _colAcciones = 48;
-
-class _AddressTable extends StatelessWidget {
-  final List<AddressModel> addresses;
-  final void Function(AddressModel address) onEdit;
-  final void Function(AddressModel address) onDelete;
-
-  const _AddressTable({required this.addresses, required this.onEdit, required this.onDelete});
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SizedBox(
-        width: _tableWidth,
-        child: Column(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                color: AppColorsDir.encabezado,
-                border: Border(
-                  top: BorderSide(color: AppColorsDir.dorado, width: 1),
-                  bottom: BorderSide(color: AppColorsDir.dorado, width: 1),
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: const Row(
-                children: [
-                  SizedBox(width: _colId, child: Text('ID', style: _headerStyle)),
-                  SizedBox(width: _colDireccion, child: Text('Dirección / Ciudad', style: _headerStyle)),
-                  SizedBox(width: _colBarrio, child: Text('Barrio', style: _headerStyle)),
-                  SizedBox(width: _colEstado, child: Text('Est.', style: _headerStyle)),
-                  SizedBox(width: _colAcciones, child: Text('Acc.', style: _headerStyle)),
                 ],
               ),
             ),
-            ...addresses.map((a) => _AddressRow(
-                  address: a,
-                  onEdit: () => onEdit(a),
-                  onDelete: () => onDelete(a),
-                )),
           ],
         ),
       ),
     );
   }
 }
-
-const TextStyle _headerStyle = TextStyle(color: AppColorsDir.doradoClaro, fontSize: 10.5, fontWeight: FontWeight.bold);
 
 class _AddressRow extends StatelessWidget {
   final AddressModel address;
@@ -1818,79 +1804,80 @@ class _AddressRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColorsDir.doradoClaro.withOpacity(0.5))),
+        color: address.isPrincipal ? AppColorsDir.filaTinte : Colors.white,
+        border: const Border(top: BorderSide(color: AppColorsDir.doradoBorde, width: 1)),
       ),
+      padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: _colId,
-            child: Text(
-              address.id,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColorsDir.encabezado),
-            ),
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(Icons.location_on_outlined, size: 17, color: AppColorsDir.dorado),
           ),
-          SizedBox(
-            width: _colDireccion,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(address.street, style: const TextStyle(fontSize: 12, color: AppColorsDir.encabezado)),
-                  Text(address.city, style: const TextStyle(fontSize: 11, color: AppColorsDir.grisTexto)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  address.street,
+                  style: const TextStyle(
+                      fontSize: 14.5, fontWeight: FontWeight.bold, color: AppColorsDir.navyTexto, height: 1.25),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  address.neighborhood.isEmpty ? address.city : '${address.city} · ${address.neighborhood}',
+                  style: const TextStyle(fontSize: 12.5, color: AppColorsDir.gris),
+                ),
+                if (address.note.isNotEmpty) ...[
+                  const SizedBox(height: 2),
                   Text(
                     address.note,
-                    style: const TextStyle(fontSize: 10.5, fontStyle: FontStyle.italic, color: AppColorsDir.grisTexto),
+                    style: const TextStyle(
+                        fontSize: 12, fontStyle: FontStyle.italic, color: AppColorsDir.gris),
                   ),
-                  if (address.isPrincipal)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 3),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.star_rounded, size: 11, color: AppColorsDir.dorado),
-                          SizedBox(width: 2),
-                          Text(
-                            'Principal',
-                            style: TextStyle(fontSize: 10.5, color: AppColorsDir.doradoOscuro, fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    ),
                 ],
-              ),
-            ),
-          ),
-          SizedBox(
-            width: _colBarrio,
-            child: Text(address.neighborhood, style: const TextStyle(fontSize: 12, color: AppColorsDir.encabezado)),
-          ),
-          SizedBox(
-            width: _colEstado,
-            child: _Badge(
-              text: address.status,
-              bg: AppColorsDir.doradoClaro.withOpacity(0.4),
-              fg: AppColorsDir.doradoOscuro,
-            ),
-          ),
-          SizedBox(
-            width: _colAcciones,
-            child: Row(
-              children: [
-                InkWell(
-                  onTap: onEdit,
-                  child: const Icon(Icons.edit_rounded, size: 15, color: AppColorsDir.grisTexto),
-                ),
-                const SizedBox(width: 6),
-                InkWell(
-                  onTap: onDelete,
-                  child: const Icon(Icons.delete_outline_rounded, size: 15, color: AppColorsDir.rojo),
-                ),
+                if (address.status.toLowerCase() != 'activa') ...[
+                  const SizedBox(height: 6),
+                  const _Pill(text: 'Inactiva', bg: Color(0xFFF1F2F4), fg: AppColorsDir.grisTexto),
+                ],
               ],
             ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (address.isPrincipal) ...[
+                    const _Pill(
+                      text: 'Principal',
+                      bg: AppColorsDir.doradoSuave,
+                      fg: AppColorsDir.doradoOscuro,
+                      icon: Icons.star,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  _ActionIcon(
+                    icon: Icons.edit_outlined,
+                    color: AppColorsDir.dorado,
+                    bg: AppColorsDir.doradoSuave,
+                    onTap: onEdit,
+                  ),
+                  const SizedBox(width: 8),
+                  _ActionIcon(
+                    icon: Icons.delete_outline,
+                    color: AppColorsDir.rojo,
+                    bg: AppColorsDir.rojoSuave,
+                    onTap: onDelete,
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
       ),
