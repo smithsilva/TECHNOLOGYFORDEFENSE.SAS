@@ -1,4 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:excel/excel.dart' as excel_pkg;
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../models/reporte.dart';
 // import '../services/reportes_service.dart'; // ← lo conectas cuando pases de mock a datos reales
 
@@ -33,6 +40,7 @@ class ReportesScreen extends StatefulWidget {
 
 class _ReportesScreenState extends State<ReportesScreen> {
   bool _cargando = false;
+  bool _exportando = false;
   ResumenReporte? _resumen;
 
   // Conteo de estado general del inventario (mock, independiente del modelo
@@ -127,6 +135,16 @@ class _ReportesScreenState extends State<ReportesScreen> {
     );
   }
 
+  void _mostrarMensaje(String mensaje, {bool esError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: esError ? AppColors.rojo : AppColors.verde,
+      ),
+    );
+  }
+
   String _formatoMiles(num numero) {
     final texto = numero.toStringAsFixed(0);
     final buffer = StringBuffer();
@@ -146,6 +164,164 @@ class _ReportesScreenState extends State<ReportesScreen> {
       return '\$${(numero / 1000).toStringAsFixed(1)}K';
     }
     return '\$${numero.toStringAsFixed(0)}';
+  }
+
+  // ---------------------------------------------------------------------
+  // EXPORTAR A EXCEL
+  // ---------------------------------------------------------------------
+  Future<void> _exportarExcel() async {
+    final r = _resumen;
+    if (r == null) {
+      _mostrarMensaje('No hay datos para exportar.', esError: true);
+      return;
+    }
+
+    setState(() => _exportando = true);
+    try {
+      final libro = excel_pkg.Excel.createExcel();
+
+      final hojaResumen = libro['Resumen'];
+      libro.delete('Sheet1');
+      hojaResumen.appendRow([
+        excel_pkg.TextCellValue('Indicador'),
+        excel_pkg.TextCellValue('Valor'),
+      ]);
+      hojaResumen.appendRow([
+        excel_pkg.TextCellValue('Total Productos'),
+        excel_pkg.IntCellValue(r.totalProductos),
+      ]);
+      hojaResumen.appendRow([
+        excel_pkg.TextCellValue('Valor Total'),
+        excel_pkg.DoubleCellValue(r.valorTotal),
+      ]);
+      hojaResumen.appendRow([
+        excel_pkg.TextCellValue('Stock Crítico'),
+        excel_pkg.IntCellValue(r.stockBajo),
+      ]);
+      hojaResumen.appendRow([
+        excel_pkg.TextCellValue('Movimientos del Periodo'),
+        excel_pkg.IntCellValue(r.movimientosPeriodo),
+      ]);
+
+      final hojaCategorias = libro['Categorías'];
+      hojaCategorias.appendRow([
+        excel_pkg.TextCellValue('Categoría'),
+        excel_pkg.TextCellValue('Cantidad'),
+      ]);
+      for (final c in r.categorias) {
+        hojaCategorias.appendRow([
+          excel_pkg.TextCellValue(c.nombre),
+          excel_pkg.IntCellValue(c.cantidad),
+        ]);
+      }
+
+      final hojaDestacados = libro['Destacados'];
+      hojaDestacados.appendRow([
+        excel_pkg.TextCellValue('#'),
+        excel_pkg.TextCellValue('Producto'),
+        excel_pkg.TextCellValue('Stock'),
+        excel_pkg.TextCellValue('Valor'),
+        excel_pkg.TextCellValue('Estado'),
+      ]);
+      for (final p in r.destacados) {
+        hojaDestacados.appendRow([
+          excel_pkg.IntCellValue(p.posicion),
+          excel_pkg.TextCellValue(p.nombre),
+          excel_pkg.IntCellValue(p.stock),
+          excel_pkg.DoubleCellValue(p.valor.toDouble()),
+          excel_pkg.TextCellValue(p.estado == 'alto' ? 'Alto' : 'Bajo'),
+        ]);
+      }
+
+      final bytes = libro.save();
+      if (bytes == null) throw Exception('No se pudo generar el archivo.');
+
+      final dir = await getTemporaryDirectory();
+      final path = '${dir.path}/reportes.xlsx';
+      final file = File(path);
+      await file.writeAsBytes(bytes);
+
+      await Share.shareXFiles([XFile(path)], text: 'Reporte del Sistema');
+    } catch (e) {
+      _mostrarMensaje('Error al exportar a Excel: $e', esError: true);
+    } finally {
+      if (mounted) setState(() => _exportando = false);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // EXPORTAR A PDF
+  // ---------------------------------------------------------------------
+  Future<void> _exportarPDF() async {
+    final r = _resumen;
+    if (r == null) {
+      _mostrarMensaje('No hay datos para exportar.', esError: true);
+      return;
+    }
+
+    setState(() => _exportando = true);
+    try {
+      final doc = pw.Document();
+
+      doc.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          build: (context) => [
+            pw.Header(level: 0, text: 'Reportes del Sistema'),
+            pw.Text('Resumen general', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+            pw.SizedBox(height: 6),
+            pw.Table.fromTextArray(
+              headers: ['Indicador', 'Valor'],
+              data: [
+                ['Total Productos', '${r.totalProductos}'],
+                ['Valor Total', _formatoCompacto(r.valorTotal)],
+                ['Stock Crítico', '${r.stockBajo}'],
+                ['Movimientos del Periodo', '${r.movimientosPeriodo}'],
+              ],
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+              cellStyle: const pw.TextStyle(fontSize: 9),
+              headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF13202E)),
+            ),
+            pw.SizedBox(height: 18),
+            pw.Text('Distribución por categoría',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+            pw.SizedBox(height: 6),
+            pw.Table.fromTextArray(
+              headers: ['Categoría', 'Cantidad'],
+              data: r.categorias.map((c) => [c.nombre, '${c.cantidad}']).toList(),
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+              cellStyle: const pw.TextStyle(fontSize: 9),
+              headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF13202E)),
+            ),
+            pw.SizedBox(height: 18),
+            pw.Text('Productos destacados',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+            pw.SizedBox(height: 6),
+            pw.Table.fromTextArray(
+              headers: ['#', 'Producto', 'Stock', 'Valor', 'Estado'],
+              data: r.destacados
+                  .map((p) => [
+                        '${p.posicion}',
+                        p.nombre,
+                        _formatoMiles(p.stock),
+                        _formatoMiles(p.valor),
+                        p.estado == 'alto' ? 'Alto' : 'Bajo',
+                      ])
+                  .toList(),
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+              cellStyle: const pw.TextStyle(fontSize: 9),
+              headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF13202E)),
+            ),
+          ],
+        ),
+      );
+
+      await Printing.sharePdf(bytes: await doc.save(), filename: 'reportes.pdf');
+    } catch (e) {
+      _mostrarMensaje('Error al exportar a PDF: $e', esError: true);
+    } finally {
+      if (mounted) setState(() => _exportando = false);
+    }
   }
 
   @override
@@ -168,6 +344,10 @@ class _ReportesScreenState extends State<ReportesScreen> {
                 children: [
                   // Encabezado oscuro, igual estilo que el resto de la app
                   _encabezado(rolCrudo),
+                  const SizedBox(height: 14),
+
+                  // Botones de Actualizar / Exportar
+                  _botonesAccion(),
                   const SizedBox(height: 14),
 
                   // Tarjetas de estadísticas (oscuras, con icono)
@@ -321,6 +501,123 @@ class _ReportesScreenState extends State<ReportesScreen> {
                   _resumenEstadoStock(r.stockBajo),
                 ],
               ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // BOTONES DE ACTUALIZAR / EXPORTAR
+  // ---------------------------------------------------------------------
+  Widget _botonesAccion() {
+    return Row(
+      children: [
+        Expanded(
+          child: _botonAccion(
+            icono: Icons.refresh,
+            texto: 'Actualizar',
+            onTap: _cargarReporte,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: PopupMenuButton<String>(
+            enabled: !_exportando && _resumen != null,
+            padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            onSelected: (valor) {
+              if (valor == 'excel') _exportarExcel();
+              if (valor == 'pdf') _exportarPDF();
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'excel',
+                child: Row(
+                  children: [
+                    Icon(Icons.grid_on, size: 18, color: Color(0xFF1D6F42)),
+                    SizedBox(width: 10),
+                    Text('Exportar Excel'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'pdf',
+                child: Row(
+                  children: [
+                    Icon(Icons.picture_as_pdf, size: 18, color: Color(0xFFE53935)),
+                    SizedBox(width: 10),
+                    Text('Exportar PDF'),
+                  ],
+                ),
+              ),
+            ],
+            child: _botonAccion(
+              icono: Icons.download,
+              texto: _exportando ? 'Exportando...' : 'Exportar',
+              cargando: _exportando,
+              onTap: null,
+              mostrarFlecha: !_exportando,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _botonAccion({
+    required IconData icono,
+    required String texto,
+    required VoidCallback? onTap,
+    bool cargando = false,
+    bool mostrarFlecha = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 10),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.dorado, AppColors.doradoOscuro],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.doradoOscuro.withValues(alpha: 0.35),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            cargando
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : Icon(icono, size: 16, color: Colors.white),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                texto,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (mostrarFlecha) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_drop_down, size: 16, color: Colors.white),
+            ],
+          ],
+        ),
       ),
     );
   }

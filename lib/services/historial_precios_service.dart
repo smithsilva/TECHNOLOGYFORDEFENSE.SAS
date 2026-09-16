@@ -5,7 +5,7 @@ import '../models/producto.dart';
 import '../models/historial_precio.dart';
 
 class HistorialPreciosService {
-  static const String _baseUrl = '${AuthService.apiUrl}/historial-precios';
+  static const String _baseUrl = '${AuthService.apiUrl}/precios-historiales';
   static const String _apiKey = AuthService.apiKey;
 
   Map<String, String> _headers(String token) => {
@@ -170,7 +170,7 @@ class HistorialPreciosService {
         final body = jsonDecode(response.body);
         mensaje = body['error']?.toString() ?? mensaje;
       } catch (_) {
-        // el body no era JSON, se deja el mensaje genérico
+        // el cuerpo no era JSON, se deja el mensaje genérico
       }
       throw Exception(mensaje);
     }
