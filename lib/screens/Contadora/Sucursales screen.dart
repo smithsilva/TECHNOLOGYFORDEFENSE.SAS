@@ -12,32 +12,43 @@ import '../../services/sucursales_service.dart';
 
 // ==================== PALETA DE COLORES ====================
 class AppColors {
-  static const background = Color(0xFFF7EFDD);
-  static const navy = Color(0xFF101B33);
-  static const gold = Color(0xFFC9A24A);
-  static const goldDark = Color(0xFF8A6D1F);
-  static const goldText = Color(0xFFD2A03C);
-  static const lightBlue = Color(0xFF9FB4DE);
-  static const inputBg = Color(0xFFEFE4CB);
-  static const iconBg = Color(0xFFF0E3BE);
-  static const cardBorder = Color(0xFFECE0BD);
+  static const dorado = Color(0xFFC9962E);
+  static const doradoOscuro = Color(0xFF8C6B2E);
+  static const doradoClaro = Color(0xFFE8C97A);
+  static const doradoMezcla = Color(0xFFAB812E);
+  static const fondo = Color(0xFFFAF3E4);
 
-  static const green = Color(0xFF2E9E4E);
-  static const greenBg = Color(0xFFDCF2E3);
-  static const olive = Color(0xFF8B7920);
-  static const oliveBg = Color(0xFFF3ECD2);
-  static const red = Color(0xFFC24555);
-  static const redBg = Color(0xFFF8DCE0);
+  static const navyOscuro = Color(0xFF0F1B2E);
+  static const navyClaro = Color(0xFF16233A);
+  static const subtitulo = Color(0xFF8FA3C4);
 
-  // Colores auxiliares que no venían en la paleta pero que la pantalla
-  // necesita (texto, tarjetas, sombra).
-  static const white = Colors.white;
+  static const verde = Color(0xFF2E9E5B);
+  static const verdeFondo = Color(0xFFDDF2E1);
+
+  static const naranja = Color(0xFFA17A2E);
+  static const naranjaFondo = Color(0xFFF5E3C3);
+
+  static const rojo = Color(0xFFC0293B);
+  static const rojoFondo = Color(0xFFFADCE0);
+
+  static const textoMuted = Color(0xFF6B7280);
+  static const enlace = Color(0xFF2563EB);
+
+  static const rosaMuted = Color(0xFFB98CA0);
+  static const azulValor = Color(0xFF1B4F91);
+
+  static const background = fondo;
+  static const navy = navyOscuro;
+  static const gold = dorado;
+  static const goldDark = doradoOscuro;
+  static const green = verde;
+  static const greenBg = verdeFondo;
   static const textDark = Color(0xFF111827);
-  static const textGrey = Color(0xFF6B7280);
+  static const textGrey = textoMuted;
+  static const white = Colors.white;
+  static const cardBorder = Color(0xFFEFEFF2);
   static const cardShadow = Color(0x14000000);
 }
-
-enum _FiltroEstado { todos, activa, inactiva }
 
 // ==================== PANTALLA PRINCIPAL ====================
 class SucursalesScreen extends StatefulWidget {
@@ -49,7 +60,6 @@ class SucursalesScreen extends StatefulWidget {
 
 class _SucursalesScreenState extends State<SucursalesScreen> {
   final SucursalesService _service = SucursalesService();
-  final TextEditingController _busquedaCtrl = TextEditingController();
 
   List<Sucursal> _sucursales = [];
   bool _cargando = true;
@@ -57,29 +67,10 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
   String? _token;
   bool _exportando = false;
 
-  bool _filtrosAbiertos = true;
-  _FiltroEstado _filtroEstado = _FiltroEstado.todos;
-
-  // NOTA IMPORTANTE:
-  // El modelo `Sucursal` y el servicio no tienen un campo "encargado".
-  // Como solo se puede modificar este archivo, el nombre del encargado se
-  // guarda aquí en memoria (no se envía ni se guarda en el backend). Si
-  // luego agregas una columna "encargado" al modelo/servicio, reemplaza
-  // este mapa por el valor real que venga de la API.
-  final Map<int, String> _encargados = {};
-
-  String _encargadoDe(Sucursal s) => _encargados[s.id] ?? '—';
-
   @override
   void initState() {
     super.initState();
     _cargarSucursales();
-  }
-
-  @override
-  void dispose() {
-    _busquedaCtrl.dispose();
-    super.dispose();
   }
 
   Future<void> _cargarSucursales() async {
@@ -118,7 +109,7 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensaje),
-        backgroundColor: esError ? AppColors.red : AppColors.green,
+        backgroundColor: esError ? AppColors.rojo : AppColors.green,
       ),
     );
   }
@@ -135,50 +126,22 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => _SucursalFormSheet(
         sucursal: sucursal,
-        encargadoInicial: sucursal == null ? '' : _encargados[sucursal.id] ?? '',
-        onGuardar: (datos, encargado) => _guardarSucursal(
-          datos,
-          encargado,
-          idExistente: sucursal?.id,
-        ),
+        onGuardar: (datos) => _guardarSucursal(datos, idExistente: sucursal?.id),
       ),
     );
   }
 
-  Future<void> _guardarSucursal(
-    Sucursal datos,
-    String encargado, {
-    int? idExistente,
-  }) async {
+  Future<void> _guardarSucursal(Sucursal datos, {int? idExistente}) async {
     try {
       if (idExistente != null) {
         await _service.editarSucursal(_token!, idExistente, datos);
-        setState(() {
-          if (encargado.trim().isEmpty) {
-            _encargados.remove(idExistente);
-          } else {
-            _encargados[idExistente] = encargado.trim();
-          }
-        });
         _mostrarMensaje('Sucursal actualizada correctamente.');
-        if (mounted) Navigator.of(context).pop();
-        await _cargarSucursales();
       } else {
         await _service.crearSucursal(_token!, datos);
         _mostrarMensaje('Sucursal creada correctamente.');
-        await _cargarSucursales();
-        if (encargado.trim().isNotEmpty) {
-          // Busca la sucursal recién creada (por nombre + ciudad) para
-          // asociarle el encargado localmente, ya que el backend no lo guarda.
-          final creada = _sucursales.where(
-            (s) => s.nombre == datos.nombre && s.ciudad == datos.ciudad,
-          );
-          if (creada.isNotEmpty) {
-            setState(() => _encargados[creada.first.id] = encargado.trim());
-          }
-        }
-        if (mounted) Navigator.of(context).pop();
       }
+      if (mounted) Navigator.of(context).pop();
+      await _cargarSucursales();
     } catch (e) {
       _mostrarMensaje(e.toString().replaceFirst('Exception: ', ''), esError: true);
     }
@@ -187,18 +150,7 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
   void _verDetalle(Sucursal sucursal) {
     showDialog(
       context: context,
-      builder: (_) => _SucursalDetailDialog(
-        sucursal: sucursal,
-        encargado: _encargadoDe(sucursal),
-        onEditar: () {
-          Navigator.of(context).pop();
-          _abrirFormulario(sucursal: sucursal);
-        },
-        onEliminar: () {
-          Navigator.of(context).pop();
-          _confirmarEliminar(sucursal);
-        },
-      ),
+      builder: (_) => _SucursalDetailDialog(sucursal: sucursal),
     );
   }
 
@@ -216,7 +168,7 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.red,
+              backgroundColor: AppColors.rojo,
               foregroundColor: Colors.white,
             ),
             onPressed: () => Navigator.of(context).pop(true),
@@ -234,47 +186,11 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
 
     try {
       await _service.eliminarSucursal(_token!, sucursal.id);
-      setState(() => _encargados.remove(sucursal.id));
       _mostrarMensaje('Sucursal eliminada correctamente.');
       await _cargarSucursales();
     } catch (e) {
       _mostrarMensaje(e.toString().replaceFirst('Exception: ', ''), esError: true);
     }
-  }
-
-  void _limpiarFiltros() {
-    setState(() {
-      _busquedaCtrl.clear();
-      _filtroEstado = _FiltroEstado.todos;
-    });
-  }
-
-  String _normalizar(String texto) {
-    const conTilde = 'áàäâéèëêíìïîóòöôúùüû';
-    const sinTilde = 'aaaaeeeeiiiioooouuuu';
-    var resultado = texto.toLowerCase();
-    for (var i = 0; i < conTilde.length; i++) {
-      resultado = resultado.replaceAll(conTilde[i], sinTilde[i]);
-    }
-    return resultado;
-  }
-
-  List<Sucursal> get _filtradas {
-    final texto = _normalizar(_busquedaCtrl.text);
-    return _sucursales.where((s) {
-      final coincideTexto = texto.isEmpty ||
-          _normalizar(s.nombre).contains(texto) ||
-          _normalizar(s.ciudad ?? '').contains(texto) ||
-          _normalizar(_encargadoDe(s)).contains(texto);
-
-      final coincideEstado = switch (_filtroEstado) {
-        _FiltroEstado.todos => true,
-        _FiltroEstado.activa => s.activo,
-        _FiltroEstado.inactiva => !s.activo,
-      };
-
-      return coincideTexto && coincideEstado;
-    }).toList();
   }
 
   // NOTA: se dejaron ambos métodos de exportación intactos (sin quitarlos)
@@ -373,7 +289,7 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
                   .toList(),
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
               cellStyle: const pw.TextStyle(fontSize: 9),
-              headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF101B33)),
+              headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF0F1B2E)),
               headerHeight: 24,
               cellHeight: 22,
               cellAlignments: {0: pw.Alignment.centerLeft},
@@ -392,31 +308,32 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // AJUSTE: se quitó el FloatingActionButton "Agregar" y el Stack que lo
+    // posicionaba, porque el botón de agregar ahora vive dentro del
+    // encabezado (ver _PageHeaderCard, botón "+" dorado arriba a la derecha).
     return Container(
       color: AppColors.background,
       child: RefreshIndicator(
         onRefresh: _cargarSucursales,
         color: AppColors.gold,
-        child: _buildBody(),
+        child: _buildBody(_sucursales.length, _sucursales.where((s) => s.activo).length),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(int total, int activas) {
     if (_cargando) {
-      return ListView(
-        children: const [
-          Padding(
-            padding: EdgeInsets.only(top: 120),
-            child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
-          ),
-        ],
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.only(top: 120),
+          child: CircularProgressIndicator(color: AppColors.gold),
+        ),
       );
     }
 
     if (_error != null) {
       return ListView(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 100),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
         children: [
           _PageHeaderCard(
             eyebrow: 'CONTADORA - SUCURSALES',
@@ -430,12 +347,29 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
       );
     }
 
-    final total = _sucursales.length;
-    final activas = _sucursales.where((s) => s.activo).length;
-    final filtradas = _filtradas;
+    if (_sucursales.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+        children: [
+          _PageHeaderCard(
+            eyebrow: 'CONTADORA - SUCURSALES',
+            title: 'Sucursales',
+            subtitle: '0 sucursales registradas',
+            onAgregar: () => _abrirFormulario(),
+          ),
+          const SizedBox(height: 40),
+          const Center(
+            child: Text(
+              'No hay sucursales registradas todavía.',
+              style: TextStyle(color: AppColors.textGrey, fontSize: 13),
+            ),
+          ),
+        ],
+      );
+    }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 100),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
       children: [
         _PageHeaderCard(
           eyebrow: 'CONTADORA - SUCURSALES',
@@ -447,229 +381,37 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
         Row(
           children: [
             Expanded(
-              child: _StatCard(label: 'Total', value: '$total', accentColor: AppColors.gold),
+              child: _StatCard(
+                valor: '$total',
+                label: 'Total',
+                color: AppColors.gold,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _StatCard(label: 'Activas', value: '$activas', accentColor: AppColors.green),
+              child: _StatCard(
+                valor: '$activas',
+                label: 'Activas',
+                color: AppColors.green,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 14),
-        _buildPanelFiltros(),
-        const SizedBox(height: 14),
-        if (total == 0)
-          const Padding(
-            padding: EdgeInsets.only(top: 30),
-            child: Center(
-              child: Text(
-                'No hay sucursales registradas todavía.',
-                style: TextStyle(color: AppColors.textGrey, fontSize: 13),
-              ),
+        ...List.generate(_sucursales.length, (index) {
+          final sucursal = _sucursales[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _SucursalCard(
+              numero: '#${index + 1}',
+              sucursal: sucursal,
+              onVer: () => _verDetalle(sucursal),
+              onEditar: () => _abrirFormulario(sucursal: sucursal),
+              onEliminar: () => _confirmarEliminar(sucursal),
             ),
-          )
-        else ...[
-          Text(
-            '${filtradas.length} ${filtradas.length == 1 ? "SUCURSAL" : "SUCURSALES"}',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.0,
-              color: Colors.grey.shade500,
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (filtradas.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 20),
-              child: Center(
-                child: Text(
-                  'No se encontraron sucursales con esos filtros.',
-                  style: TextStyle(color: AppColors.textGrey, fontSize: 13),
-                ),
-              ),
-            )
-          else
-            ...List.generate(filtradas.length, (index) {
-              final sucursal = filtradas[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _SucursalCard(
-                  numero: index + 1,
-                  sucursal: sucursal,
-                  encargado: _encargadoDe(sucursal),
-                  onVer: () => _verDetalle(sucursal),
-                ),
-              );
-            }),
-        ],
+          );
+        }),
       ],
-    );
-  }
-
-  Widget _buildPanelFiltros() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Column(
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  const Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.goldDark),
-                  const SizedBox(width: 8),
-                  const Text('Filtros y Búsqueda',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                  const Spacer(),
-                  Icon(
-                    _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    color: Colors.grey,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (_filtrosAbiertos) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-              child: TextField(
-                controller: _busquedaCtrl,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: 'Buscar por nombre, ciudad o encargado...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                  prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
-                  filled: true,
-                  fillColor: AppColors.inputBg,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: const BorderSide(color: AppColors.navy),
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-              child: Row(
-                children: [
-                  _FiltroEstadoChip(
-                    label: 'Todos',
-                    seleccionado: _filtroEstado == _FiltroEstado.todos,
-                    onTap: () => setState(() => _filtroEstado = _FiltroEstado.todos),
-                  ),
-                  const SizedBox(width: 8),
-                  _FiltroEstadoChip(
-                    label: 'Activa',
-                    seleccionado: _filtroEstado == _FiltroEstado.activa,
-                    onTap: () => setState(() => _filtroEstado = _FiltroEstado.activa),
-                  ),
-                  const SizedBox(width: 8),
-                  _FiltroEstadoChip(
-                    label: 'Inactiva',
-                    seleccionado: _filtroEstado == _FiltroEstado.inactiva,
-                    onTap: () => setState(() => _filtroEstado = _FiltroEstado.inactiva),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _limpiarFiltros,
-                  icon: const Icon(Icons.close, size: 14),
-                  label: const Text('Limpiar filtros', style: TextStyle(fontSize: 12)),
-                  style: TextButton.styleFrom(foregroundColor: AppColors.goldDark),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-// ==================== CHIP DE FILTRO DE ESTADO ====================
-class _FiltroEstadoChip extends StatelessWidget {
-  final String label;
-  final bool seleccionado;
-  final VoidCallback onTap;
-
-  const _FiltroEstadoChip({
-    required this.label,
-    required this.seleccionado,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.cardBorder),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: seleccionado ? AppColors.goldText : AppColors.textGrey,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ==================== BADGE DE ESTADO ====================
-class _EstadoBadge extends StatelessWidget {
-  final bool activo;
-
-  const _EstadoBadge({required this.activo});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: activo ? AppColors.greenBg : AppColors.redBg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        activo ? 'Activa' : 'Inactiva',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: activo ? AppColors.green : AppColors.red,
-        ),
-      ),
     );
   }
 }
@@ -688,11 +430,11 @@ class _ErrorState extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.red.withValues(alpha: 0.4)),
+        border: Border.all(color: AppColors.rojo.withValues(alpha: 0.4)),
       ),
       child: Column(
         children: [
-          const Icon(Icons.error_outline, color: AppColors.red, size: 32),
+          const Icon(Icons.error_outline, color: AppColors.rojo, size: 32),
           const SizedBox(height: 10),
           Text(
             mensaje,
@@ -715,6 +457,9 @@ class _ErrorState extends StatelessWidget {
 }
 
 // ==================== TARJETA DE ENCABEZADO ====================
+// AJUSTE: ahora acepta un `onAgregar` opcional que dibuja un botón "+"
+// dorado arriba a la derecha (tal como en la imagen de referencia),
+// en reemplazo de los botones "Actualizar"/"Exportar" que se quitaron.
 class _PageHeaderCard extends StatelessWidget {
   final String eyebrow;
   final String title;
@@ -736,6 +481,7 @@ class _PageHeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.navy,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold, width: 1.2),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -766,7 +512,7 @@ class _PageHeaderCard extends StatelessWidget {
                 Text(
                   subtitle,
                   style: const TextStyle(
-                    color: AppColors.lightBlue,
+                    color: AppColors.subtitulo,
                     fontSize: 12.5,
                   ),
                 ),
@@ -775,19 +521,7 @@ class _PageHeaderCard extends StatelessWidget {
           ),
           if (onAgregar != null) ...[
             const SizedBox(width: 12),
-            Material(
-              color: AppColors.gold,
-              borderRadius: BorderRadius.circular(12),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: onAgregar,
-                child: const SizedBox(
-                  width: 42,
-                  height: 42,
-                  child: Icon(Icons.add, color: AppColors.navy, size: 24),
-                ),
-              ),
-            ),
+            _BotonAgregarHeader(onTap: onAgregar!),
           ],
         ],
       ),
@@ -795,48 +529,100 @@ class _PageHeaderCard extends StatelessWidget {
   }
 }
 
+// Botón "+" dorado del encabezado, tal como se ve en la imagen.
+class _BotonAgregarHeader extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _BotonAgregarHeader({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.dorado,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          alignment: Alignment.center,
+          child: const Icon(Icons.add, color: AppColors.navy, size: 22),
+        ),
+      ),
+    );
+  }
+}
+
 // ==================== TARJETA DE ESTADÍSTICA ====================
 class _StatCard extends StatelessWidget {
+  final String valor;
   final String label;
-  final String value;
-  final Color accentColor;
+  final Color color;
 
   const _StatCard({
+    required this.valor,
     required this.label,
-    required this.value,
-    required this.accentColor,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.cardBorder),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: accentColor,
-              ),
+      child: Column(
+        children: [
+          Text(
+            valor,
+            style: TextStyle(
+              color: color,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 11, color: AppColors.textGrey),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textGrey,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== BADGE DE ESTADO (activo) ====================
+class _EstadoBadge extends StatelessWidget {
+  final bool activo;
+
+  const _EstadoBadge({required this.activo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: activo ? AppColors.greenBg : const Color(0xFFF1F1F5),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        activo ? 'Activa' : 'Inactiva',
+        style: TextStyle(
+          color: activo ? AppColors.green : AppColors.textGrey,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -847,9 +633,8 @@ class _StatCard extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
-  final Color? valueColor;
 
-  const _InfoRow({required this.label, required this.value, this.valueColor});
+  const _InfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -860,16 +645,20 @@ class _InfoRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 10.5, color: AppColors.textGrey),
+            style: const TextStyle(
+              color: AppColors.rosaMuted,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: valueColor ?? AppColors.textDark,
+              style: const TextStyle(
+                color: AppColors.azulValor,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -879,30 +668,72 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
+// ==================== BOTÓN DE ACCIÓN PEQUEÑO ====================
+class _ActionIconButton extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final Color background;
+  final VoidCallback onTap;
+
+  const _ActionIconButton({
+    required this.icon,
+    required this.color,
+    required this.background,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.doradoClaro),
+        ),
+        alignment: Alignment.center,
+        child: Icon(icon, size: 16, color: color),
+      ),
+    );
+  }
+}
+
 // ==================== TARJETA DE SUCURSAL ====================
 class _SucursalCard extends StatelessWidget {
-  final int numero;
+  final String numero;
   final Sucursal sucursal;
-  final String encargado;
   final VoidCallback onVer;
+  final VoidCallback onEditar;
+  final VoidCallback onEliminar;
 
   const _SucursalCard({
     required this.numero,
     required this.sucursal,
-    required this.encargado,
     required this.onVer,
+    required this.onEditar,
+    required this.onEliminar,
   });
 
-  String get _codigo => 'SUC-${numero.toString().padLeft(3, '0')}';
+  String get _horario {
+    final apertura = sucursal.horarioApertura;
+    final cierre = sucursal.horarioCierre;
+    if (apertura == null && cierre == null) return '—';
+    return '${apertura ?? '—'} - ${cierre ?? '—'}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final activa = sucursal.activo;
+    final bool activa = sucursal.activo;
 
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
@@ -912,12 +743,15 @@ class _SucursalCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(width: 4, color: activa ? AppColors.green : AppColors.textGrey),
+            Container(
+              width: 4,
+              color: activa ? AppColors.green : AppColors.textGrey,
+            ),
             Expanded(
               child: InkWell(
                 onTap: onVer,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -929,9 +763,9 @@ class _SucursalCard extends StatelessWidget {
                               text: TextSpan(
                                 children: [
                                   TextSpan(
-                                    text: '#$numero ',
+                                    text: '$numero ',
                                     style: const TextStyle(
-                                      color: AppColors.goldText,
+                                      color: AppColors.gold,
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w800,
                                     ),
@@ -951,28 +785,44 @@ class _SucursalCard extends StatelessWidget {
                           _EstadoBadge(activo: activa),
                         ],
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 2),
                       Text(
-                        _codigo,
-                        style: const TextStyle(fontSize: 10.5, color: AppColors.textGrey),
+                        'ID: ${sucursal.id}',
+                        style: const TextStyle(
+                          color: AppColors.textGrey,
+                          fontSize: 10.5,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       const Divider(height: 1, color: AppColors.cardBorder),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
+                      _InfoRow(label: 'Ciudad', value: sucursal.ciudad ?? '—'),
+                      _InfoRow(label: 'Dirección', value: sucursal.direccion ?? '—'),
+                      _InfoRow(label: 'Teléfono', value: sucursal.telefono ?? '—'),
+                      _InfoRow(label: 'Horario', value: _horario),
+                      const SizedBox(height: 10),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          Text(
-                            sucursal.ciudad ?? '—',
-                            style: const TextStyle(fontSize: 11.5, color: AppColors.textGrey),
+                          _ActionIconButton(
+                            icon: Icons.visibility_outlined,
+                            color: AppColors.textDark,
+                            background: AppColors.white,
+                            onTap: onVer,
                           ),
-                          Text(
-                            encargado,
-                            style: const TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textDark,
-                            ),
+                          const SizedBox(width: 8),
+                          _ActionIconButton(
+                            icon: Icons.edit_outlined,
+                            color: AppColors.doradoOscuro,
+                            background: AppColors.fondo,
+                            onTap: onEditar,
+                          ),
+                          const SizedBox(width: 8),
+                          _ActionIconButton(
+                            icon: Icons.delete_outline,
+                            color: AppColors.rojo,
+                            background: AppColors.rojoFondo,
+                            onTap: onEliminar,
                           ),
                         ],
                       ),
@@ -991,16 +841,8 @@ class _SucursalCard extends StatelessWidget {
 // ==================== DIÁLOGO DE DETALLE (VER) ====================
 class _SucursalDetailDialog extends StatelessWidget {
   final Sucursal sucursal;
-  final String encargado;
-  final VoidCallback onEditar;
-  final VoidCallback onEliminar;
 
-  const _SucursalDetailDialog({
-    required this.sucursal,
-    required this.encargado,
-    required this.onEditar,
-    required this.onEliminar,
-  });
+  const _SucursalDetailDialog({required this.sucursal});
 
   String get _horario {
     final apertura = sucursal.horarioApertura;
@@ -1041,52 +883,13 @@ class _SucursalDetailDialog extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            _InfoRow(label: 'ID', value: '${sucursal.id}'),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Estado', style: TextStyle(fontSize: 10.5, color: AppColors.textGrey)),
-                  _EstadoBadge(activo: sucursal.activo),
-                ],
-              ),
-            ),
             _InfoRow(label: 'Nombre', value: sucursal.nombre),
-            _InfoRow(label: 'Ciudad', value: sucursal.ciudad ?? '—'),
             _InfoRow(label: 'Dirección', value: sucursal.direccion ?? '—'),
+            _InfoRow(label: 'Ciudad', value: sucursal.ciudad ?? '—'),
             _InfoRow(label: 'Teléfono', value: sucursal.telefono ?? '—'),
             _InfoRow(label: 'Horario', value: _horario),
-            _InfoRow(label: 'Encargado', value: encargado),
+            _InfoRow(label: 'Estado', value: sucursal.activo ? 'Activa' : 'Inactiva'),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onEditar,
-                    icon: const Icon(Icons.edit_outlined, size: 16, color: AppColors.goldDark),
-                    label: const Text('Editar', style: TextStyle(color: AppColors.goldDark)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.navy),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onEliminar,
-                    icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.red),
-                    label: const Text('Eliminar', style: TextStyle(color: AppColors.red)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.red),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -1109,14 +912,9 @@ class _SucursalDetailDialog extends StatelessWidget {
 // ==================== HOJA DE FORMULARIO (AGREGAR / EDITAR) ====================
 class _SucursalFormSheet extends StatefulWidget {
   final Sucursal? sucursal;
-  final String encargadoInicial;
-  final Future<void> Function(Sucursal datos, String encargado) onGuardar;
+  final Future<void> Function(Sucursal datos) onGuardar;
 
-  const _SucursalFormSheet({
-    this.sucursal,
-    required this.encargadoInicial,
-    required this.onGuardar,
-  });
+  const _SucursalFormSheet({this.sucursal, required this.onGuardar});
 
   @override
   State<_SucursalFormSheet> createState() => _SucursalFormSheetState();
@@ -1126,12 +924,13 @@ class _SucursalFormSheetState extends State<_SucursalFormSheet> {
   final _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _nombreCtrl;
-  late final TextEditingController _ciudadCtrl;
   late final TextEditingController _direccionCtrl;
+  late final TextEditingController _ciudadCtrl;
   late final TextEditingController _telefonoCtrl;
-  late final TextEditingController _encargadoCtrl;
 
-  late bool _activo;
+  TimeOfDay? _apertura;
+  TimeOfDay? _cierre;
+  bool _activo = true;
   bool _guardando = false;
 
   bool get _esEdicion => widget.sucursal != null;
@@ -1141,21 +940,50 @@ class _SucursalFormSheetState extends State<_SucursalFormSheet> {
     super.initState();
     final s = widget.sucursal;
     _nombreCtrl = TextEditingController(text: s?.nombre ?? '');
-    _ciudadCtrl = TextEditingController(text: s?.ciudad ?? '');
     _direccionCtrl = TextEditingController(text: s?.direccion ?? '');
+    _ciudadCtrl = TextEditingController(text: s?.ciudad ?? '');
     _telefonoCtrl = TextEditingController(text: s?.telefono ?? '');
-    _encargadoCtrl = TextEditingController(text: widget.encargadoInicial);
+    _apertura = _parseHora(s?.horarioApertura);
+    _cierre = _parseHora(s?.horarioCierre);
     _activo = s?.activo ?? true;
   }
 
   @override
   void dispose() {
     _nombreCtrl.dispose();
-    _ciudadCtrl.dispose();
     _direccionCtrl.dispose();
+    _ciudadCtrl.dispose();
     _telefonoCtrl.dispose();
-    _encargadoCtrl.dispose();
     super.dispose();
+  }
+
+  TimeOfDay? _parseHora(String? valor) {
+    if (valor == null || valor.isEmpty) return null;
+    final partes = valor.split(':');
+    if (partes.length < 2) return null;
+    final hora = int.tryParse(partes[0]);
+    final minuto = int.tryParse(partes[1]);
+    if (hora == null || minuto == null) return null;
+    return TimeOfDay(hour: hora, minute: minuto);
+  }
+
+  String _formatearHora(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  Future<void> _seleccionarHora({required bool esApertura}) async {
+    final actual = esApertura ? _apertura : _cierre;
+    final elegido = await showTimePicker(
+      context: context,
+      initialTime: actual ?? TimeOfDay.now(),
+    );
+    if (elegido == null) return;
+    setState(() {
+      if (esApertura) {
+        _apertura = elegido;
+      } else {
+        _cierre = elegido;
+      }
+    });
   }
 
   Future<void> _guardar() async {
@@ -1169,12 +997,12 @@ class _SucursalFormSheetState extends State<_SucursalFormSheet> {
       direccion: _direccionCtrl.text.trim().isEmpty ? null : _direccionCtrl.text.trim(),
       ciudad: _ciudadCtrl.text.trim().isEmpty ? null : _ciudadCtrl.text.trim(),
       telefono: _telefonoCtrl.text.trim().isEmpty ? null : _telefonoCtrl.text.trim(),
-      horarioApertura: widget.sucursal?.horarioApertura,
-      horarioCierre: widget.sucursal?.horarioCierre,
+      horarioApertura: _apertura == null ? null : _formatearHora(_apertura!),
+      horarioCierre: _cierre == null ? null : _formatearHora(_cierre!),
       activo: _activo,
     );
 
-    await widget.onGuardar(datos, _encargadoCtrl.text.trim());
+    await widget.onGuardar(datos);
 
     if (mounted) setState(() => _guardando = false);
   }
@@ -1207,101 +1035,85 @@ class _SucursalFormSheetState extends State<_SucursalFormSheet> {
                     ),
                   ),
                 ),
+                Text(
+                  _esEdicion ? 'Editar Sucursal' : 'Agregar Sucursal',
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.textDark),
+                ),
                 Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  margin: const EdgeInsets.only(bottom: 16),
+                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  height: 3,
+                  width: 40,
                   decoration: BoxDecoration(
-                    color: AppColors.navy,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'CONTADORA · SUCURSALES',
-                        style: TextStyle(
-                          color: AppColors.gold,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _esEdicion ? 'Editar Sucursal' : 'Nueva Sucursal',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
+                    color: AppColors.gold,
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                _campoTexto(controller: _nombreCtrl, label: 'Nombre', requerido: true),
-                _campoTexto(controller: _ciudadCtrl, label: 'Ciudad'),
+                _campoTexto(controller: _nombreCtrl, label: 'Nombre de la Sucursal', requerido: true),
                 _campoTexto(controller: _direccionCtrl, label: 'Dirección'),
+                _campoTexto(controller: _ciudadCtrl, label: 'Ciudad'),
                 _campoTexto(controller: _telefonoCtrl, label: 'Teléfono', tipoTeclado: TextInputType.phone),
-                _campoTexto(controller: _encargadoCtrl, label: 'Encargado'),
-                const Text(
-                  'Estado',
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                ),
-                const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
-                      child: _EstadoToggle(
-                        label: 'Activa',
-                        seleccionado: _activo,
-                        onTap: () => setState(() => _activo = true),
+                      child: _campoHora(
+                        label: 'Horario Apertura',
+                        valor: _apertura,
+                        onTap: () => _seleccionarHora(esApertura: true),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: _EstadoToggle(
-                        label: 'Inactiva',
-                        seleccionado: !_activo,
-                        onTap: () => setState(() => _activo = false),
+                      child: _campoHora(
+                        label: 'Horario Cierre',
+                        valor: _cierre,
+                        onTap: () => _seleccionarHora(esApertura: false),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _guardando ? null : _guardar,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.gold,
-                      foregroundColor: AppColors.navy,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: _guardando
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.navy),
-                          )
-                        : Text(
-                            _esEdicion ? 'Actualizar Sucursal' : 'Crear Sucursal',
-                            style: const TextStyle(fontWeight: FontWeight.w800),
-                          ),
+                const SizedBox(height: 6),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  activeColor: AppColors.gold,
+                  title: const Text(
+                    'Sucursal activa',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
                   ),
+                  value: _activo,
+                  onChanged: (v) => setState(() => _activo = v),
                 ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: _guardando ? null : () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: const BorderSide(color: AppColors.cardBorder),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: const BorderSide(color: AppColors.cardBorder),
+                        ),
+                        child: const Text('Cancelar', style: TextStyle(color: AppColors.textDark)),
+                      ),
                     ),
-                    child: const Text('Cancelar', style: TextStyle(color: AppColors.textDark)),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _guardando ? null : _guardar,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.navy,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: _guardando
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold),
+                              )
+                            : Text(_esEdicion ? 'Actualizar' : 'Guardar'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1319,77 +1131,66 @@ class _SucursalFormSheetState extends State<_SucursalFormSheet> {
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: tipoTeclado,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(fontSize: 12.5, color: AppColors.textGrey),
+          filled: true,
+          fillColor: const Color(0xFFFAFAFA),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppColors.cardBorder),
           ),
-          const SizedBox(height: 6),
-          TextFormField(
-            controller: controller,
-            keyboardType: tipoTeclado,
-            decoration: InputDecoration(
-              hintText: label,
-              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-              filled: true,
-              fillColor: AppColors.inputBg,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: AppColors.navy, width: 1.4),
-              ),
-            ),
-            validator: requerido
-                ? (v) => (v == null || v.trim().isEmpty) ? 'Este campo es obligatorio' : null
-                : null,
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppColors.cardBorder),
           ),
-        ],
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppColors.gold, width: 1.4),
+          ),
+        ),
+        validator: requerido
+            ? (v) => (v == null || v.trim().isEmpty) ? 'Este campo es obligatorio' : null
+            : null,
       ),
     );
   }
-}
 
-// ==================== TOGGLE DE ESTADO (FORMULARIO) ====================
-class _EstadoToggle extends StatelessWidget {
-  final String label;
-  final bool seleccionado;
-  final VoidCallback onTap;
-
-  const _EstadoToggle({
-    required this.label,
-    required this.seleccionado,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.cardBorder),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            color: seleccionado ? AppColors.goldText : AppColors.textGrey,
+  Widget _campoHora({
+    required String label,
+    required TimeOfDay? valor,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: const TextStyle(fontSize: 12.5, color: AppColors.textGrey),
+            filled: true,
+            fillColor: const Color(0xFFFAFAFA),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.cardBorder),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                valor == null ? '—' : _formatearHora(valor),
+                style: const TextStyle(fontSize: 13, color: AppColors.textDark),
+              ),
+              const Icon(Icons.access_time, size: 16, color: AppColors.textGrey),
+            ],
           ),
         ),
       ),
