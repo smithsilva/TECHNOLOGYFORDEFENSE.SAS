@@ -569,8 +569,10 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 18),
 
+            _buildFiltroHeader(),
+            const SizedBox(height: 10),
             _buscador(),
             const SizedBox(height: 18),
 
@@ -649,6 +651,26 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // =======================================================================
+  // ENCABEZADO "Filtros y Búsqueda" — ícono + título, como en Inventario/Categorías
+  // =======================================================================
+  Widget _buildFiltroHeader() {
+    return Row(
+      children: const [
+        Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.navyOscuro),
+        SizedBox(width: 8),
+        Text(
+          'Filtros y Búsqueda',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppColors.navyOscuro,
+          ),
+        ),
+      ],
     );
   }
 

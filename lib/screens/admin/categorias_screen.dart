@@ -595,11 +595,13 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             _buildHeader(),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             _buildStats(),
-            const SizedBox(height: 14),
-            _buildBuscador(),
+            const SizedBox(height: 18),
+            _buildFiltroHeader(),
             const SizedBox(height: 10),
+            _buildBuscador(),
+            const SizedBox(height: 14),
             Row(
               children: [
                 const Text(
@@ -799,6 +801,26 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           Text(sublabel, style: const TextStyle(fontSize: 10, color: AppColors.textoMuted)),
         ],
       ),
+    );
+  }
+
+  // =======================================================================
+  // ENCABEZADO "Filtros y Búsqueda" — ícono + título, como en el panel web
+  // =======================================================================
+  Widget _buildFiltroHeader() {
+    return Row(
+      children: const [
+        Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.navyOscuro),
+        SizedBox(width: 8),
+        Text(
+          'Filtros y Búsqueda',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppColors.navyOscuro,
+          ),
+        ),
+      ],
     );
   }
 

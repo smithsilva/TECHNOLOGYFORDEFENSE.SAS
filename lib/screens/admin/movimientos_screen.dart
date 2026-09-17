@@ -436,72 +436,67 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // Filtros y búsqueda
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                // Filtros y búsqueda — directo sobre el fondo, sin tarjeta blanca
+                Row(
+                  children: const [
+                    Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.navyOscuro),
+                    SizedBox(width: 8),
+                    Text(
+                      'Filtros y Búsqueda',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.navyOscuro,
                       ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      children: [
-                        TextField(
-                          controller: _busquedaCtrl,
-                          onChanged: (_) => setState(() {}),
-                          decoration: InputDecoration(
-                            hintText: 'Buscar por producto o usuario...',
-                            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                            prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
-                            filled: true,
-                            fillColor: AppColors.fondo,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide.none,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: const BorderSide(color: AppColors.dorado),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            _chipTipo('Todos', 'todos'),
-                            _chipTipo('Entrada', 'entrada'),
-                            _chipTipo('Salida', 'salida'),
-                            TextButton.icon(
-                              onPressed: _limpiarFiltros,
-                              icon: const Icon(Icons.close, size: 14),
-                              label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.textoMuted,
-                                padding: EdgeInsets.zero,
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _busquedaCtrl,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por producto o usuario...',
+                    hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                    prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: const BorderSide(color: AppColors.dorado),
                     ),
                   ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _chipTipo('Todos', 'todos'),
+                    _chipTipo('Entrada', 'entrada'),
+                    _chipTipo('Salida', 'salida'),
+                    TextButton.icon(
+                      onPressed: _limpiarFiltros,
+                      icon: const Icon(Icons.close, size: 14),
+                      label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.textoMuted,
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
 

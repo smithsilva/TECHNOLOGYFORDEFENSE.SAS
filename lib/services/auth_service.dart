@@ -8,7 +8,7 @@ class AuthService {
   static const String apiKey = 'pollo';
 
   // Servidor por Wi-Fi
-  static const String wifiApiUrl = 'http://192.168.137.1:5000';
+  static const String wifiApiUrl = 'http://192.168.2.7:5000';
 
   // Servidor mediante USB + adb reverse
   static const String usbApiUrl = 'http://localhost:5000';

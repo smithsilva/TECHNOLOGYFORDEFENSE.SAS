@@ -728,13 +728,15 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             _buildHeader(),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             _buildStats(),
-            const SizedBox(height: 14),
+            const SizedBox(height: 18),
+            _buildFiltroHeader(),
+            const SizedBox(height: 10),
             _buildBuscador(),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             _buildFiltros(),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             Text(
               '${_filtrados.length} ${_filtrados.length == 1 ? "USUARIO" : "USUARIOS"}',
               textAlign: TextAlign.center,
@@ -863,6 +865,27 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
           Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textoMuted)),
         ],
       ),
+    );
+  }
+
+  // =======================================================================
+  // ENCABEZADO "Filtros y Búsqueda" — ícono + título, sobre el fondo,
+  // igual que en Inventario / Categorías / Historial de Precios.
+  // =======================================================================
+  Widget _buildFiltroHeader() {
+    return Row(
+      children: const [
+        Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.navyOscuro),
+        SizedBox(width: 8),
+        Text(
+          'Filtros y Búsqueda',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppColors.navyOscuro,
+          ),
+        ),
+      ],
     );
   }
 

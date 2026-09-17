@@ -819,13 +819,15 @@ class _InventarioScreenState extends State<InventarioScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             _buildHeader(),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             _buildStats(),
-            const SizedBox(height: 14),
+            const SizedBox(height: 18),
+            _buildFiltroHeader(),
+            const SizedBox(height: 10),
             _buildBuscador(),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             _buildFiltros(),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             Text(
               '$_total ${_total == 1 ? "PRODUCTO" : "PRODUCTOS"}',
               textAlign: TextAlign.center,
@@ -986,6 +988,26 @@ class _InventarioScreenState extends State<InventarioScreen> {
           Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textoMuted)),
         ],
       ),
+    );
+  }
+
+  // =======================================================================
+  // ENCABEZADO "Filtros y Búsqueda" — ícono + título, como en el panel web
+  // =======================================================================
+  Widget _buildFiltroHeader() {
+    return Row(
+      children: const [
+        Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.navyOscuro),
+        SizedBox(width: 8),
+        Text(
+          'Filtros y Búsqueda',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppColors.navyOscuro,
+          ),
+        ),
+      ],
     );
   }
 
