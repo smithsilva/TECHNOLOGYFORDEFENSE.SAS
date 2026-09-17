@@ -2,56 +2,96 @@ import 'package:flutter/material.dart';
 
 // ==================== PALETA DE COLORES ====================
 class AppColors {
-  static const dorado = Color(0xFFC9962E);
-  static const doradoOscuro = Color(0xFF8C6B2E);
-  static const doradoClaro = Color(0xFFE8C97A);
-  static const doradoMezcla = Color(0xFFAB812E); // punto medio dorado/doradoOscuro
-  static const fondo = Color(0xFFFAF3E4);
+  static const background = Color(0xFFF7EFDD);
+  static const navy = Color(0xFF101B33);
+  static const gold = Color(0xFFC9A24A);
+  static const goldDark = Color(0xFF8A6D1F);
+  static const goldText = Color(0xFFD2A03C);
+  static const lightBlue = Color(0xFF9FB4DE);
+  static const inputBg = Color(0xFFEFE4CB);
+  static const iconBg = Color(0xFFF0E3BE);
+  static const cardBorder = Color(0xFFECE0BD);
 
-  static const navyOscuro = Color(0xFF0F1B2E);
-  static const navyClaro = Color(0xFF16233A);
-  static const subtitulo = Color(0xFF8FA3C4);
+  static const green = Color(0xFF2E9E4E);
+  static const greenBg = Color(0xFFDCF2E3);
+  static const olive = Color(0xFF8B7920);
+  static const oliveBg = Color(0xFFF3ECD2);
+  static const red = Color(0xFFC24555);
+  static const redBg = Color(0xFFF8DCE0);
 
-  static const verde = Color(0xFF2E9E5B);
-  static const verdeFondo = Color(0xFFDDF2E1);
-
-  static const naranja = Color(0xFFA17A2E);
-  static const naranjaFondo = Color(0xFFF5E3C3);
-
-  static const rojo = Color(0xFFC0293B);
-  static const rojoFondo = Color(0xFFFADCE0);
-
-  static const textoMuted = Color(0xFF6B7280);
-  static const enlace = Color(0xFF2563EB);
-
-  // Alias usados en esta pantalla, ahora apuntando a la paleta nueva.
-  static const background = fondo;
-  static const navy = navyOscuro;
-  static const gold = dorado;
-  static const goldDark = doradoOscuro;
-  static const green = verde;
-  static const greenBg = verdeFondo;
+  // Colores auxiliares que no vienen en la paleta pero se necesitan
+  // para texto general (no son parte del branding, solo legibilidad).
   static const textDark = Color(0xFF111827);
-  static const textGrey = textoMuted;
+  static const textGrey = Color(0xFF6B7280);
   static const white = Colors.white;
-  static const cardBorder = Color(0xFFEFEFF2);
   static const cardShadow = Color(0x14000000);
+
+  // Fondo de la tarjeta "Filtros y Búsqueda". Se usa blanco puro
+  // (igual que las demás tarjetas) para que resalte contra el
+  // fondo general en vez de mezclarse con él.
+  static const filtroCardBg = white;
+}
+
+// ==================== FORMATO DE MONEDA ====================
+String _formatoPesos(num monto) {
+  final texto = monto.toStringAsFixed(0);
+  final buffer = StringBuffer();
+  for (var i = 0; i < texto.length; i++) {
+    final posDesdeFinal = texto.length - i;
+    buffer.write(texto[i]);
+    if (posDesdeFinal > 1 && posDesdeFinal % 3 == 1) buffer.write('.');
+  }
+  return '\$${buffer.toString()}';
+}
+
+// ==================== MODELO: ASIGNACIÓN VINCULADA ====================
+// Representa un mantenimiento/reparación/blindamiento de un vehículo que
+// quedó pagado con este método de pago (mismo origen de datos que la
+// pantalla de Movimientos Contables).
+class AsignacionMetodo {
+  final int numero;
+  final String vehiculoId;
+  final String vehiculoNombre;
+  final String servicio;
+  final String fechaVencimiento;
+  final double monto;
+  final String estado;
+
+  const AsignacionMetodo({
+    required this.numero,
+    required this.vehiculoId,
+    required this.vehiculoNombre,
+    required this.servicio,
+    required this.fechaVencimiento,
+    required this.monto,
+    required this.estado,
+  });
 }
 
 // ==================== MODELO ====================
 // Nota: dejó de ser 100% inmutable "const" porque ahora se crea
 // dinámicamente desde el formulario (el usuario define el % real).
 class MetodoPagoModel {
+  final int id;
   final String nombre;
+  final String tipo;
   final String descripcion;
   final double comisionValor; // porcentaje numérico real, ej: 2.5
   final String estado;
+  final bool permiteOnline;
+  // TODO: Reemplaza esto por tu fetch real a Supabase (tabla
+  // asignaciones/mantenimiento filtrada por id_metodo_pago).
+  final List<AsignacionMetodo> asignaciones;
 
   const MetodoPagoModel({
+    required this.id,
     required this.nombre,
+    required this.tipo,
     required this.descripcion,
     required this.comisionValor,
     required this.estado,
+    required this.permiteOnline,
+    this.asignaciones = const [],
   });
 
   String get comisionTexto {
@@ -68,32 +108,196 @@ class MetodoPagoModel {
 // de partida, y cada método nuevo que agregues define SU PROPIO %).
 final List<MetodoPagoModel> metodosPagoDataInicial = [
   const MetodoPagoModel(
+    id: 1,
     nombre: 'Efectivo',
+    tipo: 'Efectivo',
     descripcion: 'Pago en efectivo en punto físico',
     comisionValor: 0,
     estado: 'Activo',
+    permiteOnline: false,
+    asignaciones: [
+      AsignacionMetodo(
+        numero: 1,
+        vehiculoId: 'VT-001',
+        vehiculoNombre: 'Humvee Blindado',
+        servicio: 'Mantenimiento',
+        fechaVencimiento: '01/07/2026',
+        monto: 850000,
+        estado: 'Pendiente',
+      ),
+      AsignacionMetodo(
+        numero: 2,
+        vehiculoId: 'VT-002',
+        vehiculoNombre: 'Toyota Hilux',
+        servicio: 'Mantenimiento',
+        fechaVencimiento: '18/06/2026',
+        monto: 420000,
+        estado: 'Pendiente',
+      ),
+      AsignacionMetodo(
+        numero: 7,
+        vehiculoId: 'VT-007',
+        vehiculoNombre: 'Chevrolet Colorado',
+        servicio: 'Blindamiento',
+        fechaVencimiento: '10/06/2026',
+        monto: 2399997,
+        estado: 'Pendiente',
+      ),
+      AsignacionMetodo(
+        numero: 8,
+        vehiculoId: 'VT-008',
+        vehiculoNombre: 'Mitsubishi L200',
+        servicio: 'Mantenimiento',
+        fechaVencimiento: '10/06/2026',
+        monto: 220000,
+        estado: 'Pendiente',
+      ),
+      AsignacionMetodo(
+        numero: 9,
+        vehiculoId: 'VT-009',
+        vehiculoNombre: 'Mazda BT-50',
+        servicio: 'Mantenimiento',
+        fechaVencimiento: '13/06/2026',
+        monto: 349998,
+        estado: 'Pendiente',
+      ),
+      AsignacionMetodo(
+        numero: 10,
+        vehiculoId: 'VT-010',
+        vehiculoNombre: 'Isuzu D-Max',
+        servicio: 'Reparación',
+        fechaVencimiento: '18/06/2026',
+        monto: 3200001,
+        estado: 'Pendiente',
+      ),
+      AsignacionMetodo(
+        numero: 11,
+        vehiculoId: 'VT-011',
+        vehiculoNombre: 'Renault Duster',
+        servicio: 'Mantenimiento',
+        fechaVencimiento: '17/06/2026',
+        monto: 180000,
+        estado: 'Pendiente',
+      ),
+      AsignacionMetodo(
+        numero: 12,
+        vehiculoId: 'VT-012',
+        vehiculoNombre: 'Kia Sportage',
+        servicio: 'Reparación',
+        fechaVencimiento: '02/04/2026',
+        monto: 980000,
+        estado: 'Pendiente',
+      ),
+      AsignacionMetodo(
+        numero: 13,
+        vehiculoId: 'VT-013',
+        vehiculoNombre: 'Hyundai Tucson',
+        servicio: 'Mantenimiento',
+        fechaVencimiento: '25/03/2026',
+        monto: 270000,
+        estado: 'Pendiente',
+      ),
+      AsignacionMetodo(
+        numero: 14,
+        vehiculoId: 'VT-014',
+        vehiculoNombre: 'Toyota Prado',
+        servicio: 'Mantenimiento',
+        fechaVencimiento: '19/08/2026',
+        monto: 450003,
+        estado: 'Pendiente',
+      ),
+    ],
   ),
   const MetodoPagoModel(
+    id: 2,
     nombre: 'Transferencia Bancaria',
+    tipo: 'Transferencia',
     descripcion: 'Transferencia entre cuentas bancarias',
     comisionValor: 0,
     estado: 'Activo',
+    permiteOnline: true,
+    asignaciones: [
+      AsignacionMetodo(
+        numero: 3,
+        vehiculoId: 'VT-013',
+        vehiculoNombre: 'Hyundai Tucson',
+        servicio: 'Mantenimiento',
+        fechaVencimiento: '30/06/2026',
+        monto: 270000,
+        estado: 'Pendiente',
+      ),
+      AsignacionMetodo(
+        numero: 4,
+        vehiculoId: 'VT-012',
+        vehiculoNombre: 'Kia Sportage',
+        servicio: 'Reparación',
+        fechaVencimiento: '30/06/2026',
+        monto: 980000,
+        estado: 'Pendiente',
+      ),
+      AsignacionMetodo(
+        numero: 5,
+        vehiculoId: 'VT-011',
+        vehiculoNombre: 'Renault Duster',
+        servicio: 'Mantenimiento',
+        fechaVencimiento: '30/06/2026',
+        monto: 180000,
+        estado: 'Pendiente',
+      ),
+    ],
   ),
   const MetodoPagoModel(
+    id: 3,
     nombre: 'Nequi',
+    tipo: 'Transferencia',
     descripcion: 'Pago digital a través de la aplicación Nequi',
     comisionValor: 0,
     estado: 'Activo',
+    permiteOnline: true,
+    asignaciones: [
+      AsignacionMetodo(
+        numero: 6,
+        vehiculoId: 'VT-010',
+        vehiculoNombre: 'Isuzu D-Max',
+        servicio: 'Reparación',
+        fechaVencimiento: '30/06/2026',
+        monto: 3200001,
+        estado: 'Pendiente',
+      ),
+      AsignacionMetodo(
+        numero: 9,
+        vehiculoId: 'VT-009',
+        vehiculoNombre: 'Mazda BT-50',
+        servicio: 'Mantenimiento',
+        fechaVencimiento: '30/06/2026',
+        monto: 349998,
+        estado: 'Pendiente',
+      ),
+    ],
   ),
   const MetodoPagoModel(
+    id: 4,
     nombre: 'Tarjeta Crédito/Débito',
+    tipo: 'Tarjeta',
     descripcion: 'Pago con tarjeta mediante datáfono o pasarela',
     comisionValor: 2.5,
     estado: 'Activo',
+    permiteOnline: true,
+    asignaciones: [
+      AsignacionMetodo(
+        numero: 8,
+        vehiculoId: 'VT-008',
+        vehiculoNombre: 'Mitsubishi L200',
+        servicio: 'Mantenimiento',
+        fechaVencimiento: '30/06/2026',
+        monto: 220000,
+        estado: 'Pendiente',
+      ),
+    ],
   ),
 ];
 
-// ==================== PANTALLA PRINCIPAL (AHORA STATEFUL) ====================
+// ==================== PANTALLA PRINCIPAL ====================
 class MetodosPagoScreen extends StatefulWidget {
   const MetodosPagoScreen({super.key});
 
@@ -108,9 +312,44 @@ class _MetodosPagoScreenState extends State<MetodosPagoScreen> {
   // dispositivos deben ver lo mismo.
   final List<MetodoPagoModel> _metodos = List.of(metodosPagoDataInicial);
 
+  final TextEditingController _busquedaCtrl = TextEditingController();
+  String _filtroEstado = 'Todos';
+  bool _filtrosExpandido = true;
+
   int get _totalMetodos => _metodos.length;
   int get _activos => _metodos.where((m) => m.estado == 'Activo').length;
 
+  bool get _hayFiltrosActivos =>
+      _busquedaCtrl.text.trim().isNotEmpty || _filtroEstado != 'Todos';
+
+  List<MetodoPagoModel> get _metodosFiltrados {
+    final query = _busquedaCtrl.text.trim().toLowerCase();
+    return _metodos.where((m) {
+      final coincideEstado =
+          _filtroEstado == 'Todos' || m.estado == _filtroEstado;
+      final coincideBusqueda = query.isEmpty ||
+          m.nombre.toLowerCase().contains(query) ||
+          m.descripcion.toLowerCase().contains(query);
+      return coincideEstado && coincideBusqueda;
+    }).toList();
+  }
+
+  @override
+  void dispose() {
+    _busquedaCtrl.dispose();
+    super.dispose();
+  }
+
+  void _limpiarFiltros() {
+    setState(() {
+      _busquedaCtrl.clear();
+      _filtroEstado = 'Todos';
+    });
+  }
+
+  // NOTA: se dejó este método intacto (sin quitarlo) aunque ya no se
+  // dispara desde ningún botón en pantalla, por si luego quieres
+  // volver a engancharlo (por ejemplo desde una tarjeta o un menú).
   Future<void> _abrirFormulario({MetodoPagoModel? existente, int? index}) async {
     final nombreCtrl = TextEditingController(text: existente?.nombre ?? '');
     final descCtrl = TextEditingController(text: existente?.descripcion ?? '');
@@ -191,10 +430,14 @@ class _MetodosPagoScreenState extends State<MetodosPagoScreen> {
                     Navigator.pop(
                       context,
                       MetodoPagoModel(
+                        id: existente?.id ?? (_metodos.length + 1),
                         nombre: nombre,
+                        tipo: existente?.tipo ?? 'Efectivo',
                         descripcion: descCtrl.text.trim(),
                         comisionValor: comision,
                         estado: estadoSeleccionado,
+                        permiteOnline: existente?.permiteOnline ?? false,
+                        asignaciones: existente?.asignaciones ?? const [],
                       ),
                     );
                   },
@@ -218,55 +461,60 @@ class _MetodosPagoScreenState extends State<MetodosPagoScreen> {
     }
   }
 
-  void _eliminarMetodo(int index) {
-    setState(() => _metodos.removeAt(index));
+  // ------------------------------------------------------------
+  // Modal "Detalle del Método" — mismo diseño de la imagen de
+  // referencia: datos generales arriba y lista de asignaciones
+  // vinculadas abajo, con botón "Cerrar" fijo.
+  // ------------------------------------------------------------
+  void _verDetalle(MetodoPagoModel metodo) {
+    showDialog(
+      context: context,
+      builder: (context) => _DetalleMetodoDialog(metodo: metodo),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final metodosVisibles = _metodosFiltrados;
+
     return Container(
       color: AppColors.background,
-      child: Stack(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
         children: [
-          ListView(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 90),
-            children: [
-              const _PageHeaderCard(
-                eyebrow: 'CONTADORA - PAGOS',
-                title: 'Métodos de Pago',
-                subtitle: 'Canales de pago aceptados',
-              ),
-              const SizedBox(height: 14),
-              _buildStatsRow(),
-              const SizedBox(height: 14),
-              ..._metodos.asMap().entries.map(
-                    (entry) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _MetodoCard(
-                        metodo: entry.value,
-                        onEditar: () => _abrirFormulario(
-                          existente: entry.value,
-                          index: entry.key,
-                        ),
-                        onEliminar: () => _eliminarMetodo(entry.key),
-                      ),
-                    ),
-                  ),
-            ],
+          const _PageHeaderCard(
+            eyebrow: 'CONTADORA - PAGOS',
+            title: 'Métodos de Pago',
+            subtitle: 'Canales de pago aceptados',
           ),
-          Positioned(
-            right: 14,
-            bottom: 14,
-            child: FloatingActionButton.extended(
-              onPressed: () => _abrirFormulario(),
-              backgroundColor: AppColors.navy,
-              icon: const Icon(Icons.add, color: AppColors.gold),
-              label: const Text(
-                'Agregar método',
-                style: TextStyle(color: Colors.white),
+          const SizedBox(height: 14),
+          _buildStatsRow(),
+          const SizedBox(height: 14),
+          _FiltrosYBusquedaCard(
+            expandido: _filtrosExpandido,
+            onToggleExpandido: () =>
+                setState(() => _filtrosExpandido = !_filtrosExpandido),
+            controladorBusqueda: _busquedaCtrl,
+            onBusquedaChanged: (_) => setState(() {}),
+            filtroEstado: _filtroEstado,
+            onFiltroEstadoChanged: (valor) =>
+                setState(() => _filtroEstado = valor),
+            hayFiltrosActivos: _hayFiltrosActivos,
+            onLimpiarFiltros: _limpiarFiltros,
+          ),
+          const SizedBox(height: 14),
+          if (metodosVisibles.isEmpty)
+            const _SinResultados()
+          else
+            ...metodosVisibles.map(
+              (metodo) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _MetodoCard(
+                  metodo: metodo,
+                  onVerDetalle: () => _verDetalle(metodo),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -344,17 +592,9 @@ class _PageHeaderCard extends StatelessWidget {
           Text(
             subtitle,
             style: const TextStyle(
-              color: AppColors.subtitulo,
+              color: AppColors.lightBlue,
               fontSize: 12.5,
             ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: const [
-              Icon(Icons.star_rounded, size: 14, color: AppColors.gold),
-              SizedBox(width: 3),
-              Icon(Icons.star_rounded, size: 14, color: AppColors.gold),
-            ],
           ),
         ],
       ),
@@ -415,16 +655,210 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+// ============================================================
+// TARJETA "FILTROS Y BÚSQUEDA"
+// Colapsable: header con icono de filtro + chevron. Contiene un
+// buscador (filtra por nombre/descripción) y chips de estado
+// (Todos / Activo / Inactivo), más un enlace "Limpiar filtros".
+// ============================================================
+class _FiltrosYBusquedaCard extends StatelessWidget {
+  final bool expandido;
+  final VoidCallback onToggleExpandido;
+  final TextEditingController controladorBusqueda;
+  final ValueChanged<String> onBusquedaChanged;
+  final String filtroEstado;
+  final ValueChanged<String> onFiltroEstadoChanged;
+  final bool hayFiltrosActivos;
+  final VoidCallback onLimpiarFiltros;
+
+  const _FiltrosYBusquedaCard({
+    required this.expandido,
+    required this.onToggleExpandido,
+    required this.controladorBusqueda,
+    required this.onBusquedaChanged,
+    required this.filtroEstado,
+    required this.onFiltroEstadoChanged,
+    required this.hayFiltrosActivos,
+    required this.onLimpiarFiltros,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.filtroCardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold, width: 1.2),
+        boxShadow: const [
+          BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: onToggleExpandido,
+            child: Row(
+              children: [
+                const Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.navy),
+                const SizedBox(width: 8),
+                const Text(
+                  'Filtros y Búsqueda',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navy,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  expandido ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  size: 20,
+                  color: AppColors.navy,
+                ),
+              ],
+            ),
+          ),
+          if (expandido) ...[
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.inputBg,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: TextField(
+                controller: controladorBusqueda,
+                onChanged: onBusquedaChanged,
+                style: const TextStyle(fontSize: 12.5, color: AppColors.goldDark),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  hintText: 'Buscar método de pago...',
+                  hintStyle: TextStyle(fontSize: 12.5, color: AppColors.goldDark),
+                  prefixIcon: Icon(Icons.search, size: 18, color: AppColors.goldDark),
+                  prefixIconConstraints: BoxConstraints(minWidth: 40),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _ChipFiltro(
+                  texto: 'Todos',
+                  seleccionado: filtroEstado == 'Todos',
+                  onTap: () => onFiltroEstadoChanged('Todos'),
+                ),
+                _ChipFiltro(
+                  texto: 'Activo',
+                  seleccionado: filtroEstado == 'Activo',
+                  onTap: () => onFiltroEstadoChanged('Activo'),
+                ),
+                _ChipFiltro(
+                  texto: 'Inactivo',
+                  seleccionado: filtroEstado == 'Inactivo',
+                  onTap: () => onFiltroEstadoChanged('Inactivo'),
+                ),
+              ],
+            ),
+            if (hayFiltrosActivos) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: InkWell(
+                  onTap: onLimpiarFiltros,
+                  child: const Text(
+                    '\u00D7 Limpiar filtros',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.goldDark,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ChipFiltro extends StatelessWidget {
+  final String texto;
+  final bool seleccionado;
+  final VoidCallback onTap;
+
+  const _ChipFiltro({
+    required this.texto,
+    required this.seleccionado,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: seleccionado ? AppColors.iconBg : AppColors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: seleccionado ? AppColors.gold : AppColors.cardBorder,
+            width: seleccionado ? 1.2 : 1,
+          ),
+        ),
+        child: Text(
+          texto,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: seleccionado ? FontWeight.w700 : FontWeight.w500,
+            color: seleccionado ? AppColors.goldDark : AppColors.textGrey,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SinResultados extends StatelessWidget {
+  const _SinResultados();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cardBorder, width: 1),
+      ),
+      child: const Center(
+        child: Text(
+          'No se encontraron métodos de pago con esos filtros.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12.5, color: AppColors.textGrey),
+        ),
+      ),
+    );
+  }
+}
+
 // ==================== TARJETA DE MÉTODO DE PAGO ====================
 class _MetodoCard extends StatelessWidget {
   final MetodoPagoModel metodo;
-  final VoidCallback onEditar;
-  final VoidCallback onEliminar;
+  final VoidCallback onVerDetalle;
 
   const _MetodoCard({
     required this.metodo,
-    required this.onEditar,
-    required this.onEliminar,
+    required this.onVerDetalle,
   });
 
   @override
@@ -443,7 +877,7 @@ class _MetodoCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(width: 4, color: AppColors.enlace),
+            Container(width: 4, color: AppColors.lightBlue),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
@@ -484,7 +918,7 @@ class _MetodoCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.goldDark,
+                            color: AppColors.goldText,
                           ),
                         ),
                       ],
@@ -497,14 +931,9 @@ class _MetodoCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textGrey),
-                  onPressed: onEditar,
-                  tooltip: 'Editar',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.rojo),
-                  onPressed: onEliminar,
-                  tooltip: 'Eliminar',
+                  icon: const Icon(Icons.visibility_outlined, size: 18, color: AppColors.lightBlue),
+                  onPressed: onVerDetalle,
+                  tooltip: 'Ver detalle',
                 ),
               ],
             ),
@@ -536,6 +965,274 @@ class _EstadoBadge extends StatelessWidget {
           fontSize: 10.5,
           fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// MODAL "Detalle del Método" — igual al diseño de referencia:
+// datos generales (ID, Nombre, Tipo, Descripción, Permite online)
+// y debajo la lista de "Asignaciones vinculadas", con un botón
+// "Cerrar" fijo en la parte inferior.
+// ============================================================
+class _DetalleMetodoDialog extends StatelessWidget {
+  final MetodoPagoModel metodo;
+
+  const _DetalleMetodoDialog({required this.metodo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 40),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: AppColors.white,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+          maxWidth: 420,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ---- Encabezado ----
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 8, 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Detalle del Método',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(width: 42, height: 3, color: AppColors.gold),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20, color: AppColors.textGrey),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            // ---- Contenido con scroll ----
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 64,
+                        height: 64,
+                        margin: const EdgeInsets.only(bottom: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.iconBg,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(Icons.payments_outlined,
+                            size: 28, color: AppColors.goldDark),
+                      ),
+                    ),
+                    _filaDetalle('ID', '#${metodo.id}'),
+                    _filaDetalle('Nombre', metodo.nombre),
+                    _filaDetalle('Tipo', metodo.tipo),
+                    _filaDetalle('Descripción', metodo.descripcion),
+                    _filaDetalle('Permite online', metodo.permiteOnline ? 'Sí' : 'No',
+                        conDivisor: false),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        const Icon(Icons.link, size: 16, color: AppColors.lightBlue),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Asignaciones vinculadas (${metodo.asignaciones.length})',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.navy,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    if (metodo.asignaciones.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text(
+                          'Sin asignaciones vinculadas.',
+                          style: TextStyle(
+                              fontSize: 12.5,
+                              fontStyle: FontStyle.italic,
+                              color: AppColors.textGrey),
+                        ),
+                      )
+                    else
+                      ...metodo.asignaciones.map(
+                        (a) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _AsignacionTile(asignacion: a),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            // ---- Botón Cerrar fijo ----
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: AppColors.navy,
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () => Navigator.of(context).pop(),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4),
+                    child: Center(
+                      child: Text(
+                        'Cerrar',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _filaDetalle(String label, String valor, {bool conDivisor = true}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          child: Row(
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.navy,
+                ),
+              ),
+              const Spacer(),
+              Flexible(
+                child: Text(
+                  valor,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(fontSize: 12.5, color: AppColors.textDark),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (conDivisor) const Divider(height: 1, color: AppColors.cardBorder),
+      ],
+    );
+  }
+}
+
+// ==================== TARJETA DE ASIGNACIÓN VINCULADA ====================
+class _AsignacionTile extends StatelessWidget {
+  final AsignacionMetodo asignacion;
+
+  const _AsignacionTile({required this.asignacion});
+
+  @override
+  Widget build(BuildContext context) {
+    final esPendiente = asignacion.estado.toLowerCase() == 'pendiente';
+    final colorEstado = esPendiente ? AppColors.olive : AppColors.green;
+    final fondoEstado = esPendiente ? AppColors.oliveBg : AppColors.greenBg;
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.gold, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  '#${asignacion.numero} — ${asignacion.vehiculoId} - ${asignacion.vehiculoNombre}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navy,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: fondoEstado,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  asignacion.estado,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: colorEstado,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Text(
+                asignacion.servicio,
+                style: const TextStyle(fontSize: 11, color: AppColors.textGrey),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Vence ${asignacion.fechaVencimiento}',
+                style: const TextStyle(fontSize: 11, color: AppColors.textGrey),
+              ),
+              const Spacer(),
+              Text(
+                _formatoPesos(asignacion.monto),
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textDark,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -2,39 +2,35 @@ import 'package:flutter/material.dart';
 
 // ==================== PALETA DE COLORES ====================
 class AppColors {
-  static const dorado = Color(0xFFC9962E);
-  static const doradoOscuro = Color(0xFF8C6B2E);
-  static const doradoClaro = Color(0xFFE8C97A);
-  static const doradoMezcla = Color(0xFFAB812E); // punto medio dorado/doradoOscuro
-  static const fondo = Color(0xFFFAF3E4);
+  static const background = Color(0xFFF7EFDD);
+  static const navy = Color(0xFF101B33);
+  static const gold = Color(0xFFC9A24A);
+  static const goldDark = Color(0xFF8A6D1F);
+  static const goldText = Color(0xFFD2A03C);
+  static const lightBlue = Color(0xFF9FB4DE);
+  static const inputBg = Color(0xFFEFE4CB);
+  static const iconBg = Color(0xFFF0E3BE);
+  static const cardBorder = Color(0xFFECE0BD);
 
-  static const navyOscuro = Color(0xFF0F1B2E);
-  static const navyClaro = Color(0xFF16233A);
-  static const subtitulo = Color(0xFF8FA3C4);
+  static const green = Color(0xFF2E9E4E);
+  static const greenBg = Color(0xFFDCF2E3);
+  static const olive = Color(0xFF8B7920);
+  static const oliveBg = Color(0xFFF3ECD2);
+  static const red = Color(0xFFC24555);
+  static const redBg = Color(0xFFF8DCE0);
 
-  static const verde = Color(0xFF2E9E5B);
-  static const verdeFondo = Color(0xFFDDF2E1);
+  // NOTA: este morado NO viene en tu paleta original. Lo agregué
+  // únicamente para el avatar de "Camilo García" porque en tu imagen
+  // de referencia se ve morado y tu paleta no trae ningún tono de
+  // morado. Si prefieres usar solo tus colores originales, cámbialo
+  // por AppColors.navy o AppColors.lightBlue.
+  static const violeta = Color(0xFF7C5CD9);
 
-  static const naranja = Color(0xFFA17A2E);
-  static const naranjaFondo = Color(0xFFF5E3C3);
-
-  static const rojo = Color(0xFFC0293B);
-  static const rojoFondo = Color(0xFFFADCE0);
-
-  static const textoMuted = Color(0xFF6B7280);
-  static const enlace = Color(0xFF2563EB);
-
-  // Alias usados en esta pantalla, ahora apuntando a la paleta nueva.
-  static const background = fondo;
-  static const navy = navyOscuro;
-  static const gold = dorado;
-  static const goldDark = doradoOscuro;
-  static const green = verde;
-  static const greenBg = verdeFondo;
+  // Colores auxiliares que no vienen en la paleta pero se necesitan
+  // para texto general (no son parte del branding, solo legibilidad).
   static const textDark = Color(0xFF111827);
-  static const textGrey = textoMuted;
+  static const textGrey = Color(0xFF6B7280);
   static const white = Colors.white;
-  static const cardBorder = Color(0xFFEFEFF2);
   static const cardShadow = Color(0x14000000);
 }
 
@@ -61,12 +57,12 @@ class EmpleadoModel {
   });
 }
 
-// Colores de avatar tomados de tu paleta (antes eran morado/naranja/
-// rosado genéricos, ahora usan dorado oscuro, azul "enlace" y rojo).
+// Colores de avatar tomados de tu paleta: dorado oscuro y rojo.
+// "Camilo García" usa AppColors.violeta (ver nota arriba).
 final List<EmpleadoModel> empleadosData = [
   const EmpleadoModel(
     initials: 'CG',
-    avatarColor: AppColors.enlace,
+    avatarColor: AppColors.violeta,
     nombre: 'Camilo García',
     cargo: 'Mecánico',
     correo: 'camilo@t4d.com',
@@ -76,7 +72,7 @@ final List<EmpleadoModel> empleadosData = [
   ),
   const EmpleadoModel(
     initials: 'JP',
-    avatarColor: AppColors.doradoOscuro,
+    avatarColor: AppColors.goldDark,
     nombre: 'Juan Pérez',
     cargo: 'Admin',
     correo: 'juan@t4d.com',
@@ -86,7 +82,7 @@ final List<EmpleadoModel> empleadosData = [
   ),
   const EmpleadoModel(
     initials: 'CT',
-    avatarColor: AppColors.rojo,
+    avatarColor: AppColors.red,
     nombre: 'Contadora T4D',
     cargo: 'Contadora',
     correo: 'contadora@gmail.com',
@@ -97,11 +93,47 @@ final List<EmpleadoModel> empleadosData = [
 ];
 
 // ==================== PANTALLA PRINCIPAL ====================
-class EmpleadosScreen extends StatelessWidget {
+class EmpleadosScreen extends StatefulWidget {
   const EmpleadosScreen({super.key});
 
   @override
+  State<EmpleadosScreen> createState() => _EmpleadosScreenState();
+}
+
+class _EmpleadosScreenState extends State<EmpleadosScreen> {
+  final TextEditingController _busquedaCtrl = TextEditingController();
+  String _filtroEstado = 'Todos';
+  bool _filtrosExpandido = true;
+
+  List<EmpleadoModel> get _empleadosFiltrados {
+    final query = _busquedaCtrl.text.trim().toLowerCase();
+    return empleadosData.where((e) {
+      final coincideEstado =
+          _filtroEstado == 'Todos' || e.estado == _filtroEstado;
+      final coincideBusqueda = query.isEmpty ||
+          e.nombre.toLowerCase().contains(query) ||
+          e.cargo.toLowerCase().contains(query);
+      return coincideEstado && coincideBusqueda;
+    }).toList();
+  }
+
+  @override
+  void dispose() {
+    _busquedaCtrl.dispose();
+    super.dispose();
+  }
+
+  void _limpiarFiltros() {
+    setState(() {
+      _busquedaCtrl.clear();
+      _filtroEstado = 'Todos';
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final visibles = _empleadosFiltrados;
+
     return Container(
       color: AppColors.background,
       child: ListView(
@@ -113,10 +145,25 @@ class EmpleadosScreen extends StatelessWidget {
             subtitle: '${empleadosData.length} empleados registrados',
           ),
           const SizedBox(height: 14),
-          ...empleadosData.map((e) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _EmpleadoCard(empleado: e),
-              )),
+          _FiltrosYBusquedaCard(
+            expandido: _filtrosExpandido,
+            onToggleExpandido: () =>
+                setState(() => _filtrosExpandido = !_filtrosExpandido),
+            controladorBusqueda: _busquedaCtrl,
+            onBusquedaChanged: (_) => setState(() {}),
+            filtroEstado: _filtroEstado,
+            onFiltroEstadoChanged: (valor) =>
+                setState(() => _filtroEstado = valor),
+            onLimpiarFiltros: _limpiarFiltros,
+          ),
+          const SizedBox(height: 14),
+          if (visibles.isEmpty)
+            const _SinResultados()
+          else
+            ...visibles.map((e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _EmpleadoCard(empleado: e),
+                )),
         ],
       ),
     );
@@ -125,8 +172,7 @@ class EmpleadosScreen extends StatelessWidget {
 
 // ============================================================
 // TARJETA DE ENCABEZADO ESTILO "HISTORIAL DE PRECIOS"
-// Fondo azul marino oscuro, borde dorado (igual que el botón
-// "Agregar dirección" de Direcciones Cliente), etiqueta dorada,
+// Fondo azul marino oscuro, borde dorado, etiqueta dorada,
 // título blanco y subtítulo azul claro.
 // ============================================================
 class _PageHeaderCard extends StatelessWidget {
@@ -175,11 +221,203 @@ class _PageHeaderCard extends StatelessWidget {
           Text(
             subtitle,
             style: const TextStyle(
-              color: AppColors.subtitulo,
+              color: AppColors.lightBlue,
               fontSize: 12.5,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ============================================================
+// TARJETA "FILTROS Y BÚSQUEDA"
+// Colapsable: header con icono de filtro + chevron. Contiene un
+// buscador (filtra por nombre/cargo) y chips de estado
+// (Todos / Activo / Inactivo), más un enlace "Limpiar filtros".
+// ============================================================
+class _FiltrosYBusquedaCard extends StatelessWidget {
+  final bool expandido;
+  final VoidCallback onToggleExpandido;
+  final TextEditingController controladorBusqueda;
+  final ValueChanged<String> onBusquedaChanged;
+  final String filtroEstado;
+  final ValueChanged<String> onFiltroEstadoChanged;
+  final VoidCallback onLimpiarFiltros;
+
+  const _FiltrosYBusquedaCard({
+    required this.expandido,
+    required this.onToggleExpandido,
+    required this.controladorBusqueda,
+    required this.onBusquedaChanged,
+    required this.filtroEstado,
+    required this.onFiltroEstadoChanged,
+    required this.onLimpiarFiltros,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold, width: 1.2),
+        boxShadow: const [
+          BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: onToggleExpandido,
+            child: Row(
+              children: [
+                const Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.gold),
+                const SizedBox(width: 8),
+                const Text(
+                  'Filtros y Búsqueda',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navy,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  expandido ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  size: 20,
+                  color: AppColors.textGrey,
+                ),
+              ],
+            ),
+          ),
+          if (expandido) ...[
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.inputBg,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: TextField(
+                controller: controladorBusqueda,
+                onChanged: onBusquedaChanged,
+                style: const TextStyle(fontSize: 12.5, color: AppColors.goldDark),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  hintText: 'Buscar por nombre o cargo...',
+                  hintStyle: TextStyle(fontSize: 12.5, color: AppColors.goldDark),
+                  prefixIcon: Icon(Icons.search, size: 18, color: AppColors.goldDark),
+                  prefixIconConstraints: BoxConstraints(minWidth: 40),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _ChipFiltro(
+                  texto: 'Todos',
+                  seleccionado: filtroEstado == 'Todos',
+                  onTap: () => onFiltroEstadoChanged('Todos'),
+                ),
+                _ChipFiltro(
+                  texto: 'Activo',
+                  seleccionado: filtroEstado == 'Activo',
+                  onTap: () => onFiltroEstadoChanged('Activo'),
+                ),
+                _ChipFiltro(
+                  texto: 'Inactivo',
+                  seleccionado: filtroEstado == 'Inactivo',
+                  onTap: () => onFiltroEstadoChanged('Inactivo'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: InkWell(
+                onTap: onLimpiarFiltros,
+                child: const Text(
+                  '\u00D7 Limpiar filtros',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.goldDark,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ChipFiltro extends StatelessWidget {
+  final String texto;
+  final bool seleccionado;
+  final VoidCallback onTap;
+
+  const _ChipFiltro({
+    required this.texto,
+    required this.seleccionado,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: seleccionado ? AppColors.iconBg : AppColors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: seleccionado ? AppColors.gold : AppColors.cardBorder,
+            width: seleccionado ? 1.2 : 1,
+          ),
+        ),
+        child: Text(
+          texto,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: seleccionado ? FontWeight.w700 : FontWeight.w500,
+            color: seleccionado ? AppColors.goldDark : AppColors.textGrey,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SinResultados extends StatelessWidget {
+  const _SinResultados();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cardBorder, width: 1),
+      ),
+      child: const Center(
+        child: Text(
+          'No se encontraron empleados con esos filtros.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12.5, color: AppColors.textGrey),
+        ),
       ),
     );
   }
@@ -213,8 +451,7 @@ class _EstadoBadge extends StatelessWidget {
 }
 
 // Tarjeta de empleado con franja de acento a la izquierda (color del
-// avatar) y borde dorado en todo el cuadro, igual al estilo de
-// Direcciones Cliente / Movimientos Contables.
+// avatar) y borde dorado en todo el cuadro.
 class _EmpleadoCard extends StatelessWidget {
   final EmpleadoModel empleado;
 
@@ -281,7 +518,7 @@ class _EmpleadoCard extends StatelessWidget {
                             empleado.cargo,
                             style: const TextStyle(
                               fontSize: 11.5,
-                              color: AppColors.goldDark,
+                              color: AppColors.goldText,
                               fontWeight: FontWeight.w600,
                             ),
                           ),

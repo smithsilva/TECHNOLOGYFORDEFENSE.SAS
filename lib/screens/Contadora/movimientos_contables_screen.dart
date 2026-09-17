@@ -1,24 +1,35 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 
-// ============================================================
-// PALETA DE COLORES — mismos valores que AppColorsDir (Direcciones
-// Cliente) para que ambas pantallas luzcan exactamente igual.
-// ============================================================
+import 'package:archive/archive.dart';
+import 'package:excel/excel.dart' as xls;
+import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
+
+
 class AppColors {
-  static const dorado = Color(0xFFC9962E);
-  static const doradoOscuro = Color(0xFF8C6B2E);
-  static const doradoClaro = Color(0xFFE8C97A);
-  static const doradoMezcla = Color(0xFFAB812E); // punto medio dorado/doradoOscuro
-  static const fondo = Color(0xFFFAF3E4);
-  static const navyOscuro = Color(0xFF0F1B2E);
-  static const navyClaro = Color(0xFF16233A);
-  static const subtitulo = Color(0xFF8FA3C4);
-  static const verde = Color(0xFF2E9E5B);
-  static const verdeFondo = Color(0xFFDDF2E1);
-  static const naranja = Color(0xFFA17A2E);
-  static const naranjaFondo = Color(0xFFF5E3C3);
-  static const rojo = Color(0xFFC0293B);
-  static const rojoFondo = Color(0xFFFADCE0);
+  static const dorado = Color(0xFFC9A24A); // gold
+  static const doradoOscuro = Color(0xFF8A6D1F); // goldDark
+  static const doradoClaro = Color(0xFFD2A03C); // goldText
+  static const doradoMezcla = Color(0xFFAA8835); // punto medio gold/goldDark
+  static const fondo = Color(0xFFF7EFDD); // background
+  static const navyOscuro = Color(0xFF101B33); // navy
+  static const navyClaro = Color(0xFF17253F); // derivado de navy
+  static const subtitulo = Color(0xFF9FB4DE); // lightBlue
+  static const inputBg = Color(0xFFEFE4CB); // inputBg
+  static const iconBg = Color(0xFFF0E3BE); // iconBg
+  static const cardBorder = Color(0xFFECE0BD); // cardBorder
+
+  static const verde = Color(0xFF2E9E4E); // green
+  static const verdeFondo = Color(0xFFDCF2E3); // greenBg
+  static const naranja = Color(0xFF8B7920); // olive
+  static const naranjaFondo = Color(0xFFF3ECD2); // oliveBg
+  static const rojo = Color(0xFFC24555); // red
+  static const rojoFondo = Color(0xFFF8DCE0); // redBg
+
   static const textoMuted = Color(0xFF6B7280);
   static const enlace = Color(0xFF2563EB);
 
@@ -38,8 +49,6 @@ class MovimientoContable {
   final TipoMovimiento tipo;
   final CategoriaMovimiento categoria;
   final String vehiculoId;
-  // Algunos vehículos no tienen un modelo asociado en los datos de
-  // ejemplo (p. ej. el movimiento #1), por eso es opcional.
   final String? vehiculoNombre;
   final String cliente;
   final String fecha;
@@ -255,9 +264,6 @@ const List<MovimientoContable> movimientosData = [
 // PANTALLA PRINCIPAL
 // ============================================================
 class MovimientosContablesScreen extends StatefulWidget {
-  // Si embedded = true, no dibuja su propio Scaffold/AppBar (se usa
-  // así dentro de main_shell_gerente.dart, igual que la pantalla de
-  // Direcciones Cliente).
   final bool embedded;
 
   const MovimientosContablesScreen({super.key, this.embedded = false});
@@ -271,6 +277,7 @@ class _MovimientosContablesScreenState
     extends State<MovimientosContablesScreen> {
   String _filtroTipo = 'Todos';
   final TextEditingController _searchController = TextEditingController();
+  bool _filtrosExpandido = true;
 
   // ------------------------------------------------------------
   // TODO: Reemplaza esto por tu fetch real a Supabase
@@ -306,9 +313,6 @@ class _MovimientosContablesScreenState
 
   double get _balance => _totalIngresos - _totalEgresos + _totalAjustes;
 
-  // Corregido: antes el signo "-" quedaba después del "$" en los
-  // balances negativos (ej. "$-12.683.998"). Ahora el signo va
-  // siempre antes del símbolo de moneda ("-$12.683.998").
   String _formatoMoneda(double monto) {
     final esNegativo = monto < 0;
     final entero = monto.abs().round();
@@ -322,18 +326,311 @@ class _MovimientosContablesScreenState
     return '$signo\$${buffer.toString()}';
   }
 
-  void _exportar() {
+  void _mostrarMensaje(String texto, {bool esError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text(
-          'Exportando movimientos contables...',
-          style: TextStyle(fontSize: 13),
-        ),
-        backgroundColor: AppColors.encabezado,
+        content: Text(texto, style: const TextStyle(fontSize: 13)),
+        backgroundColor: esError ? AppColors.rojo : AppColors.encabezado,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
+  }
+
+  // ============================================================
+  // EXPORTAR — abre un selector de formato y genera el archivo
+  // ============================================================
+  void _exportar() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Exportar movimientos',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: AppColors.encabezado,
+                  ),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined, color: AppColors.rojo),
+              title: const Text('Exportar como PDF'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _exportarPDF();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.description_outlined, color: AppColors.enlace),
+              title: const Text('Exportar como Word'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _exportarWord();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.table_chart_outlined, color: AppColors.verde),
+              title: const Text('Exportar como Excel'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _exportarExcel();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<List<String>> _filasParaExportar() {
+    return _movimientosFiltrados
+        .map((m) => [
+              m.numero.toString(),
+              m.tipoLabel,
+              m.categoriaLabel,
+              m.vehiculoNombre == null
+                  ? m.vehiculoId
+                  : '${m.vehiculoId} - ${m.vehiculoNombre}',
+              m.cliente,
+              m.fecha,
+              '#${m.mantNumero}',
+              _formatoMoneda(m.monto),
+            ])
+        .toList();
+  }
+
+  Future<void> _exportarPDF() async {
+    try {
+      final pdf = pw.Document();
+      final filas = _filasParaExportar();
+
+      pdf.addPage(
+        pw.MultiPage(
+          build: (context) => [
+            pw.Header(level: 0, text: 'Movimientos Contables'),
+            pw.Text('Ingresos: ${_formatoMoneda(_totalIngresos)}'),
+            pw.Text('Egresos: ${_formatoMoneda(_totalEgresos)}'),
+            pw.Text('Ajustes: ${_formatoMoneda(_totalAjustes)}'),
+            pw.Text('Balance: ${_formatoMoneda(_balance)}'),
+            pw.SizedBox(height: 14),
+            pw.TableHelper.fromTextArray(
+              headers: const [
+                '#',
+                'Tipo',
+                'Categoría',
+                'Vehículo',
+                'Cliente',
+                'Fecha',
+                'Mant.',
+                'Monto'
+              ],
+              data: filas,
+              cellStyle: const pw.TextStyle(fontSize: 8),
+              headerStyle:
+                  pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColor.fromInt(0xFFC9A24A)),
+              cellAlignment: pw.Alignment.centerLeft,
+            ),
+          ],
+        ),
+      );
+
+      await Printing.sharePdf(
+        bytes: await pdf.save(),
+        filename: 'movimientos_contables.pdf',
+      );
+    } catch (e) {
+      _mostrarMensaje('Error al exportar PDF: $e', esError: true);
+    }
+  }
+
+  Future<void> _exportarExcel() async {
+    try {
+      final excel = xls.Excel.createExcel();
+      final nombreHoja = 'Movimientos';
+      final sheet = excel[nombreHoja];
+      excel.setDefaultSheet(nombreHoja);
+      // Elimina la hoja por defecto "Sheet1" si Excel la crea aparte
+      if (excel.sheets.containsKey('Sheet1') && nombreHoja != 'Sheet1') {
+        excel.delete('Sheet1');
+      }
+
+      // La API v4 del paquete `excel` exige que cada celda sea un
+      // CellValue explícito (TextCellValue, IntCellValue,
+      // DoubleCellValue) en vez de un String/int/double "crudo".
+      xls.TextCellValue t(String v) => xls.TextCellValue(v);
+      xls.DoubleCellValue money(double v) => xls.DoubleCellValue(v);
+
+      sheet.appendRow([t('Ingresos'), t(_formatoMoneda(_totalIngresos))]);
+      sheet.appendRow([t('Egresos'), t(_formatoMoneda(_totalEgresos))]);
+      sheet.appendRow([t('Ajustes'), t(_formatoMoneda(_totalAjustes))]);
+      sheet.appendRow([t('Balance'), t(_formatoMoneda(_balance))]);
+      sheet.appendRow(<xls.CellValue?>[]);
+      sheet.appendRow([
+        t('#'),
+        t('Tipo'),
+        t('Categoría'),
+        t('Vehículo'),
+        t('Cliente'),
+        t('Fecha'),
+        t('Mant.'),
+        t('Monto'),
+      ]);
+
+      for (final m in _movimientosFiltrados) {
+        sheet.appendRow([
+          xls.IntCellValue(m.numero),
+          t(m.tipoLabel),
+          t(m.categoriaLabel),
+          t(m.vehiculoNombre == null
+              ? m.vehiculoId
+              : '${m.vehiculoId} - ${m.vehiculoNombre}'),
+          t(m.cliente),
+          t(m.fecha),
+          t('#${m.mantNumero}'),
+          money(m.monto),
+        ]);
+      }
+
+      final bytes = excel.encode();
+      if (bytes == null) throw Exception('No se pudo generar el archivo');
+
+      await Share.shareXFiles([
+        XFile.fromData(
+          Uint8List.fromList(bytes),
+          name: 'movimientos_contables.xlsx',
+          mimeType:
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ),
+      ]);
+    } catch (e) {
+      _mostrarMensaje('Error al exportar Excel: $e', esError: true);
+    }
+  }
+
+  Future<void> _exportarWord() async {
+    try {
+      final bytes = _generarDocxBytes(_movimientosFiltrados);
+      await Share.shareXFiles([
+        XFile.fromData(
+          bytes,
+          name: 'movimientos_contables.docx',
+          mimeType:
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ),
+      ]);
+    } catch (e) {
+      _mostrarMensaje('Error al exportar Word: $e', esError: true);
+    }
+  }
+
+  // Genera un .docx válido a mano (sin plantillas), con el resumen
+  // y una línea de texto por cada movimiento.
+  Uint8List _generarDocxBytes(List<MovimientoContable> movimientos) {
+    String esc(Object valor) => valor
+        .toString()
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&apos;');
+
+    final cuerpo = StringBuffer();
+    cuerpo.writeln(
+        '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="32"/></w:rPr><w:t>Movimientos Contables</w:t></w:r></w:p>');
+    cuerpo.writeln('<w:p/>');
+    cuerpo.writeln(
+        '<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>${esc('Ingresos: ${_formatoMoneda(_totalIngresos)}')}</w:t></w:r></w:p>');
+    cuerpo.writeln(
+        '<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>${esc('Egresos: ${_formatoMoneda(_totalEgresos)}')}</w:t></w:r></w:p>');
+    cuerpo.writeln(
+        '<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>${esc('Ajustes: ${_formatoMoneda(_totalAjustes)}')}</w:t></w:r></w:p>');
+    cuerpo.writeln(
+        '<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>${esc('Balance: ${_formatoMoneda(_balance)}')}</w:t></w:r></w:p>');
+    cuerpo.writeln('<w:p/>');
+
+    for (final m in movimientos) {
+      final vehiculo = m.vehiculoNombre == null
+          ? m.vehiculoId
+          : '${m.vehiculoId} - ${m.vehiculoNombre}';
+      final linea =
+          '#${m.numero} | ${m.tipoLabel} | ${m.categoriaLabel} | Vehículo: $vehiculo | '
+          'Cliente: ${m.cliente} | Fecha: ${m.fecha} | Mant. #${m.mantNumero} | '
+          'Monto: ${_formatoMoneda(m.monto)}';
+      cuerpo.writeln('<w:p><w:r><w:t>${esc(linea)}</w:t></w:r></w:p>');
+    }
+
+    final documentXml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    $cuerpo
+    <w:sectPr/>
+  </w:body>
+</w:document>''';
+
+    const contentTypesXml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+  <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+</Types>''';
+
+    const relsXml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
+</Relationships>''';
+
+    const documentRelsXml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>''';
+
+    const coreXml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>Movimientos Contables</dc:title>
+  <dc:creator>App</dc:creator>
+</cp:coreProperties>''';
+
+    const appXml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">
+  <Application>Flutter</Application>
+</Properties>''';
+
+    final archive = Archive();
+    void addFile(String path, String content) {
+      final data = utf8.encode(content);
+      archive.addFile(ArchiveFile(path, data.length, data));
+    }
+
+    addFile('[Content_Types].xml', contentTypesXml);
+    addFile('_rels/.rels', relsXml);
+    addFile('word/document.xml', documentXml);
+    addFile('word/_rels/document.xml.rels', documentRelsXml);
+    addFile('docProps/core.xml', coreXml);
+    addFile('docProps/app.xml', appXml);
+
+    final zipData = ZipEncoder().encode(archive);
+    if (zipData == null) throw Exception('No se pudo generar el .docx');
+    return Uint8List.fromList(zipData);
   }
 
   // ============================================================
@@ -348,9 +645,13 @@ class _MovimientosContablesScreenState
         const SizedBox(height: 18),
         _buildStatsGrid(),
         const SizedBox(height: 18),
-        _buildSearchBar(),
-        const SizedBox(height: 14),
-        _buildFiltros(),
+        _buildFiltrosHeader(),
+        if (_filtrosExpandido) ...[
+          const SizedBox(height: 10),
+          _buildSearchBar(),
+          const SizedBox(height: 14),
+          _buildFiltros(),
+        ],
         const SizedBox(height: 16),
         Text(
           '${_movimientosFiltrados.length} movimientos',
@@ -389,24 +690,12 @@ class _MovimientosContablesScreenState
     if (widget.embedded) {
       return _buildContent(context);
     }
-
-    // Ya no dibuja su propio AppBar/header ("BIENVENIDO / Movimientos
-    // Contables"): la pantalla principal no lo necesita, así que
-    // solo se muestra el contenido (el cuadro navy con el título ya
-    // cumple esa función).
     return Scaffold(
       backgroundColor: AppColors.fondo,
       body: SafeArea(child: _buildContent(context)),
     );
   }
 
-  // ------------------------------------------------------------
-  // CUADRO NAVY "Movimientos Contables" — MISMOS colores y estilo
-  // que el cuadro "Direcciones del cliente": fondo navyOscuro,
-  // borde dorado 1.2, radio 14, mismas tipografías. El botón
-  // "Exportar" usa exactamente los mismos colores que el botón
-  // "Agregar dirección" (fondo dorado, texto/ícono navy).
-  // ------------------------------------------------------------
   Widget _buildTituloYExportar() {
     return Container(
       width: double.infinity,
@@ -450,13 +739,6 @@ class _MovimientosContablesScreenState
                     height: 1.35,
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Row(
-                  children: [
-                    Icon(Icons.star_rounded, size: 16, color: AppColors.dorado),
-                    Icon(Icons.star_rounded, size: 16, color: AppColors.dorado),
-                  ],
-                ),
               ],
             ),
           ),
@@ -471,10 +753,6 @@ class _MovimientosContablesScreenState
     );
   }
 
-  // ------------------------------------------------------------
-  // GRID DE ESTADÍSTICAS 2x2 — bordes dorados en todo el cuadro,
-  // con una franja de color a la izquierda según el tipo.
-  // ------------------------------------------------------------
   Widget _buildStatsGrid() {
     return Column(
       children: [
@@ -522,15 +800,44 @@ class _MovimientosContablesScreenState
     );
   }
 
-  // ------------------------------------------------------------
-  // BUSCADOR — borde dorado, mismo estilo que Direcciones Cliente
-  // ------------------------------------------------------------
+  Widget _buildFiltrosHeader() {
+    return InkWell(
+      onTap: () => setState(() => _filtrosExpandido = !_filtrosExpandido),
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        children: [
+          const Icon(Icons.filter_alt_outlined, size: 17, color: AppColors.dorado),
+          const SizedBox(width: 6),
+          const Expanded(
+            child: Text(
+              'Filtros y Búsqueda',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppColors.encabezado,
+              ),
+            ),
+          ),
+          AnimatedRotation(
+            turns: _filtrosExpandido ? 0.5 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 20,
+              color: AppColors.dorado,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSearchBar() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.inputBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.dorado, width: 1.2),
+        border: Border.all(color: AppColors.cardBorder, width: 1.2),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: TextField(
@@ -548,9 +855,6 @@ class _MovimientosContablesScreenState
     );
   }
 
-  // ------------------------------------------------------------
-  // FILTROS Todos / Egreso / Ingreso — bordes dorados
-  // ------------------------------------------------------------
   Widget _buildFiltros() {
     final opciones = ['Todos', 'Egreso', 'Ingreso'];
     return Row(
@@ -589,10 +893,6 @@ class _MovimientosContablesScreenState
     );
   }
 
-  // ------------------------------------------------------------
-  // TARJETA DE MOVIMIENTO — borde dorado en todo el cuadro más una
-  // franja de color a la izquierda según el tipo (rojo/verde).
-  // ------------------------------------------------------------
   Widget _buildMovimientoCard(MovimientoContable m) {
     final esEgreso = m.tipo == TipoMovimiento.egreso;
     final colorTipo = esEgreso
@@ -609,9 +909,9 @@ class _MovimientosContablesScreenState
           color: Colors.white,
           border: Border(
             left: BorderSide(color: colorTipo, width: 4),
-            top: BorderSide(color: AppColors.dorado, width: 1.2),
-            right: BorderSide(color: AppColors.dorado, width: 1.2),
-            bottom: BorderSide(color: AppColors.dorado, width: 1.2),
+            top: const BorderSide(color: AppColors.cardBorder, width: 1.2),
+            right: const BorderSide(color: AppColors.cardBorder, width: 1.2),
+            bottom: const BorderSide(color: AppColors.cardBorder, width: 1.2),
           ),
         ),
         padding: const EdgeInsets.all(14),
@@ -727,7 +1027,6 @@ class _MovimientosContablesScreenState
     );
   }
 
-  // Íconos por categoría.
   Widget _iconoCategoria(CategoriaMovimiento categoria, Color fondo) {
     IconData icono;
     switch (categoria) {
@@ -755,8 +1054,6 @@ class _MovimientosContablesScreenState
 
 // ==================== WIDGETS AUXILIARES ====================
 
-// Botón dorado — MISMOS colores/tamaños que "Agregar dirección" en
-// Direcciones Cliente (fondo dorado, texto/ícono navy).
 class _GoldButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -795,8 +1092,6 @@ class _GoldButton extends StatelessWidget {
   }
 }
 
-// Tarjeta de estadística — borde dorado completo + franja de color
-// a la izquierda según el tipo de dato que muestra.
 class _StatCard extends StatelessWidget {
   final String label;
   final String valor;
@@ -819,9 +1114,9 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border(
           left: BorderSide(color: colorAcento, width: 4),
-          top: BorderSide(color: AppColors.dorado, width: 1.2),
-          right: BorderSide(color: AppColors.dorado, width: 1.2),
-          bottom: BorderSide(color: AppColors.dorado, width: 1.2),
+          top: const BorderSide(color: AppColors.cardBorder, width: 1.2),
+          right: const BorderSide(color: AppColors.cardBorder, width: 1.2),
+          bottom: const BorderSide(color: AppColors.cardBorder, width: 1.2),
         ),
         boxShadow: [
           BoxShadow(
@@ -851,6 +1146,30 @@ class _StatCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ============================================================
+// DEMO STANDALONE — flutter run
+// ============================================================
+void main() {
+  runApp(const _DemoApp());
+}
+
+class _DemoApp extends StatelessWidget {
+  const _DemoApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Movimientos Contables',
+      theme: ThemeData(
+        scaffoldBackgroundColor: AppColors.fondo,
+        fontFamily: 'Roboto',
+      ),
+      home: const MovimientosContablesScreen(),
     );
   }
 }

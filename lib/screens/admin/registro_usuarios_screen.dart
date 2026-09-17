@@ -1,5 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-// import '../services/usuarios_service.dart'; // ← lo conectas cuando pases de mock a datos reales
+import '../../services/usuarios_service.dart';
 
 class AppColors {
   static const dorado = Color(0xFFD4A743);
@@ -29,6 +30,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _correoCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmarCtrl = TextEditingController();
+  final _codigoCtrl = TextEditingController();
+
+  final _usuariosService = UsuariosService();
 
   String? _rolSeleccionado;
   bool _passVisible = false;
@@ -36,12 +40,20 @@ class _RegistroScreenState extends State<RegistroScreen> {
   bool _guardando = false;
   bool _reenviando = false;
 
+  // Mapea el valor visual del rol al id_rol que espera el backend
+  // (según tus datos: Admin=1, Contador=2, Gerente=3, Mecanico=4)
   static const _roles = [
-    {'valor': 'admin', 'label': 'Admin'},
-    {'valor': 'contador', 'label': 'Contador'},
-    {'valor': 'gerente', 'label': 'Gerente'},
-    {'valor': 'mecanico', 'label': 'Mecanico'},
+    {'valor': 'admin', 'label': 'Admin', 'id_rol': 1},
+    {'valor': 'contador', 'label': 'Contador', 'id_rol': 2},
+    {'valor': 'gerente', 'label': 'Gerente', 'id_rol': 3},
+    {'valor': 'mecanico', 'label': 'Mecanico', 'id_rol': 4},
   ];
+
+  int? get _idRolSeleccionado {
+    if (_rolSeleccionado == null) return null;
+    return _roles.firstWhere((r) => r['valor'] == _rolSeleccionado)['id_rol']
+        as int;
+  }
 
   @override
   void dispose() {
@@ -49,6 +61,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _correoCtrl.dispose();
     _passCtrl.dispose();
     _confirmarCtrl.dispose();
+    _codigoCtrl.dispose();
     super.dispose();
   }
 
@@ -77,6 +90,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
     return null;
   }
 
+  String? _validarCodigo(String? valor) {
+    if (valor == null || valor.trim().isEmpty) return 'El código es obligatorio';
+    return null;
+  }
+
   Future<void> _registrar() async {
     final formValido = _formKey.currentState!.validate();
     if (!formValido || _rolSeleccionado == null) {
@@ -86,33 +104,92 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
     setState(() => _guardando = true);
 
-    // TODO: reemplazar por la llamada real, por ejemplo:
-    // await UsuariosService().crear(
-    //   nombre: _nombreCtrl.text.trim(),
-    //   correo: _correoCtrl.text.trim(),
-    //   password: _passCtrl.text,
-    //   rol: _rolSeleccionado!,
-    // );
-    await Future.delayed(const Duration(milliseconds: 600));
+    try {
+      await _usuariosService.crearUsuario(
+        username: _nombreCtrl.text.trim(),
+        email: _correoCtrl.text.trim(),
+        password: _passCtrl.text,
+        idRol: _idRolSeleccionado!,
+        codigo: _codigoCtrl.text.trim(),
+      );
 
-    if (!mounted) return;
-    setState(() => _guardando = false);
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Usuario "${_nombreCtrl.text.trim()}" registrado correctamente')),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Usuario "${_nombreCtrl.text.trim()}" registrado correctamente'),
+          backgroundColor: Colors.green.shade700,
+        ),
+      );
 
-    _formKey.currentState!.reset();
-    _nombreCtrl.clear();
-    _correoCtrl.clear();
-    _passCtrl.clear();
-    _confirmarCtrl.clear();
-    setState(() => _rolSeleccionado = null);
+      _formKey.currentState!.reset();
+      _nombreCtrl.clear();
+      _correoCtrl.clear();
+      _passCtrl.clear();
+      _confirmarCtrl.clear();
+      _codigoCtrl.clear();
+      setState(() => _rolSeleccionado = null);
+    } catch (e) {
+      // Imprime el error completo en la consola de Flutter (Debug Console / terminal)
+      debugPrint('❌ ERROR AL REGISTRAR USUARIO: $e');
+
+      if (!mounted) return;
+
+      final mensaje = _mensajeAmigable(e);
+
+      // Muestra el error en un diálogo que NO desaparece solo,
+      // para que puedas leerlo completo y copiarlo.
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Error al registrar'),
+          content: SingleChildScrollView(
+            child: Text(mensaje),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
+  }
+
+  /// Convierte la excepción cruda del backend (que viene como
+  /// "Error al crear usuario (400): {"error":"..."}") en un mensaje
+  /// legible para el usuario final.
+  String _mensajeAmigable(Object e) {
+    final texto = e.toString();
+
+    // Intenta extraer el JSON que viene después del código de estado.
+    final indice = texto.indexOf('{');
+    if (indice != -1) {
+      try {
+        final jsonStr = texto.substring(indice);
+        final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+        final errorBackend = (data['error'] ?? '').toString();
+
+        if (errorBackend.toLowerCase().contains('already been registered')) {
+          return 'Ya existe un usuario registrado con ese correo electrónico.';
+        }
+        if (errorBackend.isNotEmpty) {
+          return errorBackend;
+        }
+      } catch (_) {
+        // Si no se pudo parsear el JSON, cae al mensaje genérico de abajo.
+      }
+    }
+
+    return 'Ocurrió un error al registrar el usuario. Intenta nuevamente.';
   }
 
   // ---------------------------------------------------------
-  // NUEVO: botón "Reenviar Credenciales" — no existía en tu código
-  // original. Placeholder hasta que tengas el endpoint real, ej:
+  // Botón "Reenviar Credenciales" — placeholder hasta que tengas
+  // el endpoint real, ej:
   // await UsuariosService().reenviarCredenciales(correo: ...);
   // ---------------------------------------------------------
   Future<void> _reenviarCredenciales() async {
@@ -201,7 +278,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
         ),
         child: Stack(
           children: [
-            // Círculo decorativo, igual al de la captura
             Positioned(
               right: -20,
               top: -30,
@@ -309,6 +385,16 @@ class _RegistroScreenState extends State<RegistroScreen> {
             ),
             const SizedBox(height: 14),
 
+            _labelRequerido('Código de Usuario'),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _codigoCtrl,
+              keyboardType: TextInputType.number,
+              decoration: _decoracion('Ej: 123456', Icons.badge_outlined),
+              validator: _validarCodigo,
+            ),
+            const SizedBox(height: 14),
+
             // Contraseña / Confirmar en fila
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,7 +462,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     padding: const EdgeInsets.only(right: 6),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(10),
-                      onTap: () => setState(() => _rolSeleccionado = r['valor']),
+                      onTap: () => setState(() => _rolSeleccionado = r['valor'] as String),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         alignment: Alignment.center,
@@ -389,7 +475,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                           ),
                         ),
                         child: Text(
-                          r['label']!,
+                          r['label'] as String,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 12,

@@ -2,16 +2,17 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  // URL activa (cambia según el entorno en el que estés probando)
-  static const String apiUrl = wifiApiUrl;
+  // Servidor por Wi-Fi
+  static const String wifiApiUrl = 'http://192.168.137.1:5000';
+
+  // Servidor mediante USB + adb reverse (o navegador en el mismo PC)
+  static const String usbApiUrl = 'http://localhost:5000';
+
+
+  // Para usar en el navegador del mismo PC donde corre el backend:
+  static const String apiUrl = usbApiUrl;
 
   static const String apiKey = 'pollo';
-
-  // Servidor por Wi-Fi
-  static const String wifiApiUrl = 'http://192.168.2.7:5000';
-
-  // Servidor mediante USB + adb reverse
-  static const String usbApiUrl = 'http://localhost:5000';
 
   Future<Map<String, dynamic>> login({
     required String email,
@@ -36,6 +37,58 @@ class AuthService {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
         data['error']?.toString() ?? 'Error al iniciar sesión',
+      );
+    }
+
+    return data;
+  }
+
+  Future<Map<String, dynamic>> forgotPassword({
+    required String email,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$apiUrl/auth/forgot-password'),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+      },
+      body: jsonEncode({
+        'email': email,
+      }),
+    );
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        data['error']?.toString() ?? 'No se pudo solicitar la recuperación',
+      );
+    }
+
+    return data;
+  }
+
+  Future<Map<String, dynamic>> resetPassword({
+    required String token,
+    required String nuevaPassword,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$apiUrl/auth/reset-password'),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+      },
+      body: jsonEncode({
+        'token': token,
+        'nuevaPassword': nuevaPassword,
+      }),
+    );
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        data['error']?.toString() ?? 'No se pudo restablecer la contraseña',
       );
     }
 

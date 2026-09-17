@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'auth_service.dart';
-import '../models/proveedores_service.dart';
+import '../models/proveedor.dart';
 
 /// Servicio para consumir la API de proveedores.
 /// Misma URL base, API key y token JWT que el resto de servicios.
@@ -91,7 +91,9 @@ class ProveedoresService {
       String mensaje = 'Error en la solicitud (${response.statusCode})';
       try {
         final body = jsonDecode(response.body);
-        mensaje = body['error']?.toString() ?? mensaje;
+        // El backend devuelve { mensaje: error.message }; algunos endpoints
+        // antiguos usan { error: '...' } — cubrimos ambos.
+        mensaje = (body['mensaje'] ?? body['error'])?.toString() ?? mensaje;
       } catch (_) {
         // el body no era JSON, se deja el mensaje genérico
       }

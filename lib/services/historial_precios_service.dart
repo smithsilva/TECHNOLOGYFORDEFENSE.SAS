@@ -170,7 +170,7 @@ class HistorialPreciosService {
         final body = jsonDecode(response.body);
         mensaje = body['error']?.toString() ?? mensaje;
       } catch (_) {
-        // el body no era JSON, se deja el mensaje genérico
+        // el cuerpo no era JSON, se deja el mensaje genérico
       }
       throw Exception(mensaje);
     }

@@ -1,24 +1,22 @@
+
 import 'package:flutter/material.dart';
 
 import '../../widgets/t4d_sidebar.dart';
 import '../../widgets/contadora/contadora_appbar.dart';
 import '../../widgets/admin/notificaciones_bottom_sheet.dart';
+
 import '../admin/notificaciones_screen.dart' hide AppColors;
-import 'inventario_contadora_screen.dart' hide AppColors; // -> class InventarioContadoraScreen
-import 'Movimientos_Contables_screen.dart' hide AppColors; // ->  class movimientos_contables
-import 'Metodos pago screen.dart' hide AppColors; // -> class MetodosPagoScreen
-import 'Historial precios screen.dart' hide AppColors; // -> class HistorialPreciosScreen
-import 'Proveedores screen.dart' hide AppColors; // -> class ProveedoresScreen
-import 'Empleados screen.dart' hide AppColors; // -> class EmpleadosScreen
-import 'Sucursales screen.dart' hide AppColors; // -> class SucursalesScreen
-import 'Reportes screen.dart' hide AppColors; // -> class ReportesFinancierosScreen
-
-
+import 'inventario_contadora_screen.dart' hide AppColors;
+import 'Movimientos_Contables_screen.dart' hide AppColors;
+import 'Metodos pago screen.dart' hide AppColors;
+import 'Historial precios screen.dart' hide AppColors;
+import 'Proveedores screen.dart' hide AppColors;
+import 'Empleados screen.dart' hide AppColors;
+import 'Sucursales screen.dart' hide AppColors;
+import 'Reportes screen.dart' hide AppColors;
 
 class MainShellContadora extends StatefulWidget {
   final Map<String, dynamic>? usuario;
-
-  /// Se recibe desde main.dart: limpia SharedPreferences y navega al login.
   final VoidCallback? onLogout;
 
   const MainShellContadora({
@@ -34,63 +32,203 @@ class MainShellContadora extends StatefulWidget {
 class _MainShellContadoraState extends State<MainShellContadora> {
   int _indiceActual = 0;
 
-  // Por debajo de este ancho (en píxeles lógicos) el sidebar se
-  // convierte en un drawer deslizable en vez de quedar fijo.
   static const double _breakpointEscritorio = 900;
 
   static const List<T4DMenuItem> _menu = [
-    T4DMenuItem(icon: Icons.inventory_2_outlined, label: 'Inventario'),
-    T4DMenuItem(icon: Icons.account_balance_wallet_outlined, label: 'Movimientos contables'),
-    T4DMenuItem(icon: Icons.payments_outlined, label: 'Métodos de pago'),
-    T4DMenuItem(icon: Icons.history_rounded, label: 'Historial de precios'),
-    T4DMenuItem(icon: Icons.local_shipping_outlined, label: 'Proveedores'),
-    T4DMenuItem(icon: Icons.badge_outlined, label: 'Empleados'),
-    T4DMenuItem(icon: Icons.store_outlined, label: 'Sucursales'),
-    T4DMenuItem(icon: Icons.bar_chart_rounded, label: 'Reportes'),
-    
-    
+    T4DMenuItem(
+      icon: Icons.inventory_2_outlined,
+      label: 'Inventario',
+    ),
+    T4DMenuItem(
+      icon: Icons.account_balance_wallet_outlined,
+      label: 'Movimientos contables',
+    ),
+    T4DMenuItem(
+      icon: Icons.payments_outlined,
+      label: 'Métodos de pago',
+    ),
+    T4DMenuItem(
+      icon: Icons.history_rounded,
+      label: 'Historial de precios',
+    ),
+    T4DMenuItem(
+      icon: Icons.local_shipping_outlined,
+      label: 'Proveedores',
+    ),
+    T4DMenuItem(
+      icon: Icons.badge_outlined,
+      label: 'Empleados',
+    ),
+    T4DMenuItem(
+      icon: Icons.store_outlined,
+      label: 'Sucursales',
+    ),
+    T4DMenuItem(
+      icon: Icons.bar_chart_rounded,
+      label: 'Reportes',
+    ),
   ];
 
-  // El orden debe coincidir 1 a 1 con _menu de arriba.
-  //
-  // FIX: HistorialPreciosScreen no estaba recibiendo `usuario`, por lo
-  // que dentro de esa pantalla `widget.usuario` era null, `rolCrudo`
-  // quedaba como cadena vacía y `esSoloLectura` daba `false` — la
-  // Contadora veía el botón de eliminar igual que el Admin. Se agrega
-  // `usuario: widget.usuario` (y se quita el `const`, ya que ahora
-  // recibe un valor que no es constante en tiempo de compilación).
-  late final List<Widget> _pantallas = [
-    InventarioContadoraScreen(usuario: widget.usuario),
-    const MovimientosContablesScreen(),
-    const MetodosPagoScreen(),
-    HistorialPreciosScreen(usuario: widget.usuario),
-    const ProveedoresScreen(),
-    const EmpleadosScreen(),
-    const SucursalesScreen(),
-    const ReportesScreen(),
-  ];
+  List<Widget> _crearPantallas() {
+    return [
+      InventarioContadoraScreen(
+        usuario: widget.usuario,
+      ),
 
-  void _cerrarSesion() {
-    // Usa el callback centralizado en main.dart (limpia SharedPreferences
-    // y vuelve a la vista 'login'), igual que MainShell y MainShellGerente.
-    widget.onLogout?.call();
+      const MovimientosContablesScreen(),
+
+      const MetodosPagoScreen(),
+
+      HistorialPreciosScreen(
+        usuario: widget.usuario,
+      ),
+
+      const ProveedoresScreen(),
+
+      const EmpleadosScreen(),
+
+      const SucursalesScreen(),
+
+      ReportesContadoraScreen(
+        usuario: widget.usuario,
+      ),
+    ];
   }
 
-  // Contadora no tiene pestaña propia de "Notificaciones" en el sidebar,
-  // así que "Ver todas" dentro del bottom sheet abre la pantalla completa
-  // encima (reutilizando la misma NotificacionesScreen de Admin).
+  void _cerrarSesion() {
+    if (widget.onLogout != null) {
+      widget.onLogout!();
+    } else {
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/login',
+        (route) => false,
+      );
+    }
+  }
+
   void _abrirNotificacionesCompleto() {
-    Navigator.push(
-      context,
+    Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => Scaffold(
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF13161F),
-            foregroundColor: Colors.white,
-            title: const Text('Notificaciones'),
+        builder: (context) {
+          return Scaffold(
+            appBar: AppBar(
+              backgroundColor: const Color(0xFF13161F),
+              foregroundColor: Colors.white,
+              title: const Text(
+                'Notificaciones',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            body: NotificacionesScreen(
+              usuario: widget.usuario,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _seleccionarMenu(
+    int index, {
+    bool cerrarDrawer = false,
+  }) {
+    if (index < 0 || index >= _menu.length) {
+      return;
+    }
+
+    setState(() {
+      _indiceActual = index;
+    });
+
+    if (cerrarDrawer && mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Widget _construirSidebar({
+    bool dentroDeDrawer = false,
+  }) {
+    final nombre = widget.usuario?['username'] ??
+        widget.usuario?['nombre'] ??
+        'Contadora';
+
+    final email = widget.usuario?['email'] ?? '';
+
+    return T4DSidebar(
+      userName: nombre.toString(),
+      userEmail: email.toString(),
+      menuItems: _menu,
+      selectedIndex: _indiceActual,
+      onItemSelected: (index) {
+        _seleccionarMenu(
+          index,
+          cerrarDrawer: dentroDeDrawer,
+        );
+      },
+      onLogout: _cerrarSesion,
+    );
+  }
+
+  Widget _construirContenido() {
+    return IndexedStack(
+      index: _indiceActual,
+      children: _crearPantallas(),
+    );
+  }
+
+  Widget _construirEncabezadoEscritorio() {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 24,
+        vertical: 16,
+      ),
+      color: const Color(0xFF13161F),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'BIENVENIDO',
+                  style: TextStyle(
+                    color: Color(0xFFE0A93B),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  _menu[_indiceActual].label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
-          body: NotificacionesScreen(usuario: widget.usuario),
-        ),
+          IconButton(
+            tooltip: 'Notificaciones',
+            icon: const Icon(
+              Icons.notifications_none,
+              color: Colors.white,
+            ),
+            onPressed: () {
+              mostrarNotificacionesBottomSheet(
+                context,
+                onVerTodas: _abrirNotificacionesCompleto,
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -101,89 +239,32 @@ class _MainShellContadoraState extends State<MainShellContadora> {
         widget.usuario?['nombre'] ??
         'Contadora';
 
-    final email = widget.usuario?['email'] ?? '';
-
     return LayoutBuilder(
       builder: (context, constraints) {
-        final esEscritorio = constraints.maxWidth >= _breakpointEscritorio;
+        final bool esEscritorio =
+            constraints.maxWidth >= _breakpointEscritorio;
 
-        Widget sidebar({bool dentroDeDrawer = false}) {
-          return T4DSidebar(
-            userName: nombre,
-            userEmail: email,
-            menuItems: _menu,
-            selectedIndex: _indiceActual,
-            onItemSelected: (index) {
-              setState(() => _indiceActual = index);
-              if (dentroDeDrawer) {
-                Navigator.of(context).pop();
-              }
-            },
-            onLogout: _cerrarSesion,
-          );
-        }
+        final contenido = _construirContenido();
 
-        final contenido = IndexedStack(
-          index: _indiceActual,
-          children: _pantallas,
-        );
+        // ============================================================
+        // ESCRITORIO / TABLET GRANDE
+        // ============================================================
 
-        // -------- ESCRITORIO / TABLET: sidebar fijo al costado --------
         if (esEscritorio) {
           return Scaffold(
             backgroundColor: const Color(0xFFF7F0E1),
             body: Row(
               children: [
-                sidebar(),
+                _construirSidebar(),
+
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        ),
-                        color: const Color(0xFF13161F),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text(
-                                    'BIENVENIDO',
-                                    style: TextStyle(
-                                      color: Color(0xFFE0A93B),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.6,
-                                    ),
-                                  ),
-                                  Text(
-                                    _menu[_indiceActual].label,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.notifications_none,
-                                  color: Colors.white),
-                              onPressed: () => mostrarNotificacionesBottomSheet(
-                                context,
-                                onVerTodas: _abrirNotificacionesCompleto,
-                              ),
-                            ),
-                          ],
-                        ),
+                      _construirEncabezadoEscritorio(),
+                      Expanded(
+                        child: contenido,
                       ),
-                      Expanded(child: contenido),
                     ],
                   ),
                 ),
@@ -192,24 +273,35 @@ class _MainShellContadoraState extends State<MainShellContadora> {
           );
         }
 
-        // -------- MÓVIL: sidebar como drawer, contenido a todo el ancho --------
+        // ============================================================
+        // MÓVIL / TABLET
+        // ============================================================
+
         return Scaffold(
           backgroundColor: const Color(0xFFF7F0E1),
+
           appBar: ContadoraAppBar(
             titulo: _menu[_indiceActual].label,
             nombreUsuario: nombre.toString(),
-            onNotificationsTap: () => mostrarNotificacionesBottomSheet(
-              context,
-              onVerTodas: _abrirNotificacionesCompleto,
-            ),
+            onNotificationsTap: () {
+              mostrarNotificacionesBottomSheet(
+                context,
+                onVerTodas: _abrirNotificacionesCompleto,
+              );
+            },
           ),
+
           drawer: Drawer(
             backgroundColor: Colors.transparent,
-            child: sidebar(dentroDeDrawer: true),
+            child: _construirSidebar(
+              dentroDeDrawer: true,
+            ),
           ),
+
           body: contenido,
         );
       },
     );
   }
 }
+

@@ -5,7 +5,7 @@ import 'package:app_t4d/widgets/compartido/producto_card.dart';
 import '../../services/inventario_service.dart';
 import '../../models/categoria.dart';
 import '../../services/categorias_service.dart';
-import '../../models/proveedores_service.dart';
+import '../../models/proveedor.dart';
 import '../../services/proveedores_service.dart';
 import '../../models/sucursal.dart';
 import '../../services/sucursales_service.dart';
