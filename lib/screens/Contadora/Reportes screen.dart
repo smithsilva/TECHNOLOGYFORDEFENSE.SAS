@@ -20,17 +20,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
  
-// import '../services/reportes_service.dart'; // ← conéctalo cuando pases de mock a datos reales
-// Endpoint sugerido ya existente en tu backend: GET /reportes/financiero/balance
- 
-// ============================================================================
-// PALETA DE COLORES
-// ----------------------------------------------------------------------------
-// Si ya tienes una clase AppColors en tu proyecto (por ejemplo la que usa tu
-// ReportesScreen de Admin), BORRA este bloque completo y en su lugar importa
-// ese archivo: import '../../shared/app_colors.dart';
-// Los valores de aquí son idénticos a los que ya usas, para que se vea igual.
-// ============================================================================
+
 class AppColors {
   static const dorado = Color(0xFFD4A743);
   static const doradoOscuro = Color(0xFF8C6B3F);

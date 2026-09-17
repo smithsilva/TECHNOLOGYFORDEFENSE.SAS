@@ -147,31 +147,45 @@ class PanelDrawer extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 children: _items.map((item) {
                   final activo = seccionActiva == item['key'];
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                    decoration: BoxDecoration(
+                  // ─── FIX: antes esto era un Container con color de fondo
+                  // envolviendo directo al ListTile. El ListTile pinta su
+                  // fondo e ink splashes sobre el Material ancestro más
+                  // cercano, no sobre un DecoratedBox/Container, así que ese
+                  // color y el ripple del tap quedaban invisibles (el warning
+                  // "ListTile background color or ink splashes may be
+                  // invisible" que tirába Flutter en cada item del menú).
+                  // Se reemplaza el Container por Padding (solo para el
+                  // margen) + Material (para el color de fondo), y se le
+                  // agrega `shape` al ListTile para que el ripple respete
+                  // las esquinas redondeadas.
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                    child: Material(
                       color: activo ? AppColors.dorado : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: ListTile(
-                      dense: true,
-                      leading: Icon(
-                        item['icon'] as IconData,
-                        size: 20,
-                        color: activo ? AppColors.navy : Colors.white70,
-                      ),
-                      title: Text(
-                        item['label'] as String,
-                        style: TextStyle(
-                          color: activo ? AppColors.navy : Colors.white,
-                          fontWeight: activo ? FontWeight.bold : FontWeight.w500,
-                          fontSize: 13,
+                      child: ListTile(
+                        dense: true,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
+                        leading: Icon(
+                          item['icon'] as IconData,
+                          size: 20,
+                          color: activo ? AppColors.navy : Colors.white70,
+                        ),
+                        title: Text(
+                          item['label'] as String,
+                          style: TextStyle(
+                            color: activo ? AppColors.navy : Colors.white,
+                            fontWeight: activo ? FontWeight.bold : FontWeight.w500,
+                            fontSize: 13,
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          onSeleccionar(item['key'] as String);
+                        },
                       ),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        onSeleccionar(item['key'] as String);
-                      },
                     ),
                   );
                 }).toList(),

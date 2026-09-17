@@ -1,35 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/historial_precio.dart';
-import '../../models/producto.dart';
 import '../../services/historial_precios_service.dart';
 
-// ==================== COLORES ====================
 class AppColors {
-  static const background = Color(0xFFF7EFDD);
-  static const navy = Color(0xFF101B33);
-  static const gold = Color(0xFFC9A24A);
-  static const goldDark = Color(0xFF8A6D1F);
-  static const goldText = Color(0xFFD2A03C);
-  static const lightBlue = Color(0xFF9FB4DE);
-  static const inputBg = Color(0xFFEFE4CB);
-  static const iconBg = Color(0xFFF0E3BE);
-  static const cardBorder = Color(0xFFECE0BD);
-
-  static const green = Color(0xFF2E9E4E);
-  static const greenBg = Color(0xFFDCF2E3);
-  static const olive = Color(0xFF8B7920);
-  static const oliveBg = Color(0xFFF3ECD2);
-  static const red = Color(0xFFC24555);
-  static const redBg = Color(0xFFF8DCE0);
+  static const dorado = Color(0xFFD4A743);
+  static const doradoOscuro = Color(0xFF8C6B3F);
+  static const doradoClaro = Color(0xFFE7C98A);
+  static const fondo = Color(0xFFF7F1E3);
+  static const navyOscuro = Color(0xFF0F1B2E);
+  static const navyClaro = Color(0xFF16233A);
+  static const verde = Color(0xFF1F9D55);
+  static const verdeFondo = Color(0xFFE3F7E9);
+  static const rojo = Color(0xFFC0392B);
+  static const rojoFondo = Color(0xFFFBE2DF);
+  static const gris = Color(0xFF6B7280);
+  static const grisFondo = Color(0xFFF0F0F0);
+  static const textoMuted = Color(0xFF6B7280);
 }
 
-/// Historial de precios.
-/// Muestra el historial real de cambios de precio de cada producto. La
-/// única acción de edición disponible es "Actualizar precio" de un
-/// producto (llama a editarProducto con precioNuevo + motivo), accesible
-/// desde el detalle de cada registro. No permite eliminar registros ni
-/// editar el nombre del producto.
 class HistorialPreciosScreen extends StatefulWidget {
   final Map<String, dynamic>? usuario;
 
@@ -43,14 +32,17 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   final TextEditingController _busquedaCtrl = TextEditingController();
   final HistorialPreciosService _service = HistorialPreciosService();
 
+  String _filtroVariacion = 'todos'; // todos | aumento | reduccion | sin_cambio
   DateTime? _fechaFiltro;
   bool _cargando = false;
-  bool _filtrosExpandidos = true;
+  bool _filtrosAbiertos = true;
   String? _error;
 
   List<HistorialPrecio> _registros = [];
-  List<Producto> _productosDisponibles = [];
 
+  /// El token se guarda por separado en SharedPreferences durante el login
+  /// (ver login_screen.dart: prefs.setString('token', token)), NO dentro
+  /// del mapa `usuario`. Por eso se obtiene aquí de forma asíncrona.
   Future<String?> _obtenerToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('token');
@@ -60,7 +52,6 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   void initState() {
     super.initState();
     _cargarRegistros();
-    _cargarProductos(); // no bloqueante, para el selector del formulario
   }
 
   @override
@@ -69,6 +60,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     super.dispose();
   }
 
+  /// Carga el historial real desde el backend.
   Future<void> _cargarRegistros() async {
     final token = await _obtenerToken();
 
@@ -77,6 +69,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
         _error = 'No se encontró el token de sesión. Vuelve a iniciar sesión.';
         _cargando = false;
       });
+      debugPrint('>>> HistorialPrecios: token nulo o vacío en widget.usuario');
       return;
     }
 
@@ -87,29 +80,20 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
 
     try {
       final data = await _service.obtenerHistorial(token);
+      debugPrint('>>> HistorialPrecios: ${data.length} registros recibidos');
+
       if (!mounted) return;
       setState(() {
         _registros = data;
         _cargando = false;
       });
     } catch (e) {
+      debugPrint('>>> HistorialPrecios: error al cargar -> $e');
       if (!mounted) return;
       setState(() {
         _error = 'Error al cargar el historial: $e';
         _cargando = false;
       });
-    }
-  }
-
-  Future<void> _cargarProductos() async {
-    final token = await _obtenerToken();
-    if (token == null) return;
-    try {
-      final data = await _service.obtenerProductos(token);
-      if (!mounted) return;
-      setState(() => _productosDisponibles = data);
-    } catch (e) {
-      debugPrint('No se pudieron cargar productos: $e');
     }
   }
 
@@ -134,18 +118,44 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
           (r.fecha.year == _fechaFiltro!.year &&
               r.fecha.month == _fechaFiltro!.month &&
               r.fecha.day == _fechaFiltro!.day);
-      return matchTexto && matchFecha;
+      final matchVariacion =
+          _filtroVariacion == 'todos' || r.tipoVariacion == _filtroVariacion;
+      return matchTexto && matchFecha && matchVariacion;
     }).toList();
   }
 
-  int get _totalAumentos => _registros.where((r) => r.tipoVariacion == 'aumento').length;
-  int get _totalReducciones => _registros.where((r) => r.tipoVariacion == 'reduccion').length;
-  int get _totalIniciales => _registros.where((r) => r.tipoVariacion == 'inicial').length;
+  int get _totalAumentos =>
+      _registros.where((r) => r.tipoVariacion == 'aumento').length;
+  int get _totalReducciones =>
+      _registros.where((r) => r.tipoVariacion == 'reduccion').length;
+  int get _totalSinCambio =>
+      _registros.where((r) => r.tipoVariacion == 'sin_cambio').length;
+
+  /// Catálogo derivado de los registros: último precio conocido por producto.
+  /// Se usa para autocompletar "precio anterior" al crear un registro nuevo.
+  List<Map<String, dynamic>> get _catalogoProductos {
+    final mapa = <int, Map<String, dynamic>>{};
+    for (final r in _registros) {
+      final actual = mapa[r.idProducto];
+      if (actual == null || r.fecha.isAfter(actual['fecha'] as DateTime)) {
+        mapa[r.idProducto] = {
+          'id': r.idProducto,
+          'nombre': r.nombreProducto,
+          'precioActual': r.precioNuevo,
+          'fecha': r.fecha,
+        };
+      }
+    }
+    final lista = mapa.values.toList()
+      ..sort((a, b) => (a['nombre'] as String).compareTo(b['nombre'] as String));
+    return lista;
+  }
 
   void _limpiarFiltros() {
     setState(() {
       _busquedaCtrl.clear();
       _fechaFiltro = null;
+      _filtroVariacion = 'todos';
     });
   }
 
@@ -190,322 +200,10 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     );
   }
 
-  // Devuelve color, fondo, ícono y texto de la insignia de variación,
-  // incluyendo el caso especial de precio inicial (precioAnterior == 0).
-  ({Color color, Color fondo, IconData? icono, String texto}) _estiloVariacion(
-    HistorialPrecio r,
-  ) {
-    switch (r.tipoVariacion) {
-      case 'aumento':
-        return (
-          color: AppColors.red,
-          fondo: AppColors.redBg,
-          icono: Icons.arrow_upward,
-          texto: '+${r.variacionPorcentaje!.toStringAsFixed(2)}%',
-        );
-      case 'reduccion':
-        return (
-          color: AppColors.green,
-          fondo: AppColors.greenBg,
-          icono: Icons.arrow_downward,
-          texto: '${r.variacionPorcentaje!.toStringAsFixed(2)}%',
-        );
-      case 'inicial':
-        return (
-          color: AppColors.navy,
-          fondo: AppColors.iconBg,
-          icono: null,
-          texto: 'Inicial',
-        );
-      default:
-        return (
-          color: AppColors.olive,
-          fondo: AppColors.oliveBg,
-          icono: Icons.remove,
-          texto: 'Sin cambio',
-        );
-    }
-  }
-
-  // =======================================================================
-  // ACTUALIZAR PRECIO — única acción de edición disponible.
-  // Si se llama con un producto preseleccionado (desde una tarjeta del
-  // historial), el selector queda fijo en ese producto. Si se llama sin
-  // parámetros, se puede elegir cualquier producto de la lista.
-  // =======================================================================
-  Future<void> _abrirCambioPrecio({
-    int? idPreseleccionado,
-    String? nombrePreseleccionado,
-    double? precioActualPreseleccionado,
-  }) async {
-    int? idSeleccionado = idPreseleccionado;
-    String? nombreSeleccionado = nombrePreseleccionado;
-    final precioCtrl = TextEditingController(
-      text: precioActualPreseleccionado != null ? precioActualPreseleccionado.toStringAsFixed(0) : '',
-    );
-    final motivoCtrl = TextEditingController();
-    final esFijo = idPreseleccionado != null;
-
-    final confirmar = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Container(
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.navy,
-                            Color.lerp(AppColors.navy, AppColors.lightBlue, 0.18)!,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppColors.gold.withValues(alpha: 0.18),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(Icons.sell_outlined, color: AppColors.gold, size: 22),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Actualizar precio',
-                                  style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  esFijo
-                                      ? nombreSeleccionado ?? ''
-                                      : 'Elige un producto y su nuevo precio',
-                                  style: const TextStyle(color: AppColors.lightBlue, fontSize: 12),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (!esFijo) ...[
-                            DropdownButtonFormField<int>(
-                              initialValue: idSeleccionado,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: 'Producto',
-                                labelStyle: const TextStyle(fontSize: 13, color: AppColors.olive),
-                                prefixIcon: const Icon(Icons.inventory_2_outlined,
-                                    size: 19, color: AppColors.goldDark),
-                                filled: true,
-                                fillColor: AppColors.background,
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                              hint: const Text('Selecciona un producto', style: TextStyle(fontSize: 13)),
-                              items: _productosDisponibles
-                                  .map((p) => DropdownMenuItem<int>(
-                                        value: p.idProducto,
-                                        child: Text(
-                                          p.nombreProducto,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontSize: 13),
-                                        ),
-                                      ))
-                                  .toList(),
-                              onChanged: (valor) {
-                                final prod = _productosDisponibles.firstWhere((p) => p.idProducto == valor);
-                                setDialogState(() {
-                                  idSeleccionado = valor;
-                                  nombreSeleccionado = prod.nombreProducto;
-                                  if (prod.precioActual != null) {
-                                    precioCtrl.text = prod.precioActual!.toStringAsFixed(0);
-                                  }
-                                });
-                              },
-                            ),
-                            if (_productosDisponibles.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 6, left: 4),
-                                child: Text(
-                                  'No hay productos disponibles.',
-                                  style: TextStyle(fontSize: 11, color: AppColors.red),
-                                ),
-                              ),
-                            const SizedBox(height: 14),
-                          ] else
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                              margin: const EdgeInsets.only(bottom: 14),
-                              decoration: BoxDecoration(
-                                color: AppColors.background,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.inventory_2_outlined,
-                                      size: 19, color: AppColors.goldDark),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      nombreSeleccionado ?? '',
-                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          TextField(
-                            controller: precioCtrl,
-                            keyboardType: TextInputType.number,
-                            style: const TextStyle(fontSize: 14),
-                            decoration: InputDecoration(
-                              labelText: 'Precio nuevo',
-                              labelStyle: const TextStyle(fontSize: 13, color: AppColors.olive),
-                              prefixIcon: const Icon(Icons.attach_money, size: 19, color: AppColors.goldDark),
-                              filled: true,
-                              fillColor: AppColors.background,
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          TextField(
-                            controller: motivoCtrl,
-                            maxLines: 2,
-                            style: const TextStyle(fontSize: 14),
-                            decoration: InputDecoration(
-                              labelText: 'Motivo del cambio',
-                              labelStyle: const TextStyle(fontSize: 13, color: AppColors.olive),
-                              prefixIcon: const Icon(Icons.notes_outlined, size: 19, color: AppColors.goldDark),
-                              filled: true,
-                              fillColor: AppColors.background,
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 6, 20, 20),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.of(ctx).pop(false),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 13),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                side: BorderSide(color: AppColors.cardBorder),
-                              ),
-                              child: const Text('Cancelar',
-                                  style: TextStyle(color: AppColors.olive, fontWeight: FontWeight.w600)),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                if (idSeleccionado == null) {
-                                  _mostrarSnack('Selecciona un producto', color: AppColors.red);
-                                  return;
-                                }
-                                if (double.tryParse(precioCtrl.text.trim()) == null) {
-                                  _mostrarSnack('El precio no es válido', color: AppColors.red);
-                                  return;
-                                }
-                                if (motivoCtrl.text.trim().isEmpty) {
-                                  _mostrarSnack('El motivo es obligatorio', color: AppColors.red);
-                                  return;
-                                }
-                                Navigator.of(ctx).pop(true);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.gold,
-                                foregroundColor: AppColors.navy,
-                                padding: const EdgeInsets.symmetric(vertical: 13),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                elevation: 0,
-                              ),
-                              child: const Text('Guardar', style: TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    if (confirmar != true || idSeleccionado == null) return;
-
-    final token = await _obtenerToken();
-    if (token == null) return;
-
-    try {
-      await _service.editarProducto(
-        token,
-        idSeleccionado!,
-        precioNuevo: double.parse(precioCtrl.text.trim()),
-        motivo: motivoCtrl.text.trim(),
-      );
-      _mostrarSnack('Precio actualizado', color: AppColors.green);
-      _cargarRegistros();
-      _cargarProductos();
-    } catch (e) {
-      _mostrarSnack('No se pudo actualizar el precio: $e', color: AppColors.red);
-    }
-  }
-
   // ══════════════════════════════════════════════════════════════════════
-  // ─── HELPERS DE DISEÑO PARA EL MODAL DE DETALLE ────────────────────────
+  // ─── HELPERS DE DISEÑO COMPARTIDOS PARA EL MODAL (mismo estilo que
+  // Inventario / Categorías / Usuarios: header navy con ícono, campos
+  // redondeados, cajitas de stats y footer con botón dorado) ─────────────
   // ══════════════════════════════════════════════════════════════════════
 
   Future<T?> _mostrarDialogoBase<T>({required Widget child}) {
@@ -517,7 +215,10 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: Container(
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: SingleChildScrollView(child: child),
           ),
         ),
@@ -533,16 +234,13 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   }) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppColors.navy,
-            Color.lerp(AppColors.navy, AppColors.lightBlue, 0.18)!,
-          ],
+          colors: [AppColors.navyOscuro, AppColors.navyClaro],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -551,10 +249,10 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppColors.gold.withValues(alpha: 0.18),
+              color: AppColors.dorado.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppColors.gold, size: 22),
+            child: Icon(icon, color: AppColors.dorado, size: 22),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -568,7 +266,10 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                   maxLines: 2,
                 ),
                 const SizedBox(height: 3),
-                Text(subtitulo, style: const TextStyle(color: AppColors.lightBlue, fontSize: 12)),
+                Text(
+                  subtitulo,
+                  style: const TextStyle(color: Color(0xFF8FA3C4), fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -584,18 +285,18 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: AppColors.goldDark),
+          Icon(icon, size: 16, color: AppColors.doradoOscuro),
           const SizedBox(width: 10),
           Expanded(
             flex: 4,
-            child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.olive)),
+            child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textoMuted)),
           ),
           Expanded(
             flex: 5,
             child: Text(
               valor,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.navy),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -606,7 +307,10 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   Widget _cajaStat(String label, String valor, Color color, IconData icon) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-      decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(
+        color: AppColors.fondo,
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -617,7 +321,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(fontSize: 10, color: AppColors.olive, fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontSize: 10, color: AppColors.textoMuted, fontWeight: FontWeight.w600),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -635,10 +339,31 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   }
 
   // =======================================================================
-  // DIÁLOGO: VER DETALLE — solo "Cerrar" y "Editar precio".
+  // DIÁLOGO: VER DETALLE
   // =======================================================================
   void _verDetalle(HistorialPrecio r) {
-    final estilo = _estiloVariacion(r);
+    final tipo = r.tipoVariacion;
+    Color colorVariacion;
+    Color fondoVariacion;
+    String textoVariacion;
+    IconData iconoVariacion;
+
+    if (tipo == 'aumento') {
+      colorVariacion = AppColors.rojo;
+      fondoVariacion = AppColors.rojoFondo;
+      iconoVariacion = Icons.arrow_upward;
+      textoVariacion = '+${r.variacionPorcentaje!.toStringAsFixed(2)}%';
+    } else if (tipo == 'reduccion') {
+      colorVariacion = AppColors.verde;
+      fondoVariacion = AppColors.verdeFondo;
+      iconoVariacion = Icons.arrow_downward;
+      textoVariacion = '${r.variacionPorcentaje!.toStringAsFixed(2)}%';
+    } else {
+      colorVariacion = AppColors.gris;
+      fondoVariacion = AppColors.grisFondo;
+      iconoVariacion = Icons.remove;
+      textoVariacion = 'Sin cambio';
+    }
 
     _mostrarDialogoBase(
       child: Column(
@@ -650,14 +375,19 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
             subtitulo: '#${r.id} · ID Producto ${r.idProducto}',
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: estilo.fondo, borderRadius: BorderRadius.circular(20)),
+              decoration: BoxDecoration(
+                color: fondoVariacion,
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (estilo.icono != null) Icon(estilo.icono, size: 11, color: estilo.color),
-                  if (estilo.icono != null) const SizedBox(width: 3),
-                  Text(estilo.texto,
-                      style: TextStyle(color: estilo.color, fontSize: 11, fontWeight: FontWeight.bold)),
+                  Icon(iconoVariacion, size: 11, color: colorVariacion),
+                  const SizedBox(width: 3),
+                  Text(
+                    textoVariacion,
+                    style: TextStyle(color: colorVariacion, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             ),
@@ -667,25 +397,37 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
             child: Column(
               children: [
                 _filaDetalleIcono(Icons.calendar_today_outlined, 'Fecha', _formatoFechaLarga(r.fecha)),
-                _filaDetalleIcono(Icons.check_circle_outline, 'Estado', r.activo ? 'Activo' : 'Inactivo'),
+                _filaDetalleIcono(
+                  Icons.check_circle_outline,
+                  'Estado',
+                  r.activo ? 'Activo' : 'Inactivo',
+                ),
                 _filaDetalleIcono(
                   Icons.notes_outlined,
                   'Motivo',
                   r.motivo.isEmpty ? 'Sin motivo registrado' : r.motivo,
                 ),
                 const SizedBox(height: 6),
-                Divider(height: 1, color: AppColors.cardBorder),
+                const Divider(height: 1),
                 const SizedBox(height: 14),
                 Row(
                   children: [
                     Expanded(
-                      child: _cajaStat('Precio Anterior', '\$${_formatoMiles(r.precioAnterior)}',
-                          AppColors.gold, Icons.arrow_back),
+                      child: _cajaStat(
+                        'Precio Anterior',
+                        '\$${_formatoMiles(r.precioAnterior)}',
+                        AppColors.dorado,
+                        Icons.arrow_back,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: _cajaStat('Precio Nuevo', '\$${_formatoMiles(r.precioNuevo)}', AppColors.green,
-                          Icons.arrow_forward),
+                      child: _cajaStat(
+                        'Precio Nuevo',
+                        '\$${_formatoMiles(r.precioNuevo)}',
+                        AppColors.verde,
+                        Icons.arrow_forward,
+                      ),
                     ),
                   ],
                 ),
@@ -694,42 +436,18 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      side: BorderSide(color: AppColors.cardBorder),
-                    ),
-                    child: const Text('Cerrar',
-                        style: TextStyle(color: AppColors.olive, fontWeight: FontWeight.w600)),
-                  ),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  side: BorderSide(color: Colors.grey.shade300),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _abrirCambioPrecio(
-                        idPreseleccionado: r.idProducto,
-                        nombrePreseleccionado: r.nombreProducto,
-                        precioActualPreseleccionado: r.precioActual,
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.gold,
-                      foregroundColor: AppColors.navy,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                    child: const Text('Editar precio', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
+                child: const Text('Cerrar',
+                    style: TextStyle(color: AppColors.textoMuted, fontWeight: FontWeight.w600)),
+              ),
             ),
           ),
         ],
@@ -739,12 +457,11 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final rolCrudo = (widget.usuario?['rol'] ?? 'administrador').toString().toLowerCase();
+    final rolCrudo = (widget.usuario?['rol'] ?? '').toString().toLowerCase();
 
     return Container(
-      color: AppColors.background,
+      color: AppColors.fondo,
       child: RefreshIndicator(
-        color: AppColors.gold,
         onRefresh: _cargarRegistros,
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -756,26 +473,42 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: AppColors.redBg, borderRadius: BorderRadius.circular(10)),
-                child: Text(_error!, style: const TextStyle(color: AppColors.red, fontSize: 13)),
+                decoration: BoxDecoration(
+                  color: AppColors.rojoFondo,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(color: AppColors.rojo, fontSize: 13),
+                ),
               ),
               const SizedBox(height: 14),
             ],
 
+            // Tarjetas de resumen (4 en fila)
             Row(
               children: [
-                Expanded(child: _tarjetaResumen('Total', '${_registros.length}', AppColors.gold)),
-                const SizedBox(width: 8),
-                Expanded(child: _tarjetaResumen('Aumentos', '$_totalAumentos', AppColors.red)),
-                const SizedBox(width: 8),
-                Expanded(child: _tarjetaResumen('Reduc.', '$_totalReducciones', AppColors.green)),
-                const SizedBox(width: 8),
-                Expanded(child: _tarjetaResumen('Iniciales', '$_totalIniciales', AppColors.navy)),
+                Expanded(
+                  child: _tarjetaResumen('Total', '${_registros.length}', AppColors.dorado),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _tarjetaResumen('Aumentos', '$_totalAumentos', AppColors.rojo),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _tarjetaResumen('Reduc.', '$_totalReducciones', AppColors.verde),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _tarjetaResumen('Sin cambio', '$_totalSinCambio', AppColors.gris),
+                ),
               ],
             ),
             const SizedBox(height: 14),
 
             _panelFiltros(),
+
             const SizedBox(height: 16),
 
             _separadorConteo(_filtrados.length),
@@ -784,7 +517,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
             if (_cargando)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+                child: Center(child: CircularProgressIndicator()),
               )
             else if (_filtrados.isEmpty)
               Padding(
@@ -792,9 +525,10 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(Icons.history, size: 40, color: AppColors.goldDark.withValues(alpha: 0.5)),
+                      Icon(Icons.history, size: 40, color: Colors.grey.shade400),
                       const SizedBox(height: 8),
-                      const Text('No se encontraron registros', style: TextStyle(color: AppColors.olive)),
+                      Text('No se encontraron registros',
+                          style: TextStyle(color: Colors.grey.shade600)),
                     ],
                   ),
                 ),
@@ -807,53 +541,72 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     );
   }
 
+  // ---------------------------------------------------------------------
+  // ENCABEZADO
+  // ---------------------------------------------------------------------
   Widget _encabezado(String rolCrudo) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.navy,
-            Color.lerp(AppColors.navy, AppColors.lightBlue, 0.18)!,
-          ],
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F1B2E), Color(0xFF16233A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${rolCrudo.toUpperCase()} · PRECIOS',
-            style: const TextStyle(
-              color: AppColors.goldText,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.0,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${rolCrudo.toUpperCase()} · HISTORIAL DE PRECIOS',
+                  style: const TextStyle(
+                    color: AppColors.dorado,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Historial de Precios',
+                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Registro de cambios de precio por producto',
+                  style: TextStyle(color: Color(0xFF8FA3C4), fontSize: 12),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Historial de Precios',
-            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Rastrea y analiza cada cambio de precio',
-            style: TextStyle(color: AppColors.lightBlue, fontSize: 12),
           ),
         ],
       ),
     );
   }
 
+  // =======================================================================
+  // PANEL DE FILTROS — tarjeta blanca colapsable con ícono, buscador,
+  // chips de variación, filtro de fecha y botón "Limpiar".
+  // (Mismo diseño que Inventario / Movimientos, adaptado a Historial de
+  // Precios: en vez de categoría/usuario, el selector extra es la fecha.)
+  // =======================================================================
   Widget _panelFiltros() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder, width: 0.6),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -861,42 +614,37 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             InkWell(
-              onTap: () {
-                setState(() {
-                  _filtrosExpandidos = !_filtrosExpandidos;
-                });
-              },
+              onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
               child: Row(
                 children: [
-                  const Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.gold),
+                  const Icon(Icons.filter_alt_outlined, size: 18, color: Colors.black87),
                   const SizedBox(width: 6),
                   const Text(
                     'Filtros y Búsqueda',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.navy),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
                   ),
                   const Spacer(),
                   Icon(
-                    _filtrosExpandidos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                     size: 20,
-                    color: AppColors.goldDark,
+                    color: AppColors.doradoOscuro,
                   ),
                 ],
               ),
             ),
-
-            if (_filtrosExpandidos) ...[
+            if (_filtrosAbiertos) ...[
               const SizedBox(height: 12),
               TextField(
                 controller: _busquedaCtrl,
                 onChanged: (_) => setState(() {}),
-                style: const TextStyle(color: AppColors.navy, fontSize: 13),
+                style: const TextStyle(color: Colors.black87, fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Buscar por producto, ID o motivo...',
-                  hintStyle: TextStyle(color: AppColors.navy.withValues(alpha: 0.45), fontSize: 13),
-                  prefixIcon: Icon(Icons.search, size: 20, color: AppColors.navy.withValues(alpha: 0.45)),
+                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                  prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
                   filled: true,
-                  // CAMBIO: fondo del buscador más claro para que se note mejor el texto/ícono
-                  fillColor: Color.lerp(AppColors.inputBg, Colors.white, 0.85),
+                  fillColor: AppColors.fondo,
                   contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
@@ -908,34 +656,31 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
-                    borderSide: const BorderSide(color: AppColors.gold),
+                    borderSide: const BorderSide(color: AppColors.dorado),
                   ),
                 ),
               ),
               const SizedBox(height: 10),
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _elegirFecha,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        side: const BorderSide(color: AppColors.cardBorder),
-                      ),
-                      icon: const Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.goldDark),
-                      label: Text(
-                        _fechaFiltro == null ? 'Filtrar por fecha' : _formatoFechaLarga(_fechaFiltro!),
-                        style: const TextStyle(fontSize: 12, color: AppColors.goldDark),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
+                  _chipVariacion('Todos', 'todos'),
+                  _chipVariacion('Aumentos', 'aumento'),
+                  _chipVariacion('Reduc.', 'reduccion'),
+                  _chipVariacion('Sin cambio', 'sin_cambio'),
+                  _selectorFecha(),
                   TextButton.icon(
                     onPressed: _limpiarFiltros,
                     icon: const Icon(Icons.close, size: 14),
                     label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
-                    style: TextButton.styleFrom(foregroundColor: AppColors.olive),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.textoMuted,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                   ),
                 ],
               ),
@@ -946,206 +691,385 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     );
   }
 
+  Widget _selectorFecha() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: _elegirFecha,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 190),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.fondo,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.calendar_today_outlined, size: 13, color: AppColors.doradoOscuro),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                _fechaFiltro == null ? 'Fecha: Todas' : _formatoFechaLarga(_fechaFiltro!),
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            if (_fechaFiltro != null) ...[
+              const SizedBox(width: 4),
+              InkWell(
+                onTap: () => setState(() => _fechaFiltro = null),
+                child: const Icon(Icons.close, size: 14, color: AppColors.textoMuted),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chipVariacion(String label, String valor) {
+    final activo = _filtroVariacion == valor;
+    Color color;
+    switch (valor) {
+      case 'aumento':
+        color = AppColors.rojo;
+        break;
+      case 'reduccion':
+        color = AppColors.verde;
+        break;
+      case 'sin_cambio':
+        color = AppColors.gris;
+        break;
+      default:
+        color = AppColors.doradoOscuro;
+    }
+    return ChoiceChip(
+      label: Text(label),
+      selected: activo,
+      onSelected: (_) => setState(() => _filtroVariacion = valor),
+      selectedColor: Colors.white,
+      backgroundColor: Colors.white,
+      showCheckmark: false,
+      labelStyle: TextStyle(
+        color: activo ? color : Colors.grey.shade500,
+        fontWeight: FontWeight.w700,
+        fontSize: 12,
+      ),
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: activo ? color : Colors.grey.shade200,
+          width: activo ? 1.4 : 1,
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // TARJETA DE RESUMEN
+  //
+  // Mismo estilo que usa Inventario (_statCard): borde superior de 3px
+  // con el color del dato, sombra suave, y el número grande centrado
+  // arriba de la etiqueta.
+  // ---------------------------------------------------------------------
   Widget _tarjetaResumen(String titulo, String valor, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border(top: BorderSide(color: color, width: 3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          Text(valor, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+          Text(valor, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
           const SizedBox(height: 2),
-          Text(
-            titulo,
-            style: const TextStyle(fontSize: 10, color: AppColors.olive),
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-          ),
+          Text(titulo, style: const TextStyle(fontSize: 11, color: AppColors.textoMuted)),
         ],
       ),
     );
   }
 
+  // ---------------------------------------------------------------------
+  // SEPARADOR
+  // ---------------------------------------------------------------------
   Widget _separadorConteo(int cantidad) {
-    return Center(
-      child: Text(
-        '$cantidad ${cantidad == 1 ? 'REGISTRO' : 'REGISTROS'}',
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: AppColors.olive,
-          letterSpacing: 0.5,
+    return Row(
+      children: [
+        Expanded(child: Divider(color: AppColors.verde.withValues(alpha: 0.4), thickness: 1.2)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Text(
+            '$cantidad ${cantidad == 1 ? 'REGISTRO' : 'REGISTROS'}',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textoMuted,
+              letterSpacing: 0.5,
+            ),
+          ),
         ),
-      ),
+        Expanded(child: Divider(color: AppColors.verde.withValues(alpha: 0.4), thickness: 1.2)),
+      ],
     );
   }
 
+  // ---------------------------------------------------------------------
+  // TARJETA DE REGISTRO
+  //
+  // NOTA DEL FIX: antes esta tarjeta usaba un solo Container con
+  // BoxDecoration(borderRadius: ..., border: Border(left: colorVariacion,
+  // top/right/bottom: gris)). Flutter NO permite un borderRadius sobre un
+  // Border con colores distintos por lado ("A borderRadius can only be
+  // given on borders with uniform colors."), y lanzaba esa excepción en
+  // cada frame, dejando las tarjetas en blanco/rotas. La solución es
+  // separar la franja de color izquierda en su propio widget (un
+  // Container angosto dentro de un Row), y dejar el borderRadius solo
+  // sobre un borde de un único color uniforme (gris claro).
+  // ---------------------------------------------------------------------
   Widget _tarjetaRegistro(HistorialPrecio r) {
-    final estilo = _estiloVariacion(r);
+    final tipo = r.tipoVariacion;
+    Color colorVariacion;
+    Color fondoVariacion;
+    String textoVariacion;
+    IconData? iconoVariacion;
+
+    if (tipo == 'aumento') {
+      colorVariacion = AppColors.rojo;
+      fondoVariacion = AppColors.rojoFondo;
+      iconoVariacion = Icons.arrow_upward;
+      textoVariacion = '+${r.variacionPorcentaje!.toStringAsFixed(2)}%';
+    } else if (tipo == 'reduccion') {
+      colorVariacion = AppColors.verde;
+      fondoVariacion = AppColors.verdeFondo;
+      iconoVariacion = Icons.arrow_downward;
+      textoVariacion = '${r.variacionPorcentaje!.toStringAsFixed(2)}%';
+    } else {
+      colorVariacion = AppColors.gris;
+      fondoVariacion = AppColors.grisFondo;
+      iconoVariacion = null;
+      textoVariacion = 'Sin cambio';
+    }
 
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: () => _verDetalle(r),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          color: Colors.white,
-          border: Border.all(color: AppColors.cardBorder, width: 0.6),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(13),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(width: 4, color: estilo.color),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(13),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+            // Franja de color izquierda, separada del borde del contenedor.
+            Container(width: 4, color: colorVariacion),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: RichText(
-                                text: TextSpan(
-                                  style: const TextStyle(fontSize: 14, color: AppColors.navy),
-                                  children: [
-                                    TextSpan(
-                                      text: '#${r.id}  ',
-                                      style: const TextStyle(
-                                          color: AppColors.gold, fontWeight: FontWeight.bold, fontSize: 12),
-                                    ),
-                                    TextSpan(
-                                      text: r.nombreProducto,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.navy),
-                                    ),
-                                  ],
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              style: const TextStyle(fontSize: 14, color: Colors.black),
+                              children: [
+                                TextSpan(
+                                  text: '#${r.id}  ',
+                                  style: const TextStyle(
+                                    color: AppColors.doradoOscuro,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
                                 ),
-                              ),
+                                TextSpan(
+                                  text: r.nombreProducto,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
                             ),
-                            _accionBoton(
-                              Icons.remove_red_eye_outlined,
-                              AppColors.navy,
-                              Color.lerp(AppColors.lightBlue, Colors.white, 0.55)!,
-                              () => _verDetalle(r),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'ID Prod: ${r.idProducto} · ${_formatoFechaLarga(r.fecha)}',
-                          style: const TextStyle(fontSize: 11, color: AppColors.olive),
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          decoration: BoxDecoration(
-                            // CAMBIO: fondo blanco (antes AppColors.background) + borde sutil
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.cardBorder, width: 0.6),
                           ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                        ),
+                        // ─── Acciones: mismo estilo cuadrado con ícono que
+                        // usa ProductoCard/Categorías/Usuarios — sin borde,
+                        // fondo sólido de color suave.
+                        _accionBoton(
+                          Icons.remove_red_eye_outlined,
+                          AppColors.doradoOscuro,
+                          const Color(0xFFFBF1DD),
+                          () => _verDetalle(r),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          'ID: ${r.idProducto} · Actual: \$${_formatoMiles(r.precioActual)}  ',
+                          style: const TextStyle(fontSize: 12, color: AppColors.textoMuted),
+                        ),
+                        if (r.activo)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.verdeFondo,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Text(
+                              'Activo',
+                              style: TextStyle(
+                                  color: AppColors.verde, fontWeight: FontWeight.w600, fontSize: 10),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    const Divider(height: 1),
+                    const SizedBox(height: 10),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('Anterior',
-                                        style: TextStyle(fontSize: 9, color: AppColors.olive)),
-                                    Text(
-                                      '\$${_formatoMiles(r.precioAnterior)}',
-                                      style: const TextStyle(
-                                          fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.gold),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(Icons.arrow_forward, size: 14, color: AppColors.gold),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    const Text('Nuevo',
-                                        style: TextStyle(fontSize: 9, color: AppColors.olive)),
-                                    Text(
-                                      '\$${_formatoMiles(r.precioNuevo)}',
-                                      style: const TextStyle(
-                                          fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.green),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    const Text('Variación',
-                                        style: TextStyle(fontSize: 9, color: AppColors.olive)),
-                                    const SizedBox(height: 2),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                          color: estilo.fondo, borderRadius: BorderRadius.circular(20)),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (estilo.icono != null)
-                                            Icon(estilo.icono, size: 10, color: estilo.color),
-                                          if (estilo.icono != null) const SizedBox(width: 2),
-                                          Text(
-                                            estilo.texto,
-                                            style: TextStyle(
-                                                color: estilo.color, fontWeight: FontWeight.w600, fontSize: 10),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              const Text('Precio Anterior',
+                                  style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
+                              Text(
+                                '\$${_formatoMiles(r.precioAnterior)}',
+                                style: const TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.dorado),
                               ),
                             ],
                           ),
                         ),
-                        if (r.motivo.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            r.motivo,
-                            style: const TextStyle(
-                                fontSize: 11, color: AppColors.olive, fontStyle: FontStyle.italic),
+                        const Icon(Icons.arrow_forward, size: 16, color: AppColors.textoMuted),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Precio Nuevo',
+                                  style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
+                              Text(
+                                '\$${_formatoMiles(r.precioNuevo)}',
+                                style: const TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.verde),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const Text('Variación',
+                                style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
+                            const SizedBox(height: 2),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: fondoVariacion,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (iconoVariacion != null)
+                                    Icon(iconoVariacion, size: 11, color: colorVariacion),
+                                  if (iconoVariacion != null) const SizedBox(width: 2),
+                                  Text(
+                                    textoVariacion,
+                                    style: TextStyle(
+                                        color: colorVariacion,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (tipo != 'sin_cambio')
+                              Text(
+                                '${r.variacionAbsoluta > 0 ? '+' : ''}\$${_formatoMiles(r.variacionAbsoluta)}',
+                                style: const TextStyle(fontSize: 10, color: AppColors.textoMuted),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Text(
+                          _formatoFechaLarga(r.fecha),
+                          style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
+                        ),
+                        const Spacer(),
+                        Flexible(
+                          child: Text(
+                            r.motivo,
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textoMuted,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
+          ],
           ),
         ),
+      ),
       ),
     );
   }
 
+  // Mismo helper que usa ProductoCard, Categorías y Usuarios: botón
+  // cuadrado, ícono solo, fondo de color suave, sin texto ni borde.
   Widget _accionBoton(IconData icon, Color color, Color fondo, VoidCallback? onTap) {
     return InkWell(
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(10),
       onTap: onTap,
       child: Container(
-        width: 30,
-        height: 30,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(color: fondo, shape: BoxShape.circle),
-        child: Icon(icon, size: 15, color: color),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: fondo, borderRadius: BorderRadius.circular(10)),
+        child: Icon(icon, size: 17, color: color),
       ),
     );
   }

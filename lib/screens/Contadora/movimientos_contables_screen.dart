@@ -832,29 +832,51 @@ class _MovimientosContablesScreenState
     );
   }
 
+  // ---------------------------------------------------------------------
+  // BUSCADOR
+  //
+  // AJUSTE: estilo tomado de historial_precios_screen.dart -> _buscador().
+  // Campo blanco tipo "pill" (borderRadius 30), borde gris claro que se
+  // pone dorado al enfocar, en vez del fondo crema (inputBg) que tenía
+  // antes. El Container/inputBg se retira porque el propio TextField ya
+  // trae su fondo blanco redondeado.
+  // ---------------------------------------------------------------------
   Widget _buildSearchBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.inputBg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.cardBorder, width: 1.2),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: TextField(
-        controller: _searchController,
-        onChanged: (_) => setState(() {}),
-        style: const TextStyle(color: AppColors.navyOscuro, fontSize: 13.5),
-        decoration: const InputDecoration(
-          hintText: 'Buscar por ID, concepto o cliente...',
-          hintStyle: TextStyle(color: AppColors.grisTexto, fontSize: 13),
-          prefixIcon: Icon(Icons.search_rounded, color: AppColors.grisTexto, size: 20),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 14),
+    return TextField(
+      controller: _searchController,
+      onChanged: (_) => setState(() {}),
+      style: const TextStyle(color: AppColors.navyOscuro, fontSize: 13.5),
+      decoration: InputDecoration(
+        hintText: 'Buscar por ID, concepto o cliente...',
+        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+        prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: const BorderSide(color: AppColors.dorado),
         ),
       ),
     );
   }
 
+  // ---------------------------------------------------------------------
+  // CHIPS DE FILTRO (Todos / Egreso / Ingreso)
+  //
+  // AJUSTE: mismo lenguaje visual del botón "Filtrar por fecha" de
+  // historial_precios_screen.dart -> OutlinedButton con borde dorado
+  // claro y esquinas muy redondeadas (pill), fondo dorado suave cuando
+  // está activo.
+  // ---------------------------------------------------------------------
   Widget _buildFiltros() {
     final opciones = ['Todos', 'Egreso', 'Ingreso'];
     return Row(
@@ -862,29 +884,24 @@ class _MovimientosContablesScreenState
         final activo = _filtroTipo == op;
         return Padding(
           padding: const EdgeInsets.only(right: 10),
-          child: Material(
-            color: activo ? AppColors.doradoClaro.withOpacity(0.28) : Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(20),
-              onTap: () => setState(() => _filtroTipo = op),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: AppColors.dorado,
-                    width: activo ? 1.5 : 1,
-                  ),
-                ),
-                child: Text(
-                  op,
-                  style: TextStyle(
-                    color: activo ? AppColors.doradoMezcla : AppColors.grisTexto,
-                    fontSize: 12.5,
-                    fontWeight: activo ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
+          child: OutlinedButton(
+            onPressed: () => setState(() => _filtroTipo = op),
+            style: OutlinedButton.styleFrom(
+              backgroundColor:
+                  activo ? AppColors.doradoClaro.withOpacity(0.28) : Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              side: BorderSide(
+                color: activo ? AppColors.dorado : AppColors.doradoClaro,
+                width: activo ? 1.5 : 1,
+              ),
+            ),
+            child: Text(
+              op,
+              style: TextStyle(
+                color: activo ? AppColors.doradoMezcla : AppColors.textoMuted,
+                fontSize: 12.5,
+                fontWeight: activo ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ),
@@ -1092,6 +1109,22 @@ class _GoldButton extends StatelessWidget {
   }
 }
 
+// ============================================================
+// _StatCard — CORREGIDO
+// ------------------------------------------------------------
+// ANTES: un solo Container con BoxDecoration(borderRadius: ...,
+// border: Border(left: colorAcento, top/right/bottom: cardBorder)).
+// Flutter NO permite un borderRadius sobre un Border con colores
+// distintos por lado ("A borderRadius can only be given on borders
+// with uniform colors."), y lanzaba esa excepción en cada paint(),
+// dejando la tarjeta en blanco (sin borde, sin texto).
+//
+// AHORA: la franja de color izquierda se separa en su propio
+// Container angosto dentro de un Row, y el borderRadius se aplica
+// solo sobre un borde de un único color uniforme (cardBorder),
+// exactamente el mismo patrón ya usado en
+// historial_precios_screen.dart -> _tarjetaRegistro.
+// ============================================================
 class _StatCard extends StatelessWidget {
   final String label;
   final String valor;
@@ -1108,16 +1141,8 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border(
-          left: BorderSide(color: colorAcento, width: 4),
-          top: const BorderSide(color: AppColors.cardBorder, width: 1.2),
-          right: const BorderSide(color: AppColors.cardBorder, width: 1.2),
-          bottom: const BorderSide(color: AppColors.cardBorder, width: 1.2),
-        ),
         boxShadow: [
           BoxShadow(
             color: AppColors.doradoOscuro.withOpacity(0.06),
@@ -1126,25 +1151,51 @@ class _StatCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(color: AppColors.grisTexto, fontSize: 11.5),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: AppColors.cardBorder, width: 1.2),
           ),
-          const SizedBox(height: 5),
-          Text(
-            valor,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: colorValor ?? colorAcento,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Franja de color izquierda, separada del borde del
+                // contenedor (así el borderRadius de arriba sí puede
+                // aplicarse, porque ese borde es de un solo color).
+                Container(width: 4, color: colorAcento),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          label,
+                          style: const TextStyle(color: AppColors.grisTexto, fontSize: 11.5),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          valor,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: colorValor ?? colorAcento,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
