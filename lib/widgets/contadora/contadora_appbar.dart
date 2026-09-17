@@ -21,12 +21,19 @@ class ContadoraAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onMenuTap;
   final VoidCallback? onNotificationsTap;
 
+  /// AJUSTE: callback que se dispara al tocar el badge con el nombre
+  /// del usuario (ej. "Nicol"). MainShellContadora debe pasar aquí la
+  /// navegación hacia PerfilScreen (push o cambio de tab, según cómo
+  /// esté armado el shell).
+  final VoidCallback? onPerfilTap;
+
   const ContadoraAppBar({
     super.key,
     required this.titulo,
     this.nombreUsuario = 'Contadora',
     this.onMenuTap,
     this.onNotificationsTap,
+    this.onPerfilTap,
   });
 
   @override
@@ -112,42 +119,54 @@ class ContadoraAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
 
                 // Badge del rol / usuario
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
+                //
+                // AJUSTE: envuelto en InkWell + Material transparente para
+                // que sea tappable y lleve al perfil vía onPerfilTap, sin
+                // perder la forma de "pill" redondeada (borderRadius 30).
+                Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(30),
+                  child: InkWell(
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                      color:
-                          ContadoraAppBarColors.doradoClaro.withValues(alpha: 0.4),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircleAvatar(
-                        radius: 10,
-                        backgroundColor: ContadoraAppBarColors.dorado,
-                        child: Text(
-                          inicial,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: ContadoraAppBarColors.navy,
+                    onTap: onPerfilTap,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(
+                          color: ContadoraAppBarColors.doradoClaro
+                              .withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircleAvatar(
+                            radius: 10,
+                            backgroundColor: ContadoraAppBarColors.dorado,
+                            child: Text(
+                              inicial,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: ContadoraAppBarColors.navy,
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 6),
+                          Text(
+                            nombreUsuario,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        nombreUsuario,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ],
