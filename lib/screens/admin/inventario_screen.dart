@@ -42,6 +42,15 @@ class AppColors {
 
   // Enlaces (p. ej. categorías clicables, como en la tabla web)
   static const enlace = Color(0xFF2563EB);
+
+  // ---- Añadidos para el panel de filtros (diseño navy/gold) ----
+  static const navy = Color(0xFF101B33);
+  static const gold = Color(0xFFC9A24A);
+  static const goldDark = Color(0xFF8A6D1F);
+  static const olive = Color(0xFF8B7920);
+  static const inputBg = Color(0xFFEFE4CB);
+  static const iconBg = Color(0xFFF0E3BE);
+  static const cardBorder = Color(0xFFECE0BD);
 }
 
 class InventarioScreen extends StatefulWidget {
@@ -62,6 +71,8 @@ class _InventarioScreenState extends State<InventarioScreen> {
 
   String _filtroEstado = 'todos'; // todos | alto | medio | bajo
   int? _filtroCategoria; // null = todas
+  int? _filtroProveedor; // null = todos
+  int? _filtroSucursal; // null = todas
   bool _filtrosAbiertos = true;
   bool _cargando = false;
   bool _cargandoInicial = true;
@@ -1006,22 +1017,19 @@ class _InventarioScreenState extends State<InventarioScreen> {
   }
 
   // =======================================================================
-  // PANEL DE FILTROS — tarjeta blanca colapsable con ícono, buscador,
-  // chips de estado, selector de categoría y botón "Limpiar".
-  // (Mismo diseño que el panel de Movimientos, adaptado a Inventario.)
+  // PANEL DE FILTROS — diseño navy/gold: tarjeta blanca con borde sutil
+  // (en vez de sombra), acentos dorados y texto en navy. Mismo diseño que
+  // el panel de Movimientos.
   // =======================================================================
   Widget _panelFiltros() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: AppColors.cardBorder,
+          width: 0.6,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -1032,18 +1040,25 @@ class _InventarioScreenState extends State<InventarioScreen> {
               onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
               child: Row(
                 children: [
-                  const Icon(Icons.filter_alt_outlined, size: 18, color: Colors.black87),
+                  const Icon(
+                    Icons.filter_alt_outlined,
+                    size: 18,
+                    color: AppColors.gold,
+                  ),
                   const SizedBox(width: 6),
                   const Text(
                     'Filtros y Búsqueda',
                     style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: AppColors.navy,
+                    ),
                   ),
                   const Spacer(),
                   Icon(
                     _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                     size: 20,
-                    color: AppColors.doradoOscuro,
+                    color: AppColors.goldDark,
                   ),
                 ],
               ),
@@ -1053,13 +1068,27 @@ class _InventarioScreenState extends State<InventarioScreen> {
               TextField(
                 controller: _busquedaCtrl,
                 onChanged: (_) => setState(() {}),
-                style: const TextStyle(color: Colors.black87, fontSize: 13),
+                style: const TextStyle(
+                  color: AppColors.navy,
+                  fontSize: 13,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Buscar por producto, ID o código de barras...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                  prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                  hintStyle: TextStyle(
+                    color: AppColors.navy.withValues(alpha: 0.45),
+                    fontSize: 13,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20,
+                    color: AppColors.navy.withValues(alpha: 0.45),
+                  ),
                   filled: true,
-                  fillColor: AppColors.fondo,
+                  fillColor: Color.lerp(
+                    AppColors.inputBg,
+                    Colors.white,
+                    0.6,
+                  ),
                   contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
@@ -1071,7 +1100,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
-                    borderSide: const BorderSide(color: AppColors.dorado),
+                    borderSide: const BorderSide(color: AppColors.gold),
                   ),
                 ),
               ),
@@ -1091,7 +1120,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                     icon: const Icon(Icons.close, size: 14),
                     label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.textoMuted,
+                      foregroundColor: AppColors.olive,
                       padding: EdgeInsets.zero,
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1111,7 +1140,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
       constraints: const BoxConstraints(maxWidth: 190),
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: AppColors.fondo,
+        color: AppColors.iconBg,
         borderRadius: BorderRadius.circular(20),
       ),
       child: DropdownButtonHideUnderline(
@@ -1119,9 +1148,16 @@ class _InventarioScreenState extends State<InventarioScreen> {
           value: _filtroCategoria,
           isDense: true,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.black87),
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            size: 16,
+            color: AppColors.navy,
+          ),
           style: const TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w700, color: Colors.black87),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppColors.navy,
+          ),
           dropdownColor: Colors.white,
           items: [
             const DropdownMenuItem<int?>(
@@ -1143,7 +1179,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
 
   Widget _chipEstado(String label, String valor) {
     final activo = _filtroEstado == valor;
-    final color = _colorEstado(valor);
+    // Los estados con color propio (alto/medio/bajo) conservan su color
+    // semántico al estar activos; "Todos" usa el acento dorado.
+    final colorActivo = valor == 'todos' ? AppColors.gold : _colorEstado(valor);
+
     return ChoiceChip(
       label: Text(label),
       selected: activo,
@@ -1152,13 +1191,13 @@ class _InventarioScreenState extends State<InventarioScreen> {
       backgroundColor: Colors.white,
       showCheckmark: false,
       labelStyle: TextStyle(
-        color: activo ? color : Colors.grey.shade500,
+        color: activo ? colorActivo : AppColors.olive,
         fontWeight: FontWeight.w700,
         fontSize: 12,
       ),
       shape: StadiumBorder(
         side: BorderSide(
-          color: activo ? color : Colors.grey.shade200,
+          color: activo ? colorActivo : AppColors.cardBorder,
           width: activo ? 1.4 : 1,
         ),
       ),

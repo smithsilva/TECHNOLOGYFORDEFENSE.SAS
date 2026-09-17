@@ -26,6 +26,15 @@ class AppColors {
   static const rojo = Color(0xFFC0392B);
   static const rojoFondo = Color(0xFFFBE2DF);
   static const textoMuted = Color(0xFF6B7280);
+
+  // ---- Añadidos para el panel de filtros (tomados del diseño navy/gold) ----
+  static const navy = Color(0xFF101B33);
+  static const gold = Color(0xFFC9A24A);
+  static const goldDark = Color(0xFF8A6D1F);
+  static const olive = Color(0xFF8B7920);
+  static const inputBg = Color(0xFFEFE4CB);
+  static const iconBg = Color(0xFFF0E3BE);
+  static const cardBorder = Color(0xFFECE0BD);
 }
 
 class MovimientosScreen extends StatefulWidget {
@@ -697,24 +706,18 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
   }
 
   // =======================================================================
-  // PANEL DE FILTROS — tarjeta blanca colapsable con ícono, buscador,
-  // chips de tipo, selector de usuario y botón "Limpiar".
-  // (Diseño tomado de la versión con selector de usuario; las letras que
-  // antes eran doradas ahora van en negro, dejando el dorado solo como
-  // acento en bordes/chevrón.)
+  // PANEL DE FILTROS — diseño tomado de la versión navy/gold: tarjeta blanca
+  // con borde sutil (en vez de sombra), acentos dorados y texto en navy.
   // =======================================================================
   Widget _panelFiltros() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: AppColors.cardBorder,
+          width: 0.6,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -722,36 +725,66 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             InkWell(
-              onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+              onTap: () {
+                setState(() {
+                  _filtrosAbiertos = !_filtrosAbiertos;
+                });
+              },
               child: Row(
                 children: [
-                  const Icon(Icons.filter_alt_outlined, size: 18, color: Colors.black87),
+                  const Icon(
+                    Icons.filter_alt_outlined,
+                    size: 18,
+                    color: AppColors.gold,
+                  ),
                   const SizedBox(width: 6),
                   const Text(
                     'Filtros y Búsqueda',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: AppColors.navy,
+                    ),
                   ),
                   const Spacer(),
                   Icon(
-                    _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    _filtrosAbiertos
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
                     size: 20,
-                    color: AppColors.doradoOscuro,
+                    color: AppColors.goldDark,
                   ),
                 ],
               ),
             ),
+
             if (_filtrosAbiertos) ...[
               const SizedBox(height: 12),
+
               TextField(
                 controller: _busquedaCtrl,
                 onChanged: (_) => setState(() {}),
-                style: const TextStyle(color: Colors.black87, fontSize: 13),
+                style: const TextStyle(
+                  color: AppColors.navy,
+                  fontSize: 13,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Buscar por producto o usuario...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                  prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                  hintStyle: TextStyle(
+                    color: AppColors.navy.withValues(alpha: 0.45),
+                    fontSize: 13,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20,
+                    color: AppColors.navy.withValues(alpha: 0.45),
+                  ),
                   filled: true,
-                  fillColor: AppColors.fondo,
+                  fillColor: Color.lerp(
+                    AppColors.inputBg,
+                    Colors.white,
+                    0.6,
+                  ),
                   contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
@@ -763,11 +796,13 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
-                    borderSide: const BorderSide(color: AppColors.dorado),
+                    borderSide: const BorderSide(color: AppColors.gold),
                   ),
                 ),
               ),
+
               const SizedBox(height: 10),
+
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -782,7 +817,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                     icon: const Icon(Icons.close, size: 14),
                     label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.textoMuted,
+                      foregroundColor: AppColors.olive,
                       padding: EdgeInsets.zero,
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -799,26 +834,45 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
 
   Widget _selectorUsuario() {
     final usuarios = _usuariosDisponibles;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: AppColors.fondo,
+        color: AppColors.iconBg,
         borderRadius: BorderRadius.circular(20),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _filtroUsuario,
           isDense: true,
-          icon: const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.black87),
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.black87),
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            size: 16,
+            color: AppColors.navy,
+          ),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppColors.navy,
+          ),
           dropdownColor: Colors.white,
           items: [
-            const DropdownMenuItem(value: 'todos', child: Text('Usuario: Todos')),
-            ...usuarios.map((u) => DropdownMenuItem(value: u, child: Text(u))),
+            const DropdownMenuItem(
+              value: 'todos',
+              child: Text('Usuario: Todos'),
+            ),
+            ...usuarios.map(
+              (u) => DropdownMenuItem(
+                value: u,
+                child: Text(u),
+              ),
+            ),
           ],
           onChanged: (valor) {
             if (valor == null) return;
-            setState(() => _filtroUsuario = valor);
+            setState(() {
+              _filtroUsuario = valor;
+            });
           },
         ),
       ),
@@ -827,21 +881,26 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
 
   Widget _chipTipo(String label, String valor) {
     final activo = _filtroTipo == valor;
+
     return ChoiceChip(
       label: Text(label),
       selected: activo,
-      onSelected: (_) => setState(() => _filtroTipo = valor),
+      onSelected: (_) {
+        setState(() {
+          _filtroTipo = valor;
+        });
+      },
       selectedColor: Colors.white,
       backgroundColor: Colors.white,
       showCheckmark: false,
       labelStyle: TextStyle(
-        color: activo ? Colors.black87 : Colors.grey.shade500,
+        color: activo ? AppColors.gold : AppColors.olive,
         fontWeight: FontWeight.w700,
         fontSize: 12,
       ),
       shape: StadiumBorder(
         side: BorderSide(
-          color: activo ? AppColors.dorado : Colors.grey.shade200,
+          color: activo ? AppColors.gold : AppColors.cardBorder,
           width: activo ? 1.4 : 1,
         ),
       ),

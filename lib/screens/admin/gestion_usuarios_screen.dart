@@ -23,6 +23,15 @@ class AppColors {
   static const rojo = Color(0xFFC0392B);
   static const rojoFondo = Color(0xFFFBE2DF);
   static const textoMuted = Color(0xFF6B7280);
+
+  // ---- Añadidos para el panel de filtros (diseño navy/gold) ----
+  static const navy = Color(0xFF101B33);
+  static const gold = Color(0xFFC9A24A);
+  static const goldDark = Color(0xFF8A6D1F);
+  static const olive = Color(0xFF8B7920);
+  static const inputBg = Color(0xFFEFE4CB);
+  static const iconBg = Color(0xFFF0E3BE);
+  static const cardBorder = Color(0xFFECE0BD);
 }
 
 class UsuariosScreen extends StatefulWidget {
@@ -918,22 +927,19 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
   }
 
   // =======================================================================
-  // PANEL DE FILTROS — tarjeta blanca colapsable con ícono, buscador,
-  // chips de rol (dinámicos, desde RolesService) y botón "Limpiar".
-  // (Mismo diseño que Inventario / Movimientos / Historial de Precios.)
+  // PANEL DE FILTROS — diseño navy/gold: tarjeta blanca con borde sutil
+  // (en vez de sombra), acentos dorados y texto en navy. Mismo diseño que
+  // Inventario / Movimientos.
   // =======================================================================
   Widget _panelFiltros() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: AppColors.cardBorder,
+          width: 0.6,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -944,18 +950,25 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
               onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
               child: Row(
                 children: [
-                  const Icon(Icons.filter_alt_outlined, size: 18, color: Colors.black87),
+                  const Icon(
+                    Icons.filter_alt_outlined,
+                    size: 18,
+                    color: AppColors.gold,
+                  ),
                   const SizedBox(width: 6),
                   const Text(
                     'Filtros y Búsqueda',
                     style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: AppColors.navy,
+                    ),
                   ),
                   const Spacer(),
                   Icon(
                     _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                     size: 20,
-                    color: AppColors.doradoOscuro,
+                    color: AppColors.goldDark,
                   ),
                 ],
               ),
@@ -965,13 +978,27 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
               TextField(
                 controller: _busquedaCtrl,
                 onChanged: (_) => setState(() {}),
-                style: const TextStyle(color: Colors.black87, fontSize: 13),
+                style: const TextStyle(
+                  color: AppColors.navy,
+                  fontSize: 13,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Buscar por nombre, correo o rol...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                  prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                  hintStyle: TextStyle(
+                    color: AppColors.navy.withValues(alpha: 0.45),
+                    fontSize: 13,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20,
+                    color: AppColors.navy.withValues(alpha: 0.45),
+                  ),
                   filled: true,
-                  fillColor: AppColors.fondo,
+                  fillColor: Color.lerp(
+                    AppColors.inputBg,
+                    Colors.white,
+                    0.6,
+                  ),
                   contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
@@ -983,7 +1010,7 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
-                    borderSide: const BorderSide(color: AppColors.dorado),
+                    borderSide: const BorderSide(color: AppColors.gold),
                   ),
                 ),
               ),
@@ -1000,7 +1027,7 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
                     icon: const Icon(Icons.close, size: 14),
                     label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.textoMuted,
+                      foregroundColor: AppColors.olive,
                       padding: EdgeInsets.zero,
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1017,7 +1044,7 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
 
   Widget _chipRol(String label, String valor) {
     final activo = _filtroRol == valor;
-    final color = valor == 'todos' ? AppColors.dorado : _colorRol(valor);
+    final color = valor == 'todos' ? AppColors.gold : _colorRol(valor);
     return ChoiceChip(
       label: Text(label),
       selected: activo,
@@ -1026,12 +1053,12 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
       backgroundColor: Colors.white,
       showCheckmark: false,
       labelStyle: TextStyle(
-        color: activo ? color : Colors.grey.shade500,
+        color: activo ? color : AppColors.olive,
         fontWeight: FontWeight.w700,
         fontSize: 12,
       ),
       shape: StadiumBorder(
-        side: BorderSide(color: activo ? color : Colors.grey.shade200, width: activo ? 1.4 : 1),
+        side: BorderSide(color: activo ? color : AppColors.cardBorder, width: activo ? 1.4 : 1),
       ),
     );
   }
