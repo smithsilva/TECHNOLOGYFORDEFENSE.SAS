@@ -5,8 +5,8 @@ import 'package:app_t4d/widgets/compartido/producto_card.dart';
 import '../../services/inventario_service.dart';
 import '../../models/categoria.dart';
 import '../../services/categorias_service.dart';
-import '../../models/proveedor.dart';
 import '../../services/proveedores_service.dart';
+import '../../models/proveedor.dart';
 import '../../models/sucursal.dart';
 import '../../services/sucursales_service.dart';
 
@@ -61,6 +61,8 @@ class _InventarioScreenState extends State<InventarioScreen> {
   final SucursalesService _sucursalesService = SucursalesService();
 
   String _filtroEstado = 'todos'; // todos | alto | medio | bajo
+  int? _filtroCategoria; // null = todas
+  bool _filtrosAbiertos = true;
   bool _cargando = false;
   bool _cargandoInicial = true;
   String? _error;
@@ -192,8 +194,18 @@ class _InventarioScreenState extends State<InventarioScreen> {
           _normalizar(p.idProducto.toString()).contains(texto) ||
           _normalizar(p.codigoBarras ?? '').contains(texto);
       final matchEstado = _filtroEstado == 'todos' || p.estado == _filtroEstado;
-      return matchTexto && matchEstado;
+      final matchCategoria =
+          _filtroCategoria == null || p.idCategoria == _filtroCategoria;
+      return matchTexto && matchEstado && matchCategoria;
     }).toList();
+  }
+
+  void _limpiarFiltros() {
+    setState(() {
+      _busquedaCtrl.clear();
+      _filtroEstado = 'todos';
+      _filtroCategoria = null;
+    });
   }
 
   Color _colorEstado(String estado) {
@@ -821,24 +833,26 @@ class _InventarioScreenState extends State<InventarioScreen> {
             _buildHeader(),
             const SizedBox(height: 16),
             _buildStats(),
-            const SizedBox(height: 18),
-            _buildFiltroHeader(),
-            const SizedBox(height: 10),
-            _buildBuscador(),
-            const SizedBox(height: 12),
-            _buildFiltros(),
             const SizedBox(height: 14),
-            Text(
-              '$_total ${_total == 1 ? "PRODUCTO" : "PRODUCTOS"}',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.0,
-                color: Colors.grey.shade500,
-              ),
+
+            _panelFiltros(),
+
+            const SizedBox(height: 16),
+
+            Row(
+              children: [
+                const Text(
+                  'Listado de Productos',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const Spacer(),
+                Text(
+                  '${_filtrados.length} producto${_filtrados.length != 1 ? "s" : ""}',
+                  style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             if (_error != null)
               Padding(
@@ -992,85 +1006,160 @@ class _InventarioScreenState extends State<InventarioScreen> {
   }
 
   // =======================================================================
-  // ENCABEZADO "Filtros y Búsqueda" — ícono + título, como en el panel web
+  // PANEL DE FILTROS — tarjeta blanca colapsable con ícono, buscador,
+  // chips de estado, selector de categoría y botón "Limpiar".
+  // (Mismo diseño que el panel de Movimientos, adaptado a Inventario.)
   // =======================================================================
-  Widget _buildFiltroHeader() {
-    return Row(
-      children: const [
-        Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.navyOscuro),
-        SizedBox(width: 8),
-        Text(
-          'Filtros y Búsqueda',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: AppColors.navyOscuro,
+  Widget _panelFiltros() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBuscador() {
-    return TextField(
-      controller: _busquedaCtrl,
-      onChanged: (_) => setState(() {}),
-      decoration: InputDecoration(
-        hintText: 'Buscar producto o código de barras...',
-        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-        prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.grey.shade200),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.grey.shade200),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: AppColors.dorado),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFiltros() {
-    return SizedBox(
-      height: 36,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          _chipFiltro('Todos', 'todos', AppColors.dorado),
-          _chipFiltro('Alto', 'alto', AppColors.verde),
-          _chipFiltro('Medio', 'medio', AppColors.naranja),
-          _chipFiltro('Bajo', 'bajo', AppColors.rojo),
         ],
       ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_alt_outlined, size: 18, color: Colors.black87),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Filtros y Búsqueda',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: AppColors.doradoOscuro,
+                  ),
+                ],
+              ),
+            ),
+            if (_filtrosAbiertos) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _busquedaCtrl,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(color: Colors.black87, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por producto, ID o código de barras...',
+                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                  prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                  filled: true,
+                  fillColor: AppColors.fondo,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: AppColors.dorado),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _chipEstado('Todos', 'todos'),
+                  _chipEstado('Alto', 'alto'),
+                  _chipEstado('Medio', 'medio'),
+                  _chipEstado('Bajo', 'bajo'),
+                  _selectorCategoria(),
+                  TextButton.icon(
+                    onPressed: _limpiarFiltros,
+                    icon: const Icon(Icons.close, size: 14),
+                    label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.textoMuted,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _chipFiltro(String label, String valor, Color color) {
-    final activo = _filtroEstado == valor;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: activo,
-        onSelected: (_) => setState(() => _filtroEstado = valor),
-        selectedColor: Colors.white,
-        backgroundColor: Colors.white,
-        showCheckmark: false,
-        labelStyle: TextStyle(
-          color: activo ? color : Colors.grey.shade500,
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
+  Widget _selectorCategoria() {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 190),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: AppColors.fondo,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int?>(
+          value: _filtroCategoria,
+          isDense: true,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.black87),
+          style: const TextStyle(
+              fontSize: 12, fontWeight: FontWeight.w700, color: Colors.black87),
+          dropdownColor: Colors.white,
+          items: [
+            const DropdownMenuItem<int?>(
+              value: null,
+              child: Text('Categoría: Todas', overflow: TextOverflow.ellipsis),
+            ),
+            ..._categoriasActivas.map(
+              (c) => DropdownMenuItem<int?>(
+                value: c.id,
+                child: Text(c.nombre, overflow: TextOverflow.ellipsis),
+              ),
+            ),
+          ],
+          onChanged: (valor) => setState(() => _filtroCategoria = valor),
         ),
-        shape: StadiumBorder(
-          side: BorderSide(color: activo ? color : Colors.grey.shade200, width: activo ? 1.4 : 1),
+      ),
+    );
+  }
+
+  Widget _chipEstado(String label, String valor) {
+    final activo = _filtroEstado == valor;
+    final color = _colorEstado(valor);
+    return ChoiceChip(
+      label: Text(label),
+      selected: activo,
+      onSelected: (_) => setState(() => _filtroEstado = valor),
+      selectedColor: Colors.white,
+      backgroundColor: Colors.white,
+      showCheckmark: false,
+      labelStyle: TextStyle(
+        color: activo ? color : Colors.grey.shade500,
+        fontWeight: FontWeight.w700,
+        fontSize: 12,
+      ),
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: activo ? color : Colors.grey.shade200,
+          width: activo ? 1.4 : 1,
         ),
       ),
     );

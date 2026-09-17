@@ -32,6 +32,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   final TextEditingController _busquedaCtrl = TextEditingController();
   final HistorialPreciosService _service = HistorialPreciosService();
 
+  String _filtroVariacion = 'todos'; // todos | aumento | reduccion | sin_cambio
   DateTime? _fechaFiltro;
   bool _cargando = false;
   bool _filtrosAbiertos = true;
@@ -117,7 +118,9 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
           (r.fecha.year == _fechaFiltro!.year &&
               r.fecha.month == _fechaFiltro!.month &&
               r.fecha.day == _fechaFiltro!.day);
-      return matchTexto && matchFecha;
+      final matchVariacion =
+          _filtroVariacion == 'todos' || r.tipoVariacion == _filtroVariacion;
+      return matchTexto && matchFecha && matchVariacion;
     }).toList();
   }
 
@@ -152,6 +155,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     setState(() {
       _busquedaCtrl.clear();
       _fechaFiltro = null;
+      _filtroVariacion = 'todos';
     });
   }
 
@@ -569,12 +573,11 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
 
-            _buildFiltroHeader(),
-            const SizedBox(height: 10),
-            _buscador(),
-            const SizedBox(height: 18),
+            _panelFiltros(),
+
+            const SizedBox(height: 16),
 
             _separadorConteo(_filtrados.length),
             const SizedBox(height: 12),
@@ -655,84 +658,181 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   }
 
   // =======================================================================
-  // ENCABEZADO "Filtros y Búsqueda" — ícono + título, como en Inventario/Categorías
+  // PANEL DE FILTROS — tarjeta blanca colapsable con ícono, buscador,
+  // chips de variación, filtro de fecha y botón "Limpiar".
+  // (Mismo diseño que Inventario / Movimientos, adaptado a Historial de
+  // Precios: en vez de categoría/usuario, el selector extra es la fecha.)
   // =======================================================================
-  Widget _buildFiltroHeader() {
-    return Row(
-      children: const [
-        Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.navyOscuro),
-        SizedBox(width: 8),
-        Text(
-          'Filtros y Búsqueda',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: AppColors.navyOscuro,
+  Widget _panelFiltros() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_alt_outlined, size: 18, color: Colors.black87),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Filtros y Búsqueda',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: AppColors.doradoOscuro,
+                  ),
+                ],
+              ),
+            ),
+            if (_filtrosAbiertos) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _busquedaCtrl,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(color: Colors.black87, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por producto, ID o motivo...',
+                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                  prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                  filled: true,
+                  fillColor: AppColors.fondo,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: AppColors.dorado),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _chipVariacion('Todos', 'todos'),
+                  _chipVariacion('Aumentos', 'aumento'),
+                  _chipVariacion('Reduc.', 'reduccion'),
+                  _chipVariacion('Sin cambio', 'sin_cambio'),
+                  _selectorFecha(),
+                  TextButton.icon(
+                    onPressed: _limpiarFiltros,
+                    icon: const Icon(Icons.close, size: 14),
+                    label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.textoMuted,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  // ---------------------------------------------------------------------
-  // BUSCADOR + FILTRO DE FECHA
-  // ---------------------------------------------------------------------
-  Widget _buscador() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        TextField(
-          controller: _busquedaCtrl,
-          onChanged: (_) => setState(() {}),
-          decoration: InputDecoration(
-            hintText: 'Buscar por producto, ID o motivo...',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-            prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(vertical: 0),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-              borderSide: const BorderSide(color: AppColors.dorado),
-            ),
-          ),
+  Widget _selectorFecha() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: _elegirFecha,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 190),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.fondo,
+          borderRadius: BorderRadius.circular(20),
         ),
-        const SizedBox(height: 10),
-        Row(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _elegirFecha,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  side: BorderSide(color: AppColors.doradoClaro),
-                ),
-                icon: const Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.doradoOscuro),
-                label: Text(
-                  _fechaFiltro == null ? 'Filtrar por fecha' : _formatoFechaLarga(_fechaFiltro!),
-                  style: const TextStyle(fontSize: 12, color: AppColors.doradoOscuro),
+            const Icon(Icons.calendar_today_outlined, size: 13, color: AppColors.doradoOscuro),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                _fechaFiltro == null ? 'Fecha: Todas' : _formatoFechaLarga(_fechaFiltro!),
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            TextButton.icon(
-              onPressed: _limpiarFiltros,
-              icon: const Icon(Icons.close, size: 14),
-              label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
-              style: TextButton.styleFrom(foregroundColor: AppColors.textoMuted),
-            ),
+            if (_fechaFiltro != null) ...[
+              const SizedBox(width: 4),
+              InkWell(
+                onTap: () => setState(() => _fechaFiltro = null),
+                child: const Icon(Icons.close, size: 14, color: AppColors.textoMuted),
+              ),
+            ],
           ],
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _chipVariacion(String label, String valor) {
+    final activo = _filtroVariacion == valor;
+    Color color;
+    switch (valor) {
+      case 'aumento':
+        color = AppColors.rojo;
+        break;
+      case 'reduccion':
+        color = AppColors.verde;
+        break;
+      case 'sin_cambio':
+        color = AppColors.gris;
+        break;
+      default:
+        color = AppColors.doradoOscuro;
+    }
+    return ChoiceChip(
+      label: Text(label),
+      selected: activo,
+      onSelected: (_) => setState(() => _filtroVariacion = valor),
+      selectedColor: Colors.white,
+      backgroundColor: Colors.white,
+      showCheckmark: false,
+      labelStyle: TextStyle(
+        color: activo ? color : Colors.grey.shade500,
+        fontWeight: FontWeight.w700,
+        fontSize: 12,
+      ),
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: activo ? color : Colors.grey.shade200,
+          width: activo ? 1.4 : 1,
+        ),
+      ),
     );
   }
 

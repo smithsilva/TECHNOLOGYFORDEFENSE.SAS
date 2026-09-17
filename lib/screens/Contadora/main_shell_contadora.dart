@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../../widgets/t4d_sidebar.dart';
@@ -7,13 +6,14 @@ import '../../widgets/admin/notificaciones_bottom_sheet.dart';
 
 import '../admin/notificaciones_screen.dart' hide AppColors;
 import 'inventario_contadora_screen.dart' hide AppColors;
-import 'Movimientos_Contables_screen.dart' hide AppColors;
+import '../Contadora/movimientos_contables_screen.dart';
 import 'Metodos pago screen.dart' hide AppColors;
 import 'Historial precios screen.dart' hide AppColors;
 import 'Proveedores screen.dart' hide AppColors;
 import 'Empleados screen.dart' hide AppColors;
 import 'Sucursales screen.dart' hide AppColors;
 import 'Reportes screen.dart' hide AppColors;
+import '../Contadora/perfil_screen.dart.dart' hide AppColors;
 
 class MainShellContadora extends StatefulWidget {
   final Map<String, dynamic>? usuario;
@@ -123,6 +123,40 @@ class _MainShellContadoraState extends State<MainShellContadora> {
             ),
             body: NotificacionesScreen(
               usuario: widget.usuario,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // AJUSTE: abre PerfilScreen como una pantalla nueva encima del shell
+  // (no forma parte del IndexedStack / menú lateral). Se dispara al
+  // tocar el badge "Nicol" en el ContadoraAppBar.
+  void _abrirPerfil() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF7F0E1),
+            appBar: AppBar(
+              backgroundColor: const Color(0xFF13161F),
+              foregroundColor: Colors.white,
+              title: const Text(
+                'Mi Perfil',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            body: PerfilScreen(
+              usuario: widget.usuario,
+              onCerrarSesion: () {
+                Navigator.of(context).pop();
+                _cerrarSesion();
+              },
+              // TODO: conecta aquí tu servicio real para guardar cambios
+              // de perfil (ej. llamada a Supabase/API), igual que hacen
+              // las demás pantallas con sus *_service.dart.
+              onGuardar: (datos) async {},
             ),
           );
         },
@@ -289,6 +323,8 @@ class _MainShellContadoraState extends State<MainShellContadora> {
                 onVerTodas: _abrirNotificacionesCompleto,
               );
             },
+            // AJUSTE: conecta el badge "Nicol" con la navegación al perfil.
+            onPerfilTap: _abrirPerfil,
           ),
 
           drawer: Drawer(
@@ -304,4 +340,3 @@ class _MainShellContadoraState extends State<MainShellContadora> {
     );
   }
 }
-

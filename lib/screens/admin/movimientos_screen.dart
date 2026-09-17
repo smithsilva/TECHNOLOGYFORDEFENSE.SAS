@@ -42,6 +42,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
   final MovimientosService _service = MovimientosService();
 
   String _filtroTipo = 'todos'; // todos | entrada | salida
+  String _filtroUsuario = 'todos';
   bool _cargando = false;
   bool _cargandoInicial = true;
   bool _filtrosAbiertos = true;
@@ -103,6 +104,15 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     return resultado;
   }
 
+  List<String> get _usuariosDisponibles {
+    final set = <String>{};
+    for (final m in _movimientos) {
+      if (m.usuario.trim().isNotEmpty) set.add(m.usuario);
+    }
+    final lista = set.toList()..sort();
+    return lista;
+  }
+
   List<Movimiento> get _filtrados {
     final texto = _normalizar(_busquedaCtrl.text);
     return _movimientos.where((m) {
@@ -111,7 +121,8 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
           _normalizar(m.producto).contains(texto) ||
           _normalizar(m.usuario).contains(texto);
       final matchTipo = _filtroTipo == 'todos' || m.tipo == _filtroTipo;
-      return matchTexto && matchTipo;
+      final matchUsuario = _filtroUsuario == 'todos' || m.usuario == _filtroUsuario;
+      return matchTexto && matchTipo && matchUsuario;
     }).toList();
   }
 
@@ -127,6 +138,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     setState(() {
       _busquedaCtrl.clear();
       _filtroTipo = 'todos';
+      _filtroUsuario = 'todos';
     });
   }
 
@@ -436,68 +448,8 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // Filtros y búsqueda — directo sobre el fondo, sin tarjeta blanca
-                Row(
-                  children: const [
-                    Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.navyOscuro),
-                    SizedBox(width: 8),
-                    Text(
-                      'Filtros y Búsqueda',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.navyOscuro,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _busquedaCtrl,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    hintText: 'Buscar por producto o usuario...',
-                    hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                    prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide(color: Colors.grey.shade200),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide(color: Colors.grey.shade200),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: const BorderSide(color: AppColors.dorado),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    _chipTipo('Todos', 'todos'),
-                    _chipTipo('Entrada', 'entrada'),
-                    _chipTipo('Salida', 'salida'),
-                    TextButton.icon(
-                      onPressed: _limpiarFiltros,
-                      icon: const Icon(Icons.close, size: 14),
-                      label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.textoMuted,
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                    ),
-                  ],
-                ),
+                _panelFiltros(),
+
                 const SizedBox(height: 16),
 
                 // Historial de movimientos
@@ -744,6 +696,135 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     );
   }
 
+  // =======================================================================
+  // PANEL DE FILTROS — tarjeta blanca colapsable con ícono, buscador,
+  // chips de tipo, selector de usuario y botón "Limpiar".
+  // (Diseño tomado de la versión con selector de usuario; las letras que
+  // antes eran doradas ahora van en negro, dejando el dorado solo como
+  // acento en bordes/chevrón.)
+  // =======================================================================
+  Widget _panelFiltros() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_alt_outlined, size: 18, color: Colors.black87),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Filtros y Búsqueda',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: AppColors.doradoOscuro,
+                  ),
+                ],
+              ),
+            ),
+            if (_filtrosAbiertos) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _busquedaCtrl,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(color: Colors.black87, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por producto o usuario...',
+                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                  prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                  filled: true,
+                  fillColor: AppColors.fondo,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: AppColors.dorado),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _chipTipo('Todos', 'todos'),
+                  _chipTipo('Entrada', 'entrada'),
+                  _chipTipo('Salida', 'salida'),
+                  _selectorUsuario(),
+                  TextButton.icon(
+                    onPressed: _limpiarFiltros,
+                    icon: const Icon(Icons.close, size: 14),
+                    label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.textoMuted,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _selectorUsuario() {
+    final usuarios = _usuariosDisponibles;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: AppColors.fondo,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _filtroUsuario,
+          isDense: true,
+          icon: const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.black87),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.black87),
+          dropdownColor: Colors.white,
+          items: [
+            const DropdownMenuItem(value: 'todos', child: Text('Usuario: Todos')),
+            ...usuarios.map((u) => DropdownMenuItem(value: u, child: Text(u))),
+          ],
+          onChanged: (valor) {
+            if (valor == null) return;
+            setState(() => _filtroUsuario = valor);
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _chipTipo(String label, String valor) {
     final activo = _filtroTipo == valor;
     return ChoiceChip(
@@ -754,7 +835,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
       backgroundColor: Colors.white,
       showCheckmark: false,
       labelStyle: TextStyle(
-        color: activo ? AppColors.dorado : Colors.grey.shade500,
+        color: activo ? Colors.black87 : Colors.grey.shade500,
         fontWeight: FontWeight.w700,
         fontSize: 12,
       ),

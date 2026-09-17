@@ -109,23 +109,36 @@ class HistorialPreciosService {
     final productosRaw = resultados[1];
 
     final mapaProductos = <int, Map<String, dynamic>>{
-      for (final p in productosRaw) p['id_producto'] as int: p,
+      for (final p in productosRaw)
+        if (p['id_producto'] != null) p['id_producto'] as int: p,
     };
 
     return historialRaw.map((h) {
-      final prod = mapaProductos[h['id_producto'] as int];
-      final precioNuevo = (h['precio_nuevo'] as num).toDouble();
+      final idProd = h['id_producto'] as int? ?? 0;
+      final prod = mapaProductos[idProd];
+      final precioNuevo = (h['precio_nuevo'] as num?)?.toDouble() ?? 0;
 
       return HistorialPrecio(
-        id: h['id_historial'] as int,
-        idProducto: h['id_producto'] as int,
+        id: h['id_historial'] as int? ?? 0,
+        idProducto: idProd,
         // Si el producto fue eliminado después, evitamos un null y avisamos.
         nombreProducto: prod?['nombre_producto']?.toString() ?? 'Producto eliminado',
-        precioActual: prod != null ? (prod['precio_actual'] as num).toDouble() : precioNuevo,
+        precioActual: prod != null
+            ? (prod['precio_actual'] as num?)?.toDouble() ?? 0
+            : precioNuevo,
         activo: prod?['activo'] as bool? ?? false,
-        precioAnterior: (h['precio_anterior'] as num).toDouble(),
+        precioAnterior: (h['precio_anterior'] as num?)?.toDouble() ?? 0,
         precioNuevo: precioNuevo,
-        fecha: DateTime.parse(h['fecha_cambio'] as String),
+        // FIX: antes esto era `DateTime.parse(h['fecha_cambio'] as String)`.
+        // Si el backend mandaba `fecha_cambio: null` en algún registro, el
+        // cast `as String` explotaba con
+        // "TypeError: null: type 'Null' is not a subtype of type 'String'"
+        // y tumbaba toda la pantalla (ninguna tarjeta llegaba a pintarse).
+        // Ahora se tolera null o un formato de fecha inválido, cayendo en
+        // DateTime.now() como valor de respaldo en vez de crashear.
+        fecha: h['fecha_cambio'] != null
+            ? DateTime.tryParse(h['fecha_cambio'].toString()) ?? DateTime.now()
+            : DateTime.now(),
         motivo: h['motivo']?.toString() ?? '',
       );
     }).toList();

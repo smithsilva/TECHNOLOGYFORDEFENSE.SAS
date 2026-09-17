@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/usuario_lista.dart';
+import '../../models/rol.dart';
+import '../../services/roles_service.dart';
 // import '../services/usuarios_service.dart'; // ← lo conectas cuando pases de mock a datos reales
 
 class AppColors {
@@ -34,15 +36,23 @@ class UsuariosScreen extends StatefulWidget {
 
 class _UsuariosScreenState extends State<UsuariosScreen> {
   final TextEditingController _busquedaCtrl = TextEditingController();
+  final RolesService _rolesService = RolesService();
 
   bool _cargando = false;
-  String _filtroRol = 'todos'; // todos | admin | gerente | mecanico | contador
+  bool _filtrosAbiertos = true;
+  String _filtroRol = 'todos'; // todos | <nombre_rol en minúsculas>
   List<UsuarioLista> _usuarios = [];
+
+  /// Roles reales traídos del backend (para armar los chips del filtro
+  /// dinámicamente). Si la carga falla, se cae de vuelta a los roles que
+  /// ya vengan presentes en `_usuarios` (ver `_rolesParaFiltro`).
+  List<Rol> _roles = [];
 
   @override
   void initState() {
     super.initState();
     _cargarUsuarios();
+    _cargarRoles(); // no bloqueante
   }
 
   @override
@@ -103,6 +113,36 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
     });
   }
 
+  /// Trae los roles reales desde el backend para poblar los chips del
+  /// filtro. Si falla (sin conexión, endpoint no listo, etc.) no rompe la
+  /// pantalla: simplemente se usan los roles ya presentes en `_usuarios`.
+  Future<void> _cargarRoles() async {
+    try {
+      final data = await _rolesService.obtenerRoles();
+      if (!mounted) return;
+      setState(() => _roles = data);
+    } catch (e) {
+      debugPrint('No se pudieron cargar roles: $e');
+    }
+  }
+
+  /// Lista de claves de rol (en minúsculas) a mostrar como chips.
+  /// Prioriza los roles reales del backend; si aún no cargaron o vino
+  /// vacía, cae a los roles distintos que ya traen los usuarios cargados.
+  List<String> get _rolesParaFiltro {
+    if (_roles.isNotEmpty) {
+      final nombres = _roles.map((r) => r.nombre.toLowerCase()).toSet().toList();
+      nombres.sort();
+      return nombres;
+    }
+    final set = <String>{};
+    for (final u in _usuarios) {
+      if (u.rol.trim().isNotEmpty) set.add(u.rol.toLowerCase());
+    }
+    final lista = set.toList()..sort();
+    return lista;
+  }
+
   int get _total => _usuarios.length;
   int get _totalAdmins => _usuarios.where((u) => u.rol == 'admin').length;
   int get _totalMecanicos => _usuarios.where((u) => u.rol == 'mecanico').length;
@@ -126,9 +166,16 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
           _normalizar(u.nombre).contains(texto) ||
           _normalizar(u.correo).contains(texto) ||
           _normalizar(u.rol).contains(texto);
-      final matchRol = _filtroRol == 'todos' || u.rol == _filtroRol;
+      final matchRol = _filtroRol == 'todos' || u.rol.toLowerCase() == _filtroRol;
       return matchTexto && matchRol;
     }).toList();
+  }
+
+  void _limpiarFiltros() {
+    setState(() {
+      _busquedaCtrl.clear();
+      _filtroRol = 'todos';
+    });
   }
 
   void _mostrarProximamente(String accion) {
@@ -147,7 +194,7 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
   }
 
   String _etiquetaRol(String rol) {
-    switch (rol) {
+    switch (rol.toLowerCase()) {
       case 'admin':
         return 'Admin';
       case 'contador':
@@ -165,7 +212,7 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
 
   // Color principal asociado a cada rol (avatar, borde lateral y badge)
   Color _colorRol(String rol) {
-    switch (rol) {
+    switch (rol.toLowerCase()) {
       case 'admin':
         return AppColors.dorado;
       case 'contador':
@@ -180,7 +227,7 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
   }
 
   Color _fondoRol(String rol) {
-    switch (rol) {
+    switch (rol.toLowerCase()) {
       case 'admin':
         return AppColors.doradoClaro.withValues(alpha: 0.3);
       case 'contador':
@@ -730,24 +777,26 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
             _buildHeader(),
             const SizedBox(height: 16),
             _buildStats(),
-            const SizedBox(height: 18),
-            _buildFiltroHeader(),
-            const SizedBox(height: 10),
-            _buildBuscador(),
-            const SizedBox(height: 12),
-            _buildFiltros(),
             const SizedBox(height: 14),
-            Text(
-              '${_filtrados.length} ${_filtrados.length == 1 ? "USUARIO" : "USUARIOS"}',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.0,
-                color: Colors.grey.shade500,
-              ),
+
+            _panelFiltros(),
+
+            const SizedBox(height: 16),
+
+            Row(
+              children: [
+                const Text(
+                  'Listado de Usuarios',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const Spacer(),
+                Text(
+                  '${_filtrados.length} ${_filtrados.length == 1 ? "usuario" : "usuarios"}',
+                  style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             if (_cargando)
               const Padding(
@@ -869,70 +918,106 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
   }
 
   // =======================================================================
-  // ENCABEZADO "Filtros y Búsqueda" — ícono + título, sobre el fondo,
-  // igual que en Inventario / Categorías / Historial de Precios.
+  // PANEL DE FILTROS — tarjeta blanca colapsable con ícono, buscador,
+  // chips de rol (dinámicos, desde RolesService) y botón "Limpiar".
+  // (Mismo diseño que Inventario / Movimientos / Historial de Precios.)
   // =======================================================================
-  Widget _buildFiltroHeader() {
-    return Row(
-      children: const [
-        Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.navyOscuro),
-        SizedBox(width: 8),
-        Text(
-          'Filtros y Búsqueda',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: AppColors.navyOscuro,
+  Widget _panelFiltros() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBuscador() {
-    return TextField(
-      controller: _busquedaCtrl,
-      onChanged: (_) => setState(() {}),
-      decoration: InputDecoration(
-        hintText: 'Buscar por nombre, correo o rol...',
-        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-        prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.grey.shade200),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.grey.shade200),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: AppColors.dorado),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_alt_outlined, size: 18, color: Colors.black87),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Filtros y Búsqueda',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: AppColors.doradoOscuro,
+                  ),
+                ],
+              ),
+            ),
+            if (_filtrosAbiertos) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _busquedaCtrl,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(color: Colors.black87, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por nombre, correo o rol...',
+                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                  prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                  filled: true,
+                  fillColor: AppColors.fondo,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: AppColors.dorado),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _chipRol('Todos', 'todos'),
+                  ..._rolesParaFiltro.map((r) => _chipRol(_etiquetaRol(r), r)),
+                  TextButton.icon(
+                    onPressed: _limpiarFiltros,
+                    icon: const Icon(Icons.close, size: 14),
+                    label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.textoMuted,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildFiltros() {
-    final opciones = [
-      ('Todos', 'todos', AppColors.dorado),
-      ('Admin', 'admin', AppColors.dorado),
-      ('Gerente', 'gerente', AppColors.morado),
-      ('Mecanico', 'mecanico', AppColors.azul),
-      ('Contador', 'contador', AppColors.verde),
-    ];
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: opciones.map((o) => _chipFiltro(o.$1, o.$2, o.$3)).toList(),
-    );
-  }
-
-  Widget _chipFiltro(String label, String valor, Color color) {
+  Widget _chipRol(String label, String valor) {
     final activo = _filtroRol == valor;
+    final color = valor == 'todos' ? AppColors.dorado : _colorRol(valor);
     return ChoiceChip(
       label: Text(label),
       selected: activo,
