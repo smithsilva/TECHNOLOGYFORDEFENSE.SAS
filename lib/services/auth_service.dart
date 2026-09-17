@@ -5,15 +5,15 @@ class AuthService {
   // Servidor por Wi-Fi
   static const String wifiApiUrl = 'http://192.168.2.14:5000';
 
-  // Servidor mediante USB + adb reverse
+  // Servidor mediante USB + adb reverse (o navegador en el mismo PC)
   static const String usbApiUrl = 'http://localhost:5000';
 
   // URL activa
-  // Para usar Wi-Fi:
-  static const String apiUrl = wifiApiUrl;
+  // Para usar Wi-Fi (celular físico en la misma red):
+  // static const String apiUrl = wifiApiUrl;
 
-  // Para usar USB + adb reverse, cambia la línea anterior por:
-  // static const String apiUrl = usbApiUrl;
+  // Para usar en el navegador del mismo PC donde corre el backend:
+  static const String apiUrl = usbApiUrl;
 
   static const String apiKey = 'pollo';
 
@@ -98,4 +98,3 @@ class AuthService {
     return data;
   }
 }
-

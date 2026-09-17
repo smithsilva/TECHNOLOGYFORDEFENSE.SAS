@@ -193,6 +193,10 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
     }
   }
 
+  // NOTA: se dejaron ambos métodos de exportación intactos (sin quitarlos)
+  // aunque ya no hay un botón en pantalla que los dispare, por si luego
+  // quieres volver a engancharlos desde otro lugar (por ejemplo un menú).
+
   // ==================== EXPORTAR A EXCEL ====================
   Future<void> _exportarExcel() async {
     if (_sucursales.isEmpty) {
@@ -304,29 +308,15 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final total = _sucursales.length;
-    final activas = _sucursales.where((s) => s.activo).length;
-
+    // AJUSTE: se quitó el FloatingActionButton "Agregar" y el Stack que lo
+    // posicionaba, porque el botón de agregar ahora vive dentro del
+    // encabezado (ver _PageHeaderCard, botón "+" dorado arriba a la derecha).
     return Container(
       color: AppColors.background,
-      child: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: _cargarSucursales,
-            color: AppColors.gold,
-            child: _buildBody(total, activas),
-          ),
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: FloatingActionButton.extended(
-              onPressed: () => _abrirFormulario(),
-              backgroundColor: AppColors.navy,
-              icon: const Icon(Icons.add, color: AppColors.gold),
-              label: const Text('Agregar', style: TextStyle(color: Colors.white)),
-            ),
-          ),
-        ],
+      child: RefreshIndicator(
+        onRefresh: _cargarSucursales,
+        color: AppColors.gold,
+        child: _buildBody(_sucursales.length, _sucursales.where((s) => s.activo).length),
       ),
     );
   }
@@ -343,19 +333,13 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
 
     if (_error != null) {
       return ListView(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 100),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
         children: [
           _PageHeaderCard(
             eyebrow: 'CONTADORA - SUCURSALES',
             title: 'Sucursales',
             subtitle: 'No se pudieron cargar los datos',
-          ),
-          const SizedBox(height: 14),
-          _HeaderActionButtons(
-            onActualizar: _cargarSucursales,
-            onExportarExcel: _exportarExcel,
-            onExportarPDF: _exportarPDF,
-            exportando: _exportando,
+            onAgregar: () => _abrirFormulario(),
           ),
           const SizedBox(height: 24),
           _ErrorState(mensaje: _error!, onReintentar: _cargarSucursales),
@@ -365,19 +349,13 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
 
     if (_sucursales.isEmpty) {
       return ListView(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 100),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
         children: [
           _PageHeaderCard(
             eyebrow: 'CONTADORA - SUCURSALES',
             title: 'Sucursales',
             subtitle: '0 sucursales registradas',
-          ),
-          const SizedBox(height: 14),
-          _HeaderActionButtons(
-            onActualizar: _cargarSucursales,
-            onExportarExcel: _exportarExcel,
-            onExportarPDF: _exportarPDF,
-            exportando: _exportando,
+            onAgregar: () => _abrirFormulario(),
           ),
           const SizedBox(height: 40),
           const Center(
@@ -391,19 +369,13 @@ class _SucursalesScreenState extends State<SucursalesScreen> {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 100),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
       children: [
         _PageHeaderCard(
           eyebrow: 'CONTADORA - SUCURSALES',
           title: 'Sucursales',
           subtitle: '$total sucursales registradas',
-        ),
-        const SizedBox(height: 14),
-        _HeaderActionButtons(
-          onActualizar: _cargarSucursales,
-          onExportarExcel: _exportarExcel,
-          onExportarPDF: _exportarPDF,
-          exportando: _exportando,
+          onAgregar: () => _abrirFormulario(),
         ),
         const SizedBox(height: 14),
         Row(
@@ -485,15 +457,20 @@ class _ErrorState extends StatelessWidget {
 }
 
 // ==================== TARJETA DE ENCABEZADO ====================
+// AJUSTE: ahora acepta un `onAgregar` opcional que dibuja un botón "+"
+// dorado arriba a la derecha (tal como en la imagen de referencia),
+// en reemplazo de los botones "Actualizar"/"Exportar" que se quitaron.
 class _PageHeaderCard extends StatelessWidget {
   final String eyebrow;
   final String title;
   final String subtitle;
+  final VoidCallback? onAgregar;
 
   const _PageHeaderCard({
     required this.eyebrow,
     required this.title,
     required this.subtitle,
+    this.onAgregar,
   });
 
   @override
@@ -506,176 +483,71 @@ class _PageHeaderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.gold, width: 1.2),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            eyebrow.toUpperCase(),
-            style: const TextStyle(
-              color: AppColors.gold,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  eyebrow.toUpperCase(),
+                  style: const TextStyle(
+                    color: AppColors.gold,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: AppColors.subtitulo,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: AppColors.subtitulo,
-              fontSize: 12.5,
-            ),
-          ),
+          if (onAgregar != null) ...[
+            const SizedBox(width: 12),
+            _BotonAgregarHeader(onTap: onAgregar!),
+          ],
         ],
       ),
     );
   }
 }
 
-// ==================== BOTONES DE ACTUALIZAR / EXPORTAR ====================
-class _HeaderActionButtons extends StatelessWidget {
-  final VoidCallback onActualizar;
-  final VoidCallback onExportarExcel;
-  final VoidCallback onExportarPDF;
-  final bool exportando;
+// Botón "+" dorado del encabezado, tal como se ve en la imagen.
+class _BotonAgregarHeader extends StatelessWidget {
+  final VoidCallback onTap;
 
-  const _HeaderActionButtons({
-    required this.onActualizar,
-    required this.onExportarExcel,
-    required this.onExportarPDF,
-    required this.exportando,
-  });
+  const _BotonAgregarHeader({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _GoldActionButton(
-            icon: Icons.refresh,
-            label: 'Actualizar',
-            onTap: onActualizar,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: PopupMenuButton<String>(
-            enabled: !exportando,
-            padding: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            onSelected: (valor) {
-              if (valor == 'excel') onExportarExcel();
-              if (valor == 'pdf') onExportarPDF();
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: 'excel',
-                child: Row(
-                  children: [
-                    Icon(Icons.grid_on, size: 18, color: Color(0xFF1D6F42)),
-                    SizedBox(width: 10),
-                    Text('Exportar Excel'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'pdf',
-                child: Row(
-                  children: [
-                    Icon(Icons.picture_as_pdf, size: 18, color: Color(0xFFE53935)),
-                    SizedBox(width: 10),
-                    Text('Exportar PDF'),
-                  ],
-                ),
-              ),
-            ],
-            child: _GoldActionButton(
-              icon: Icons.download,
-              label: exportando ? 'Exportando...' : 'Exportar',
-              onTap: null,
-              cargando: exportando,
-              mostrarFlecha: !exportando,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _GoldActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-  final bool cargando;
-  final bool mostrarFlecha;
-
-  const _GoldActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.cargando = false,
-    this.mostrarFlecha = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 10),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.dorado, AppColors.doradoOscuro],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.doradoOscuro.withValues(alpha: 0.35),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            cargando
-                ? const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : Icon(icon, size: 16, color: Colors.white),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            if (mostrarFlecha) ...[
-              const SizedBox(width: 4),
-              const Icon(Icons.arrow_drop_down, size: 16, color: Colors.white),
-            ],
-          ],
+    return Material(
+      color: AppColors.dorado,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          alignment: Alignment.center,
+          child: const Icon(Icons.add, color: AppColors.navy, size: 22),
         ),
       ),
     );

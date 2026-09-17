@@ -272,6 +272,11 @@ class _MovimientosContablesScreenState
   String _filtroTipo = 'Todos';
   final TextEditingController _searchController = TextEditingController();
 
+  // Controla si el buscador y los chips de filtro están visibles.
+  // Se activa/desactiva con el chevron junto a "Filtros y Búsqueda",
+  // tal como en el diseño de referencia.
+  bool _filtrosExpandido = true;
+
   // ------------------------------------------------------------
   // TODO: Reemplaza esto por tu fetch real a Supabase
   // (tabla movimientos_contables + join con mantenimiento/vehiculos)
@@ -348,9 +353,13 @@ class _MovimientosContablesScreenState
         const SizedBox(height: 18),
         _buildStatsGrid(),
         const SizedBox(height: 18),
-        _buildSearchBar(),
-        const SizedBox(height: 14),
-        _buildFiltros(),
+        _buildFiltrosHeader(),
+        if (_filtrosExpandido) ...[
+          const SizedBox(height: 10),
+          _buildSearchBar(),
+          const SizedBox(height: 14),
+          _buildFiltros(),
+        ],
         const SizedBox(height: 16),
         Text(
           '${_movimientosFiltrados.length} movimientos',
@@ -450,13 +459,6 @@ class _MovimientosContablesScreenState
                     height: 1.35,
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Row(
-                  children: [
-                    Icon(Icons.star_rounded, size: 16, color: AppColors.dorado),
-                    Icon(Icons.star_rounded, size: 16, color: AppColors.dorado),
-                  ],
-                ),
               ],
             ),
           ),
@@ -519,6 +521,43 @@ class _MovimientosContablesScreenState
           ],
         ),
       ],
+    );
+  }
+
+  // ------------------------------------------------------------
+  // ENCABEZADO "Filtros y Búsqueda" — ícono dorado + texto en navy,
+  // más el chevron a la derecha (visible en el diseño de referencia)
+  // que colapsa/expande el buscador y los chips de filtro.
+  // ------------------------------------------------------------
+  Widget _buildFiltrosHeader() {
+    return InkWell(
+      onTap: () => setState(() => _filtrosExpandido = !_filtrosExpandido),
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        children: [
+          const Icon(Icons.filter_alt_outlined, size: 17, color: AppColors.dorado),
+          const SizedBox(width: 6),
+          const Expanded(
+            child: Text(
+              'Filtros y Búsqueda',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppColors.encabezado,
+              ),
+            ),
+          ),
+          AnimatedRotation(
+            turns: _filtrosExpandido ? 0.5 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 20,
+              color: AppColors.dorado,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -851,6 +890,32 @@ class _StatCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ============================================================
+// DEMO STANDALONE — por si quieres correr este archivo solo
+// (flutter run) para verificar que compila y se ve exactamente
+// como en la imagen, sin necesidad del resto de tu app.
+// ============================================================
+void main() {
+  runApp(const _DemoApp());
+}
+
+class _DemoApp extends StatelessWidget {
+  const _DemoApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Movimientos Contables',
+      theme: ThemeData(
+        scaffoldBackgroundColor: AppColors.fondo,
+        fontFamily: 'Roboto',
+      ),
+      home: const MovimientosContablesScreen(),
     );
   }
 }

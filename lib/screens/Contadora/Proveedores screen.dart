@@ -50,16 +50,25 @@ class ProveedoresScreen extends StatefulWidget {
 
 class _ProveedoresScreenState extends State<ProveedoresScreen> {
   final ProveedoresService _service = ProveedoresService();
+  final TextEditingController _busquedaCtrl = TextEditingController();
 
   List<Proveedor> _proveedores = [];
   bool _cargando = true;
   String? _error;
   String? _token;
 
+  bool _filtrosAbiertos = true;
+
   @override
   void initState() {
     super.initState();
     _cargarProveedores();
+  }
+
+  @override
+  void dispose() {
+    _busquedaCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _cargarProveedores() async {
@@ -182,41 +191,54 @@ class _ProveedoresScreenState extends State<ProveedoresScreen> {
     }
   }
 
+  void _limpiarFiltros() {
+    setState(() {
+      _busquedaCtrl.clear();
+    });
+  }
+
+  String _normalizar(String texto) {
+    const conTilde = 'áàäâéèëêíìïîóòöôúùüû';
+    const sinTilde = 'aaaaeeeeiiiioooouuuu';
+    var resultado = texto.toLowerCase();
+    for (var i = 0; i < conTilde.length; i++) {
+      resultado = resultado.replaceAll(conTilde[i], sinTilde[i]);
+    }
+    return resultado;
+  }
+
+  List<Proveedor> get _filtrados {
+    final texto = _normalizar(_busquedaCtrl.text);
+    if (texto.isEmpty) return _proveedores;
+    return _proveedores.where((p) {
+      return _normalizar(p.nombre).contains(texto) ||
+          _normalizar(p.nit ?? '').contains(texto) ||
+          _normalizar(p.direccion ?? '').contains(texto) ||
+          _normalizar(p.contacto ?? '').contains(texto);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final total = _proveedores.length;
-
     return Container(
       color: AppColors.background,
-      child: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: _cargarProveedores,
-            color: AppColors.gold,
-            child: _buildBody(total),
-          ),
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: FloatingActionButton.extended(
-              onPressed: () => _abrirFormulario(),
-              backgroundColor: AppColors.navy,
-              icon: const Icon(Icons.add, color: AppColors.gold),
-              label: const Text('Agregar', style: TextStyle(color: Colors.white)),
-            ),
-          ),
-        ],
+      child: RefreshIndicator(
+        onRefresh: _cargarProveedores,
+        color: AppColors.gold,
+        child: _buildBody(),
       ),
     );
   }
 
-  Widget _buildBody(int total) {
+  Widget _buildBody() {
     if (_cargando) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.only(top: 120),
-          child: CircularProgressIndicator(color: AppColors.gold),
-        ),
+      return ListView(
+        children: const [
+          Padding(
+            padding: EdgeInsets.only(top: 120),
+            child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+          ),
+        ],
       );
     }
 
@@ -228,6 +250,7 @@ class _ProveedoresScreenState extends State<ProveedoresScreen> {
             eyebrow: 'CONTADORA - PROVEEDORES',
             title: 'Proveedores',
             subtitle: 'No se pudieron cargar los datos',
+            onAgregar: () => _abrirFormulario(),
           ),
           const SizedBox(height: 24),
           _ErrorState(mensaje: _error!, onReintentar: _cargarProveedores),
@@ -235,25 +258,8 @@ class _ProveedoresScreenState extends State<ProveedoresScreen> {
       );
     }
 
-    if (_proveedores.isEmpty) {
-      return ListView(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 100),
-        children: [
-          _PageHeaderCard(
-            eyebrow: 'CONTADORA - PROVEEDORES',
-            title: 'Proveedores',
-            subtitle: '0 proveedores registrados',
-          ),
-          const SizedBox(height: 40),
-          const Center(
-            child: Text(
-              'No hay proveedores registrados todavía.',
-              style: TextStyle(color: AppColors.textGrey, fontSize: 13),
-            ),
-          ),
-        ],
-      );
-    }
+    final total = _proveedores.length;
+    final filtrados = _filtrados;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 100),
@@ -262,23 +268,139 @@ class _ProveedoresScreenState extends State<ProveedoresScreen> {
           eyebrow: 'CONTADORA - PROVEEDORES',
           title: 'Proveedores',
           subtitle: '$total proveedores registrados',
+          onAgregar: () => _abrirFormulario(),
         ),
         const SizedBox(height: 14),
         _StatCard(label: 'Total', value: '$total', accentColor: AppColors.gold),
         const SizedBox(height: 14),
-        ...List.generate(_proveedores.length, (index) {
-          final proveedor = _proveedores[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _ProveedorCard(
-              proveedor: proveedor,
-              onVer: () => _verDetalle(proveedor),
-              onEditar: () => _abrirFormulario(proveedor: proveedor),
-              onEliminar: () => _confirmarEliminar(proveedor),
+        _buildPanelFiltros(),
+        const SizedBox(height: 14),
+        if (total == 0)
+          const Padding(
+            padding: EdgeInsets.only(top: 30),
+            child: Center(
+              child: Text(
+                'No hay proveedores registrados todavía.',
+                style: TextStyle(color: AppColors.textGrey, fontSize: 13),
+              ),
             ),
-          );
-        }),
+          )
+        else ...[
+          Text(
+            '${filtrados.length} ${filtrados.length == 1 ? "PROVEEDOR" : "PROVEEDORES"}',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.0,
+              color: Colors.grey.shade500,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (filtrados.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 20),
+              child: Center(
+                child: Text(
+                  'No se encontraron proveedores con esos filtros.',
+                  style: TextStyle(color: AppColors.textGrey, fontSize: 13),
+                ),
+              ),
+            )
+          else
+            ...List.generate(filtrados.length, (index) {
+              final proveedor = filtrados[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _ProveedorCard(
+                  proveedor: proveedor,
+                  onVer: () => _verDetalle(proveedor),
+                  onEditar: () => _abrirFormulario(proveedor: proveedor),
+                  onEliminar: () => _confirmarEliminar(proveedor),
+                ),
+              );
+            }),
+        ],
       ],
+    );
+  }
+
+  // ------------------------------------------------------------
+  // Panel "Filtros y Búsqueda" — solo buscador, sin filtro de
+  // estado (tu modelo Proveedor no tiene ese campo).
+  // ------------------------------------------------------------
+  Widget _buildPanelFiltros() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.doradoClaro),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.doradoOscuro),
+                  const SizedBox(width: 8),
+                  const Text('Filtros y Búsqueda',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const Spacer(),
+                  Icon(
+                    _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_filtrosAbiertos) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+              child: TextField(
+                controller: _busquedaCtrl,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por nombre, NIT, dirección o contacto...',
+                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                  prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                  filled: true,
+                  fillColor: AppColors.fondo,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: AppColors.gold),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _limpiarFiltros,
+                  icon: const Icon(Icons.close, size: 14),
+                  label: const Text('Limpiar filtros', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.doradoOscuro),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -328,11 +450,13 @@ class _PageHeaderCard extends StatelessWidget {
   final String eyebrow;
   final String title;
   final String subtitle;
+  final VoidCallback? onAgregar;
 
   const _PageHeaderCard({
     required this.eyebrow,
     required this.title,
     required this.subtitle,
+    this.onAgregar,
   });
 
   @override
@@ -345,35 +469,58 @@ class _PageHeaderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.gold, width: 1.2),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            eyebrow.toUpperCase(),
-            style: const TextStyle(
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  eyebrow.toUpperCase(),
+                  style: const TextStyle(
+                    color: AppColors.gold,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: AppColors.subtitulo,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (onAgregar != null) ...[
+            const SizedBox(width: 12),
+            Material(
               color: AppColors.gold,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: onAgregar,
+                child: const SizedBox(
+                  width: 42,
+                  height: 42,
+                  child: Icon(Icons.add, color: AppColors.navy, size: 24),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: AppColors.subtitulo,
-              fontSize: 12.5,
-            ),
-          ),
+          ],
         ],
       ),
     );
@@ -542,42 +689,22 @@ class _ProveedorCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  proveedor.nombre,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textDark,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'NIT: ${proveedor.nit ?? '—'}',
-                                  style: const TextStyle(
-                                    fontSize: 10.5,
-                                    color: AppColors.goldDark,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            '#${proveedor.id}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.gold,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        proveedor.nombre,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'NIT: ${proveedor.nit ?? '—'}',
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          color: AppColors.goldDark,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       const Divider(height: 1, color: AppColors.cardBorder),
