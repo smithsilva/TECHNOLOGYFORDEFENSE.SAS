@@ -5,7 +5,7 @@ import '../models/producto.dart';
 import '../models/historial_precio.dart';
 
 class HistorialPreciosService {
-  static const String _baseUrl = '${AuthService.apiUrl}/precios-historiales';
+  static const String _baseUrl = '${AuthService.apiUrl}/historial-precios';
   static const String _apiKey = AuthService.apiKey;
 
   Map<String, String> _headers(String token) => {
