@@ -285,6 +285,12 @@ class _MovimientosContablesScreenState
   // ------------------------------------------------------------
   final List<MovimientoContable> _movimientos = movimientosData;
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   List<MovimientoContable> get _movimientosFiltrados {
     final query = _searchController.text.toLowerCase();
     return _movimientos.where((m) {
@@ -696,6 +702,8 @@ class _MovimientosContablesScreenState
     );
   }
 
+  // AJUSTE: se quitó el borde dorado (Border.all(color: dorado)) de
+  // este contenedor.
   Widget _buildTituloYExportar() {
     return Container(
       width: double.infinity,
@@ -703,7 +711,6 @@ class _MovimientosContablesScreenState
       decoration: BoxDecoration(
         color: AppColors.navyOscuro,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.dorado, width: 1.2),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -835,11 +842,8 @@ class _MovimientosContablesScreenState
   // ---------------------------------------------------------------------
   // BUSCADOR
   //
-  // AJUSTE: estilo tomado de historial_precios_screen.dart -> _buscador().
-  // Campo blanco tipo "pill" (borderRadius 30), borde gris claro que se
-  // pone dorado al enfocar, en vez del fondo crema (inputBg) que tenía
-  // antes. El Container/inputBg se retira porque el propio TextField ya
-  // trae su fondo blanco redondeado.
+  // AJUSTE: se quitó el borde dorado al enfocar (focusedBorder). Ahora el
+  // borde se mantiene gris tanto en reposo como con el foco.
   // ---------------------------------------------------------------------
   Widget _buildSearchBar() {
     return TextField(
@@ -863,7 +867,7 @@ class _MovimientosContablesScreenState
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: AppColors.dorado),
+          borderSide: BorderSide(color: Colors.grey.shade300),
         ),
       ),
     );
@@ -872,10 +876,9 @@ class _MovimientosContablesScreenState
   // ---------------------------------------------------------------------
   // CHIPS DE FILTRO (Todos / Egreso / Ingreso)
   //
-  // AJUSTE: mismo lenguaje visual del botón "Filtrar por fecha" de
-  // historial_precios_screen.dart -> OutlinedButton con borde dorado
-  // claro y esquinas muy redondeadas (pill), fondo dorado suave cuando
-  // está activo.
+  // AJUSTE: se quitaron los bordes dorados de los chips. Ahora usan un
+  // borde gris claro, igual que el buscador. El chip activo se sigue
+  // distinguiendo por su fondo y el color del texto.
   // ---------------------------------------------------------------------
   Widget _buildFiltros() {
     final opciones = ['Todos', 'Egreso', 'Ingreso'];
@@ -891,10 +894,7 @@ class _MovimientosContablesScreenState
                   activo ? AppColors.doradoClaro.withOpacity(0.28) : Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              side: BorderSide(
-                color: activo ? AppColors.dorado : AppColors.doradoClaro,
-                width: activo ? 1.5 : 1,
-              ),
+              side: BorderSide(color: Colors.grey.shade200, width: 1),
             ),
             child: Text(
               op,
@@ -1110,20 +1110,11 @@ class _GoldButton extends StatelessWidget {
 }
 
 // ============================================================
-// _StatCard — CORREGIDO
-// ------------------------------------------------------------
-// ANTES: un solo Container con BoxDecoration(borderRadius: ...,
-// border: Border(left: colorAcento, top/right/bottom: cardBorder)).
-// Flutter NO permite un borderRadius sobre un Border con colores
-// distintos por lado ("A borderRadius can only be given on borders
-// with uniform colors."), y lanzaba esa excepción en cada paint(),
-// dejando la tarjeta en blanco (sin borde, sin texto).
-//
-// AHORA: la franja de color izquierda se separa en su propio
-// Container angosto dentro de un Row, y el borderRadius se aplica
-// solo sobre un borde de un único color uniforme (cardBorder),
-// exactamente el mismo patrón ya usado en
-// historial_precios_screen.dart -> _tarjetaRegistro.
+// _StatCard
+// La franja de color izquierda va en su propio Container y el
+// borderRadius se aplica sobre un borde de un único color
+// (cardBorder), para evitar la excepción de Flutter con bordes
+// de colores distintos + borderRadius.
 // ============================================================
 class _StatCard extends StatelessWidget {
   final String label;
@@ -1162,9 +1153,6 @@ class _StatCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Franja de color izquierda, separada del borde del
-                // contenedor (así el borderRadius de arriba sí puede
-                // aplicarse, porque ese borde es de un solo color).
                 Container(width: 4, color: colorAcento),
                 Expanded(
                   child: Padding(

@@ -172,7 +172,7 @@ class _EmpleadosScreenState extends State<EmpleadosScreen> {
 
 // ============================================================
 // TARJETA DE ENCABEZADO ESTILO "HISTORIAL DE PRECIOS"
-// Fondo azul marino oscuro, borde dorado, etiqueta dorada,
+// Fondo azul marino oscuro, sin borde, etiqueta dorada,
 // título blanco y subtítulo azul claro.
 // ============================================================
 class _PageHeaderCard extends StatelessWidget {
@@ -194,7 +194,6 @@ class _PageHeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.navy,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.gold, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,7 +262,6 @@ class _FiltrosYBusquedaCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
@@ -381,10 +379,7 @@ class _ChipFiltro extends StatelessWidget {
         decoration: BoxDecoration(
           color: seleccionado ? AppColors.iconBg : AppColors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: seleccionado ? AppColors.gold : AppColors.cardBorder,
-            width: seleccionado ? 1.2 : 1,
-          ),
+          border: Border.all(color: AppColors.cardBorder, width: 1),
         ),
         child: Text(
           texto,
@@ -451,7 +446,7 @@ class _EstadoBadge extends StatelessWidget {
 }
 
 // Tarjeta de empleado con franja de acento a la izquierda (color del
-// avatar) y borde dorado en todo el cuadro.
+// avatar), sin borde alrededor del cuadro.
 class _EmpleadoCard extends StatelessWidget {
   final EmpleadoModel empleado;
 
@@ -463,7 +458,6 @@ class _EmpleadoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],

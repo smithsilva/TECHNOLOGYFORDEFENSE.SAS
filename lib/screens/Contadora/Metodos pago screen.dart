@@ -565,7 +565,6 @@ class _PageHeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.navy,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.gold, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -620,7 +619,6 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
@@ -689,7 +687,6 @@ class _FiltrosYBusquedaCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.filtroCardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
@@ -809,10 +806,7 @@ class _ChipFiltro extends StatelessWidget {
         decoration: BoxDecoration(
           color: seleccionado ? AppColors.iconBg : AppColors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: seleccionado ? AppColors.gold : AppColors.cardBorder,
-            width: seleccionado ? 1.2 : 1,
-          ),
+          border: Border.all(color: AppColors.cardBorder, width: 1),
         ),
         child: Text(
           texto,
@@ -867,7 +861,6 @@ class _MetodoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
@@ -1174,7 +1167,7 @@ class _AsignacionTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.gold, width: 1),
+        border: Border.all(color: AppColors.cardBorder, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

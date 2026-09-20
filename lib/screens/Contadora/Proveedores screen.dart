@@ -334,7 +334,6 @@ class _ProveedoresScreenState extends State<ProveedoresScreen> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.doradoClaro),
       ),
       child: Column(
         children: [
@@ -381,7 +380,7 @@ class _ProveedoresScreenState extends State<ProveedoresScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
-                    borderSide: const BorderSide(color: AppColors.gold),
+                    borderSide: BorderSide(color: Colors.grey.shade400),
                   ),
                 ),
               ),
@@ -467,7 +466,6 @@ class _PageHeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.navy,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.gold, width: 1.2),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -545,7 +543,6 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
@@ -641,7 +638,7 @@ class _ActionIconButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.doradoClaro),
+          border: Border.all(color: AppColors.cardBorder),
         ),
         alignment: Alignment.center,
         child: Icon(icon, size: 16, color: color),
@@ -670,7 +667,6 @@ class _ProveedorCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.gold, width: 1.2),
         boxShadow: const [
           BoxShadow(color: AppColors.cardShadow, blurRadius: 8, offset: Offset(0, 2)),
         ],
@@ -1009,7 +1005,7 @@ class _ProveedorFormSheetState extends State<_ProveedorFormSheet> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: AppColors.gold, width: 1.4),
+            borderSide: BorderSide(color: Colors.grey.shade400, width: 1.4),
           ),
         ),
         validator: (v) {
