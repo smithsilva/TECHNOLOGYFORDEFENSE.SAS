@@ -14,5 +14,7 @@ Future<void> inicializarSupabase() async {
   await Supabase.initialize(
     url: 'https://nnlpmcwnahjdfqhfccjj.supabase.co',
     anonKey: 'sb_publishable_3WU0ecokunMuTQMf6xWqLA_TrZVAZ7X',
+
+    
   );
 }

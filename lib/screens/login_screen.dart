@@ -1,27 +1,30 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import 'forgot_password_screen.dart';
 
-// ==========================
-// Paleta de colores (equivalente al objeto C del JSX)
-// ==========================
-class AppColors {
-  static const cardBg = Color(0x730E1621); // rgba(14,22,33,0.45)
-  static const cardBorder = Color(0x4DB89B6A); // rgba(184,155,106,0.30)
-  static const titulo = Color(0xFFFFFFFF);
-  static const dorado = Color(0xFFB89B6A);
-  static const doradoClaro = Color(0xFFC9A84C);
-  static const doradoOsc = Color(0xFF8B6914);
-  static const inputBg = Color(0xFF1A2336);
-  static const inputBorder = Color(0xFF2D3A52);
-  static const inputTxt = Color(0xFFC5CFE0);
-  static const placeholder = Color(0xFF4E6080);
-  static const labelTxt = Color(0xFF9AB0C8);
-  static const navy = Color(0xFF0E1621);
-  static const navyClaro = Color(0xFF16202E);
+// Paleta de colores (incluida en este archivo, no necesita otro archivo)
+class _AppColors {
+  static const background = Color(0xFFF7EFDD);
+  static const navy = Color(0xFF101B33);
+  static const gold = Color(0xFFC9A24A);
+  static const goldDark = Color(0xFF8A6D1F);
+  static const goldText = Color(0xFFD2A03C);
+  static const lightBlue = Color(0xFF9FB4DE);
+  static const inputBg = Color(0xFFEFE4CB);
+  static const iconBg = Color(0xFFF0E3BE);
+  static const cardBorder = Color(0xFFECE0BD);
+
+  static const green = Color(0xFF2E9E4E);
+  static const greenBg = Color(0xFFDCF2E3);
+  static const olive = Color(0xFF8B7920);
+  static const oliveBg = Color(0xFFF3ECD2);
+  static const red = Color(0xFFC24555);
+  static const redBg = Color(0xFFF8DCE0);
 }
+
 
 /// Callback que recibe la vista destino tras el login (equivalente a setVista)
 typedef OnNavigate = void Function(String vista);
@@ -88,10 +91,10 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Container(
           padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
           decoration: BoxDecoration(
-            color: AppColors.navyClaro,
+            color: _AppColors.navy,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: (exito ? Colors.greenAccent : Colors.redAccent)
+              color: (exito ? _AppColors.green : _AppColors.red)
                   .withValues(alpha: 0.35),
             ),
             boxShadow: [
@@ -110,12 +113,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 56,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: (exito ? Colors.green : Colors.redAccent)
+                  color: (exito ? _AppColors.green : _AppColors.red)
                       .withValues(alpha: 0.15),
                 ),
                 child: Icon(
                   exito ? Icons.check_rounded : Icons.priority_high_rounded,
-                  color: exito ? Colors.greenAccent : Colors.redAccent,
+                  color: exito ? _AppColors.green : _AppColors.red,
                   size: 30,
                 ),
               ),
@@ -124,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 titulo,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: AppColors.titulo,
+                  color: Colors.white,
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
                 ),
@@ -134,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 texto,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: AppColors.inputTxt,
+                  color: _AppColors.lightBlue,
                   fontSize: 13,
                   height: 1.4,
                 ),
@@ -145,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ElevatedButton(
                   onPressed: () => Navigator.of(ctx).pop(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.doradoOsc,
+                    backgroundColor: _AppColors.goldDark,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -261,25 +264,29 @@ debugPrint('>>> rol crudo: ${usuarioBD['rol']}');
     required IconData icon,
     Widget? suffixIcon,
   }) {
+    final bordeNormal = Colors.white.withValues(alpha: 0.14);
     return InputDecoration(
       hintText: label,
-      hintStyle: const TextStyle(color: AppColors.placeholder, fontSize: 14),
+      hintStyle: TextStyle(
+        color: _AppColors.lightBlue.withValues(alpha: 0.45),
+        fontSize: 14,
+      ),
       filled: true,
-      fillColor: AppColors.inputBg,
-      prefixIcon: Icon(icon, color: AppColors.dorado, size: 18),
+      fillColor: Colors.white.withValues(alpha: 0.06),
+      prefixIcon: Icon(icon, color: _AppColors.goldText, size: 18),
       suffixIcon: suffixIcon,
       contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.inputBorder),
+        borderSide: BorderSide(color: bordeNormal),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.inputBorder),
+        borderSide: BorderSide(color: bordeNormal),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.dorado),
+        borderSide: const BorderSide(color: _AppColors.goldText),
       ),
     );
   }
@@ -290,12 +297,12 @@ debugPrint('>>> rol crudo: ${usuarioBD['rol']}');
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppColors.dorado, size: 14),
+          Icon(icon, color: _AppColors.goldText, size: 14),
           const SizedBox(width: 7),
           Text(
             texto,
             style: const TextStyle(
-              color: AppColors.labelTxt,
+              color: _AppColors.lightBlue,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -332,214 +339,260 @@ debugPrint('>>> rol crudo: ${usuarioBD['rol']}');
                   constraints: const BoxConstraints(maxWidth: 400),
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
                     decoration: BoxDecoration(
-                      color: AppColors.cardBg,
                       borderRadius: BorderRadius.circular(18),
-                      boxShadow: const [
+                      boxShadow: [
                         BoxShadow(
-                          color: Color(0x8C000000),
+                          color: Colors.black.withValues(alpha: 0.55),
                           blurRadius: 60,
-                          offset: Offset(0, 24),
+                          offset: const Offset(0, 24),
                         ),
                       ],
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Logo
-                        Image.asset(
-                          'assets/escudo1.png',
-                          width: 84,
-                          height: 84,
-                          fit: BoxFit.contain,
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Título
-                        const Text(
-                          'TECHNOLOGY FOR DEFENSE S.A.S.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.titulo,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Subtítulo con líneas doradas
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Container(height: 1, color: AppColors.dorado),
+                    // Desenfoque del fondo (igual que la web)
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                _AppColors.navy.withValues(alpha: 0.40),
+                                _AppColors.navy.withValues(alpha: 0.26),
+                              ],
                             ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 6),
-                              child: Text(
-                                'Sistema de Control de Inventario',
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: _AppColors.gold.withValues(alpha: 0.30),
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Logo
+                              Image.asset(
+                                'assets/escudo1.png',
+                                width: 84,
+                                height: 84,
+                                fit: BoxFit.contain,
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Título
+                              const Text(
+                                'TECHNOLOGY FOR DEFENSE S.A.S.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: AppColors.dorado,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.0,
                                 ),
                               ),
-                            ),
-                            Expanded(
-                              child: Container(height: 1, color: AppColors.dorado),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 18),
+                              const SizedBox(height: 8),
 
-                        // Correo
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: _label('Correo electrónico', Icons.person_outline),
-                        ),
-                        TextField(
-                          controller: _correoCtrl,
-                          keyboardType: TextInputType.emailAddress,
-                          style: const TextStyle(color: AppColors.inputTxt, fontSize: 13),
-                          decoration: _inputDecoration(
-                            label: 'Ingrese su correo electrónico',
-                            icon: Icons.person_outline,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Contraseña
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: _label('Contraseña', Icons.lock_outline),
-                        ),
-                        TextField(
-                          controller: _passwordCtrl,
-                          obscureText: !_showPass,
-                          style: const TextStyle(color: AppColors.inputTxt, fontSize: 13),
-                          decoration: _inputDecoration(
-                            label: 'Ingrese su contraseña',
-                            icon: Icons.lock_outline,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _showPass
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: AppColors.dorado,
-                                size: 18,
-                              ),
-                              onPressed: () =>
-                                  setState(() => _showPass = !_showPass),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Código de verificación
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: _label(
-                            'Código de verificación',
-                            Icons.shield_outlined,
-                          ),
-                        ),
-                        TextField(
-                          controller: _codigoCtrl,
-                          style: const TextStyle(
-                            color: AppColors.inputTxt,
-                            fontSize: 13,
-                            letterSpacing: 3,
-                          ),
-                          decoration: _inputDecoration(
-                            label: 'Ingrese el código de verific...',
-                            icon: Icons.shield_outlined,
-                          ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.only(top: 4),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              'Código enviado a tu correo',
-                              style: TextStyle(
-                                color: AppColors.placeholder,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // ¿Olvidaste tu contraseña?
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const ForgotPasswordScreen(),
-                                ),
-                              );
-                            },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(50, 30),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: const Text(
-                              '¿Olvidaste tu contraseña?',
-                              style: TextStyle(
-                                color: AppColors.dorado,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-
-                        // Botón
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _cargando ? null : _manejarLogin,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              backgroundColor: AppColors.doradoOsc,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              elevation: 6,
-                            ).copyWith(
-                              backgroundColor: WidgetStateProperty.resolveWith(
-                                (states) => states.contains(WidgetState.pressed)
-                                    ? AppColors.doradoOsc
-                                    : AppColors.doradoClaro,
-                              ),
-                            ),
-                            child: _cargando
-                                ? const SizedBox(
-                                    height: 18,
-                                    width: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text(
-                                    'Iniciar sesión',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      letterSpacing: 0.5,
+                              // Subtítulo con líneas doradas
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      height: 1,
+                                      color: _AppColors.goldText,
                                     ),
                                   ),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 6),
+                                    child: Text(
+                                      'Sistema de Control de Inventario',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: _AppColors.goldText,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Container(
+                                      height: 1,
+                                      color: _AppColors.goldText,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 18),
+
+                              // Correo
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: _label(
+                                  'Correo electrónico',
+                                  Icons.person_outline,
+                                ),
+                              ),
+                              TextField(
+                                controller: _correoCtrl,
+                                keyboardType: TextInputType.emailAddress,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                ),
+                                decoration: _inputDecoration(
+                                  label: 'Ingrese su correo electrónico',
+                                  icon: Icons.person_outline,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Contraseña
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: _label('Contraseña', Icons.lock_outline),
+                              ),
+                              TextField(
+                                controller: _passwordCtrl,
+                                obscureText: !_showPass,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                ),
+                                decoration: _inputDecoration(
+                                  label: 'Ingrese su contraseña',
+                                  icon: Icons.lock_outline,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _showPass
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: _AppColors.goldText,
+                                      size: 18,
+                                    ),
+                                    onPressed: () =>
+                                        setState(() => _showPass = !_showPass),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Código de verificación
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: _label(
+                                  'Código de verificación',
+                                  Icons.shield_outlined,
+                                ),
+                              ),
+                              TextField(
+                                controller: _codigoCtrl,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  letterSpacing: 3,
+                                ),
+                                decoration: _inputDecoration(
+                                  label: 'Ingrese el código de verific...',
+                                  icon: Icons.shield_outlined,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    'Código enviado a tu correo',
+                                    style: TextStyle(
+                                      color: _AppColors.lightBlue
+                                          .withValues(alpha: 0.6),
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+
+                              // Botón
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: _cargando ? null : _manejarLogin,
+                                  style: ElevatedButton.styleFrom(
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 12),
+                                    backgroundColor: _AppColors.goldDark,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    elevation: 6,
+                                  ).copyWith(
+                                    backgroundColor:
+                                        WidgetStateProperty.resolveWith(
+                                      (states) =>
+                                          states.contains(WidgetState.pressed)
+                                              ? _AppColors.goldDark
+                                              : _AppColors.goldText,
+                                    ),
+                                  ),
+                                  child: _cargando
+                                      ? const SizedBox(
+                                          height: 18,
+                                          width: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Text(
+                                          'Iniciar sesión',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // ¿Olvidaste tu contraseña? (debajo del botón, centrado)
+                              Center(
+                                child: TextButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const ForgotPasswordScreen(),
+                                      ),
+                                    );
+                                  },
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    minimumSize: const Size(50, 30),
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: const Text(
+                                    '¿Olvidaste tu contraseña?',
+                                    style: TextStyle(
+                                      color: _AppColors.goldText,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: _AppColors.goldText,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),

@@ -1,10 +1,26 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import 'reset_password_screen.dart';
 
-const Color kNavy = Color(0xFF0F1B2E);
-const Color kGold = Color(0xFFD4A743);
-const Color kCream = Color(0xFFFAF3E4);
+// Paleta de colores (incluida en este archivo, no necesita otro archivo)
+class _AppColors {
+  static const background = Color(0xFFF7EFDD);
+  static const navy = Color(0xFF101B33);
+  static const gold = Color(0xFFC9A24A);
+  static const goldDark = Color(0xFF8A6D1F);
+  static const goldText = Color(0xFFD2A03C);
+  static const lightBlue = Color(0xFF9FB4DE);
+  static const inputBg = Color(0xFFEFE4CB);
+  static const iconBg = Color(0xFFF0E3BE);
+  static const cardBorder = Color(0xFFECE0BD);
+
+  static const green = Color(0xFF2E9E4E);
+  static const greenBg = Color(0xFFDCF2E3);
+  static const olive = Color(0xFF8B7920);
+  static const oliveBg = Color(0xFFF3ECD2);
+  static const red = Color(0xFFC24555);
+  static const redBg = Color(0xFFF8DCE0);
+}
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -48,34 +64,109 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
+  InputDecoration _decoracion({
+    required String label,
+    required IconData icono,
+  }) {
+    final bordeNormal = Colors.white.withValues(alpha: 0.14);
+    final rojoClaro = Color.lerp(_AppColors.red, Colors.white, 0.35)!;
+    OutlineInputBorder borde(Color color) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: color),
+        );
+
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: _AppColors.lightBlue),
+      floatingLabelStyle: const TextStyle(color: _AppColors.goldText),
+      filled: true,
+      fillColor: Colors.white.withValues(alpha: 0.06),
+      prefixIcon: Icon(icono, color: _AppColors.goldText),
+      border: borde(bordeNormal),
+      enabledBorder: borde(bordeNormal),
+      focusedBorder: borde(_AppColors.goldText),
+      errorBorder: borde(_AppColors.red),
+      focusedErrorBorder: borde(_AppColors.red),
+      errorStyle: TextStyle(color: rojoClaro),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kCream,
+      backgroundColor: _AppColors.navy,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: kNavy,
-        foregroundColor: kGold,
-        title: const Text('Restablecer contraseña'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        foregroundColor: _AppColors.goldText,
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Fondo con la imagen del carro
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/imagen10.png'),
+                fit: BoxFit.cover,
+              ),
             ),
-            child: _enviado ? _buildExito() : _buildFormulario(),
           ),
-        ),
+          // Overlay oscuro
+          Container(color: const Color(0x40050A16)),
+
+          // Tarjeta azul borrosa
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          blurRadius: 40,
+                          offset: const Offset(0, 16),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                _AppColors.navy.withValues(alpha: 0.40),
+                                _AppColors.navy.withValues(alpha: 0.26),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: _AppColors.gold.withValues(alpha: 0.30),
+                            ),
+                          ),
+                          child: _enviado ? _buildExito() : _buildFormulario(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -92,24 +183,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: kNavy,
+              color: Colors.white,
             ),
           ),
           const SizedBox(height: 6),
           const Text(
             'Te enviaremos un enlace para restablecer tu contraseña.',
-            style: TextStyle(fontSize: 13, color: Colors.black54),
+            style: TextStyle(fontSize: 13, color: _AppColors.lightBlue),
           ),
           const SizedBox(height: 20),
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(
-              labelText: 'Correo electrónico',
-              prefixIcon: const Icon(Icons.email_outlined, color: kGold),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
+            cursorColor: _AppColors.goldText,
+            style: const TextStyle(color: Colors.white),
+            decoration: _decoracion(
+              label: 'Correo electrónico',
+              icono: Icons.email_outlined,
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -123,7 +213,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
-            Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+            Text(
+              _error!,
+              style: TextStyle(
+                color: Color.lerp(_AppColors.red, Colors.white, 0.35),
+                fontSize: 13,
+              ),
+            ),
           ],
           const SizedBox(height: 20),
           SizedBox(
@@ -131,7 +227,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             child: ElevatedButton(
               onPressed: _cargando ? null : _enviarSolicitud,
               style: ElevatedButton.styleFrom(
-                backgroundColor: kGold,
+                backgroundColor: _AppColors.goldText,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -154,7 +250,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           Center(
             child: TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar', style: TextStyle(color: kNavy)),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: _AppColors.lightBlue),
+              ),
             ),
           ),
         ],
@@ -166,43 +265,42 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.mark_email_read_outlined, color: kGold, size: 48),
+        const Icon(
+          Icons.mark_email_read_outlined,
+          color: _AppColors.goldText,
+          size: 48,
+        ),
         const SizedBox(height: 16),
         const Text(
           'Revisa tu correo',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: kNavy,
+            color: Colors.white,
           ),
         ),
         const SizedBox(height: 8),
         const Text(
           'Si el correo existe en nuestro sistema, se ha enviado un enlace de recuperación. Revisa tu bandeja de entrada y la carpeta de spam.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: Colors.black54),
+          style: TextStyle(fontSize: 13, color: _AppColors.lightBlue),
         ),
         const SizedBox(height: 20),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ResetPasswordScreen(),
-                ),
-              );
-            },
+            onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
-              backgroundColor: kNavy,
-              foregroundColor: kGold,
+              backgroundColor: Colors.white.withValues(alpha: 0.08),
+              foregroundColor: _AppColors.goldText,
+              elevation: 0,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
+                side: BorderSide(color: _AppColors.gold.withValues(alpha: 0.40)),
               ),
             ),
-            child: const Text('Ya tengo mi código/token'),
+            child: const Text('Volver al inicio de sesión'),
           ),
         ),
       ],
