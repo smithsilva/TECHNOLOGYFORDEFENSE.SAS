@@ -5,8 +5,8 @@ import 'package:app_t4d/widgets/compartido/producto_card.dart';
 import '../../services/inventario_service.dart';
 import '../../models/categoria.dart';
 import '../../services/categorias_service.dart';
-import '../../models/proveedor.dart';
 import '../../services/proveedores_service.dart';
+import '../../models/proveedor.dart';
 import '../../models/sucursal.dart';
 import '../../services/sucursales_service.dart';
 
@@ -42,6 +42,15 @@ class AppColors {
 
   // Enlaces (p. ej. categorías clicables, como en la tabla web)
   static const enlace = Color(0xFF2563EB);
+
+  // ---- Añadidos para el panel de filtros (diseño navy/gold) ----
+  static const navy = Color(0xFF101B33);
+  static const gold = Color(0xFFC9A24A);
+  static const goldDark = Color(0xFF8A6D1F);
+  static const olive = Color(0xFF8B7920);
+  static const inputBg = Color(0xFFEFE4CB);
+  static const iconBg = Color(0xFFF0E3BE);
+  static const cardBorder = Color(0xFFECE0BD);
 }
 
 class InventarioScreen extends StatefulWidget {
@@ -61,6 +70,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
   final SucursalesService _sucursalesService = SucursalesService();
 
   String _filtroEstado = 'todos'; // todos | alto | medio | bajo
+  int? _filtroCategoria; // null = todas
+  int? _filtroProveedor; // null = todos
+  int? _filtroSucursal; // null = todas
+  bool _filtrosAbiertos = true;
   bool _cargando = false;
   bool _cargandoInicial = true;
   String? _error;
@@ -192,8 +205,18 @@ class _InventarioScreenState extends State<InventarioScreen> {
           _normalizar(p.idProducto.toString()).contains(texto) ||
           _normalizar(p.codigoBarras ?? '').contains(texto);
       final matchEstado = _filtroEstado == 'todos' || p.estado == _filtroEstado;
-      return matchTexto && matchEstado;
+      final matchCategoria =
+          _filtroCategoria == null || p.idCategoria == _filtroCategoria;
+      return matchTexto && matchEstado && matchCategoria;
     }).toList();
+  }
+
+  void _limpiarFiltros() {
+    setState(() {
+      _busquedaCtrl.clear();
+      _filtroEstado = 'todos';
+      _filtroCategoria = null;
+    });
   }
 
   Color _colorEstado(String estado) {
@@ -819,24 +842,28 @@ class _InventarioScreenState extends State<InventarioScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             _buildHeader(),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             _buildStats(),
             const SizedBox(height: 14),
-            _buildBuscador(),
-            const SizedBox(height: 10),
-            _buildFiltros(),
-            const SizedBox(height: 10),
-            Text(
-              '$_total ${_total == 1 ? "PRODUCTO" : "PRODUCTOS"}',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.0,
-                color: Colors.grey.shade500,
-              ),
+
+            _panelFiltros(),
+
+            const SizedBox(height: 16),
+
+            Row(
+              children: [
+                const Text(
+                  'Listado de Productos',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const Spacer(),
+                Text(
+                  '${_filtrados.length} producto${_filtrados.length != 1 ? "s" : ""}',
+                  style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             if (_error != null)
               Padding(
@@ -989,66 +1016,189 @@ class _InventarioScreenState extends State<InventarioScreen> {
     );
   }
 
-  Widget _buildBuscador() {
-    return TextField(
-      controller: _busquedaCtrl,
-      onChanged: (_) => setState(() {}),
-      decoration: InputDecoration(
-        hintText: 'Buscar producto o código de barras...',
-        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-        prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.grey.shade200),
+  // =======================================================================
+  // PANEL DE FILTROS — diseño navy/gold: tarjeta blanca con borde sutil
+  // (en vez de sombra), acentos dorados y texto en navy. Mismo diseño que
+  // el panel de Movimientos.
+  // =======================================================================
+  Widget _panelFiltros() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.cardBorder,
+          width: 0.6,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.grey.shade200),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: AppColors.dorado),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.filter_alt_outlined,
+                    size: 18,
+                    color: AppColors.gold,
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Filtros y Búsqueda',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: AppColors.navy,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: AppColors.goldDark,
+                  ),
+                ],
+              ),
+            ),
+            if (_filtrosAbiertos) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _busquedaCtrl,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(
+                  color: AppColors.navy,
+                  fontSize: 13,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por producto, ID o código de barras...',
+                  hintStyle: TextStyle(
+                    color: AppColors.navy.withValues(alpha: 0.45),
+                    fontSize: 13,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20,
+                    color: AppColors.navy.withValues(alpha: 0.45),
+                  ),
+                  filled: true,
+                  fillColor: Color.lerp(
+                    AppColors.inputBg,
+                    Colors.white,
+                    0.6,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: AppColors.gold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _chipEstado('Todos', 'todos'),
+                  _chipEstado('Alto', 'alto'),
+                  _chipEstado('Medio', 'medio'),
+                  _chipEstado('Bajo', 'bajo'),
+                  _selectorCategoria(),
+                  TextButton.icon(
+                    onPressed: _limpiarFiltros,
+                    icon: const Icon(Icons.close, size: 14),
+                    label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.olive,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildFiltros() {
-    return SizedBox(
-      height: 36,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          _chipFiltro('Todos', 'todos', AppColors.dorado),
-          _chipFiltro('Alto', 'alto', AppColors.verde),
-          _chipFiltro('Medio', 'medio', AppColors.naranja),
-          _chipFiltro('Bajo', 'bajo', AppColors.rojo),
-        ],
+  Widget _selectorCategoria() {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 190),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: AppColors.iconBg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int?>(
+          value: _filtroCategoria,
+          isDense: true,
+          isExpanded: true,
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            size: 16,
+            color: AppColors.navy,
+          ),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppColors.navy,
+          ),
+          dropdownColor: Colors.white,
+          items: [
+            const DropdownMenuItem<int?>(
+              value: null,
+              child: Text('Categoría: Todas', overflow: TextOverflow.ellipsis),
+            ),
+            ..._categoriasActivas.map(
+              (c) => DropdownMenuItem<int?>(
+                value: c.id,
+                child: Text(c.nombre, overflow: TextOverflow.ellipsis),
+              ),
+            ),
+          ],
+          onChanged: (valor) => setState(() => _filtroCategoria = valor),
+        ),
       ),
     );
   }
 
-  Widget _chipFiltro(String label, String valor, Color color) {
+  Widget _chipEstado(String label, String valor) {
     final activo = _filtroEstado == valor;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: activo,
-        onSelected: (_) => setState(() => _filtroEstado = valor),
-        selectedColor: Colors.white,
-        backgroundColor: Colors.white,
-        showCheckmark: false,
-        labelStyle: TextStyle(
-          color: activo ? color : Colors.grey.shade500,
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
-        ),
-        shape: StadiumBorder(
-          side: BorderSide(color: activo ? color : Colors.grey.shade200, width: activo ? 1.4 : 1),
+    // Los estados con color propio (alto/medio/bajo) conservan su color
+    // semántico al estar activos; "Todos" usa el acento dorado.
+    final colorActivo = valor == 'todos' ? AppColors.gold : _colorEstado(valor);
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: activo,
+      onSelected: (_) => setState(() => _filtroEstado = valor),
+      selectedColor: Colors.white,
+      backgroundColor: Colors.white,
+      showCheckmark: false,
+      labelStyle: TextStyle(
+        color: activo ? colorActivo : AppColors.olive,
+        fontWeight: FontWeight.w700,
+        fontSize: 12,
+      ),
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: activo ? colorActivo : AppColors.cardBorder,
+          width: activo ? 1.4 : 1,
         ),
       ),
     );

@@ -26,6 +26,15 @@ class AppColors {
   static const rojo = Color(0xFFC0392B);
   static const rojoFondo = Color(0xFFFBE2DF);
   static const textoMuted = Color(0xFF6B7280);
+
+  // ---- Añadidos para el panel de filtros (tomados del diseño navy/gold) ----
+  static const navy = Color(0xFF101B33);
+  static const gold = Color(0xFFC9A24A);
+  static const goldDark = Color(0xFF8A6D1F);
+  static const olive = Color(0xFF8B7920);
+  static const inputBg = Color(0xFFEFE4CB);
+  static const iconBg = Color(0xFFF0E3BE);
+  static const cardBorder = Color(0xFFECE0BD);
 }
 
 class MovimientosScreen extends StatefulWidget {
@@ -42,6 +51,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
   final MovimientosService _service = MovimientosService();
 
   String _filtroTipo = 'todos'; // todos | entrada | salida
+  String _filtroUsuario = 'todos';
   bool _cargando = false;
   bool _cargandoInicial = true;
   bool _filtrosAbiertos = true;
@@ -103,6 +113,15 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     return resultado;
   }
 
+  List<String> get _usuariosDisponibles {
+    final set = <String>{};
+    for (final m in _movimientos) {
+      if (m.usuario.trim().isNotEmpty) set.add(m.usuario);
+    }
+    final lista = set.toList()..sort();
+    return lista;
+  }
+
   List<Movimiento> get _filtrados {
     final texto = _normalizar(_busquedaCtrl.text);
     return _movimientos.where((m) {
@@ -111,7 +130,8 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
           _normalizar(m.producto).contains(texto) ||
           _normalizar(m.usuario).contains(texto);
       final matchTipo = _filtroTipo == 'todos' || m.tipo == _filtroTipo;
-      return matchTexto && matchTipo;
+      final matchUsuario = _filtroUsuario == 'todos' || m.usuario == _filtroUsuario;
+      return matchTexto && matchTipo && matchUsuario;
     }).toList();
   }
 
@@ -127,6 +147,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     setState(() {
       _busquedaCtrl.clear();
       _filtroTipo = 'todos';
+      _filtroUsuario = 'todos';
     });
   }
 
@@ -213,138 +234,174 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     );
   }
 
+  /// Guarda los bytes en un archivo temporal y abre la hoja de compartir.
+  /// Lanza una excepción si algo falla; el llamador decide cómo mostrarla.
   Future<void> _guardarYCompartir(Uint8List bytes, String nombreArchivo) async {
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/$nombreArchivo');
+    await file.writeAsBytes(bytes, flush: true);
+    final resultado = await Share.shareXFiles(
+      [XFile(file.path)],
+      text: 'Movimientos de Inventario',
+    );
+    // En algunas plataformas shareXFiles reporta status; lo ignoramos si el
+    // usuario simplemente cerró la hoja de compartir sin elegir destino.
+    debugPrint('Compartir resultado: ${resultado.status}');
+  }
+
+  void _mostrarError(String mensaje) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensaje)),
+    );
+  }
+
+  Future<void> _exportarPDF() async {
+    if (_exportando) return;
     setState(() => _exportando = true);
     try {
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/$nombreArchivo');
-      await file.writeAsBytes(bytes);
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Movimientos de Inventario',
+      final pdf = pw.Document();
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          build: (context) => [
+            pw.Text(
+              'Movimientos de Inventario',
+              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              'Generado: ${_formatoFecha(DateTime.now())}',
+              style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+            ),
+            pw.SizedBox(height: 16),
+            pw.Table.fromTextArray(
+              headers: ['Tipo', 'Producto', 'Usuario', 'Cantidad', 'Fecha', 'Motivo'],
+              data: _filtrados
+                  .map((m) => [
+                        m.tipo == 'entrada' ? 'Entrada' : 'Salida',
+                        m.producto,
+                        m.usuario,
+                        m.cantidad.toString(),
+                        _formatoFecha(m.fecha),
+                        m.motivo,
+                      ])
+                  .toList(),
+              headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.amber100),
+              cellStyle: const pw.TextStyle(fontSize: 8.5),
+              cellAlignment: pw.Alignment.centerLeft,
+              border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(1.1),
+                1: const pw.FlexColumnWidth(1.6),
+                2: const pw.FlexColumnWidth(1.3),
+                3: const pw.FlexColumnWidth(0.9),
+                4: const pw.FlexColumnWidth(1.6),
+                5: const pw.FlexColumnWidth(1.8),
+              },
+            ),
+          ],
+        ),
       );
+      final bytes = await pdf.save();
+      await _guardarYCompartir(bytes, 'movimientos_inventario.pdf');
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al exportar: $e')),
-        );
-      }
+      _mostrarError('Error al generar el PDF: $e');
     } finally {
       if (mounted) setState(() => _exportando = false);
     }
   }
 
-  Future<void> _exportarPDF() async {
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        build: (context) => [
-          pw.Text(
-            'Movimientos de Inventario',
-            style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
-          ),
-          pw.SizedBox(height: 4),
-          pw.Text(
-            'Generado: ${_formatoFecha(DateTime.now())}',
-            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
-          ),
-          pw.SizedBox(height: 16),
-          pw.Table.fromTextArray(
-            headers: ['Tipo', 'Producto', 'Usuario', 'Cantidad', 'Fecha', 'Motivo'],
-            data: _filtrados
-                .map((m) => [
-                      m.tipo == 'entrada' ? 'Entrada' : 'Salida',
-                      m.producto,
-                      m.usuario,
-                      m.cantidad.toString(),
-                      _formatoFecha(m.fecha),
-                      m.motivo,
-                    ])
-                .toList(),
-            headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
-            headerDecoration: const pw.BoxDecoration(color: PdfColors.amber100),
-            cellStyle: const pw.TextStyle(fontSize: 8.5),
-            cellAlignment: pw.Alignment.centerLeft,
-            border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
-            columnWidths: {
-              0: const pw.FlexColumnWidth(1.1),
-              1: const pw.FlexColumnWidth(1.6),
-              2: const pw.FlexColumnWidth(1.3),
-              3: const pw.FlexColumnWidth(0.9),
-              4: const pw.FlexColumnWidth(1.6),
-              5: const pw.FlexColumnWidth(1.8),
-            },
-          ),
-        ],
-      ),
-    );
-    final bytes = await pdf.save();
-    await _guardarYCompartir(bytes, 'movimientos_inventario.pdf');
-  }
-
   Future<void> _exportarExcel() async {
-    final excel = Excel.createExcel();
-    final nombreHoja = 'Movimientos';
-    final sheet = excel[nombreHoja];
-    excel.setDefaultSheet(nombreHoja);
-    // Elimina la hoja por defecto "Sheet1" si quedó vacía y no es la nuestra
-    if (excel.sheets.containsKey('Sheet1') && nombreHoja != 'Sheet1') {
-      excel.delete('Sheet1');
-    }
+    if (_exportando) return;
+    setState(() => _exportando = true);
+    try {
+      final excel = Excel.createExcel();
+      const nombreHoja = 'Movimientos';
+      final sheet = excel[nombreHoja];
+      excel.setDefaultSheet(nombreHoja);
+      // Elimina la hoja por defecto "Sheet1" si quedó vacía y no es la nuestra
+      if (excel.sheets.containsKey('Sheet1') && nombreHoja != 'Sheet1') {
+        excel.delete('Sheet1');
+      }
 
-    sheet.appendRow([
-      TextCellValue('Tipo'),
-      TextCellValue('Producto'),
-      TextCellValue('Usuario'),
-      TextCellValue('Cantidad'),
-      TextCellValue('Fecha'),
-      TextCellValue('Motivo'),
-    ]);
-
-    for (final m in _filtrados) {
       sheet.appendRow([
-        TextCellValue(m.tipo == 'entrada' ? 'Entrada' : 'Salida'),
-        TextCellValue(m.producto),
-        TextCellValue(m.usuario),
-        IntCellValue(m.cantidad),
-        TextCellValue(_formatoFecha(m.fecha)),
-        TextCellValue(m.motivo),
+        TextCellValue('Tipo'),
+        TextCellValue('Producto'),
+        TextCellValue('Usuario'),
+        TextCellValue('Cantidad'),
+        TextCellValue('Fecha'),
+        TextCellValue('Motivo'),
       ]);
-    }
 
-    final bytes = excel.encode();
-    if (bytes != null) {
+      for (final m in _filtrados) {
+        sheet.appendRow([
+          TextCellValue(m.tipo == 'entrada' ? 'Entrada' : 'Salida'),
+          TextCellValue(m.producto),
+          TextCellValue(m.usuario),
+          IntCellValue(m.cantidad),
+          TextCellValue(_formatoFecha(m.fecha)),
+          TextCellValue(m.motivo),
+        ]);
+      }
+
+      final bytes = excel.encode();
+      if (bytes == null) {
+        throw Exception('No se pudo generar el archivo Excel (encode devolvió null).');
+      }
       await _guardarYCompartir(Uint8List.fromList(bytes), 'movimientos_inventario.xlsx');
+    } catch (e) {
+      _mostrarError('Error al generar el Excel: $e');
+    } finally {
+      if (mounted) setState(() => _exportando = false);
     }
   }
 
   Future<void> _exportarWord() async {
-    final buffer = StringBuffer();
-    buffer.writeln('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>');
-    buffer.writeln(
-      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
-    );
-    buffer.writeln('<w:body>');
-    buffer.writeln(_parrafoWord('Movimientos de Inventario', bold: true, size: 32));
-    buffer.writeln(_parrafoWord('Generado: ${_formatoFecha(DateTime.now())}', size: 18));
-    buffer.writeln('<w:p/>');
-
-    for (final m in _filtrados) {
-      final tipo = m.tipo == 'entrada' ? 'ENTRADA' : 'SALIDA';
-      buffer.writeln(_parrafoWord('$tipo — ${m.producto}  (${m.cantidad})', bold: true, size: 22));
-      buffer.writeln(_parrafoWord('Usuario: ${m.usuario}   |   Fecha: ${_formatoFecha(m.fecha)}'));
-      if (m.motivo.isNotEmpty) {
-        buffer.writeln(_parrafoWord('Motivo: ${m.motivo}'));
-      }
+    if (_exportando) return;
+    setState(() => _exportando = true);
+    try {
+      final buffer = StringBuffer();
+      buffer.writeln('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>');
+      buffer.writeln(
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
+      );
+      buffer.writeln('<w:body>');
+      buffer.writeln(_parrafoWord('Movimientos de Inventario', bold: true, size: 32));
+      buffer.writeln(_parrafoWord('Generado: ${_formatoFecha(DateTime.now())}', size: 18));
       buffer.writeln('<w:p/>');
+
+      for (final m in _filtrados) {
+        final tipo = m.tipo == 'entrada' ? 'ENTRADA' : 'SALIDA';
+        buffer.writeln(_parrafoWord('$tipo — ${m.producto}  (${m.cantidad})', bold: true, size: 22));
+        buffer.writeln(_parrafoWord('Usuario: ${m.usuario}   |   Fecha: ${_formatoFecha(m.fecha)}'));
+        if (m.motivo.isNotEmpty) {
+          buffer.writeln(_parrafoWord('Motivo: ${m.motivo}'));
+        }
+        buffer.writeln('<w:p/>');
+      }
+
+      // Toda sección de cuerpo (w:body) en OOXML debe terminar con una
+      // w:sectPr para que el documento sea válido para más lectores de Word.
+      buffer.writeln(
+        '<w:sectPr>'
+        '<w:pgSz w:w="11906" w:h="16838"/>'
+        '<w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417" '
+        'w:header="708" w:footer="708" w:gutter="0"/>'
+        '</w:sectPr>',
+      );
+
+      buffer.writeln('</w:body>');
+      buffer.writeln('</w:document>');
+
+      final bytes = _crearDocx(buffer.toString());
+      await _guardarYCompartir(bytes, 'movimientos_inventario.docx');
+    } catch (e) {
+      _mostrarError('Error al generar el Word: $e');
+    } finally {
+      if (mounted) setState(() => _exportando = false);
     }
-
-    buffer.writeln('</w:body>');
-    buffer.writeln('</w:document>');
-
-    final bytes = _crearDocx(buffer.toString());
-    await _guardarYCompartir(bytes, 'movimientos_inventario.docx');
   }
 
   String _parrafoWord(String texto, {bool bold = false, int size = 20}) {
@@ -358,6 +415,11 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     return '<w:p><w:r>$rPr<w:t xml:space="preserve">$textoEscapado</w:t></w:r></w:p>';
   }
 
+  /// Construye un .docx (OOXML) mínimo pero VÁLIDO. El original solo incluía
+  /// [Content_Types].xml, _rels/.rels y word/document.xml, lo que hace que
+  /// varios lectores de Word (sobre todo en Android/iOS) rechacen el archivo
+  /// o lo muestren en blanco. Aquí se agregan las partes que faltaban:
+  /// word/_rels/document.xml.rels y docProps/core.xml + docProps/app.xml.
   Uint8List _crearDocx(String documentXml) {
     final archive = Archive();
 
@@ -366,12 +428,37 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+  <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
 </Types>''';
 
     const rels = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
 </Relationships>''';
+
+    const documentRels = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>''';
+
+    final ahora = DateTime.now().toUtc().toIso8601String();
+    final coreProps = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+  xmlns:dc="http://purl.org/dc/elements/1.1/"
+  xmlns:dcterms="http://purl.org/dc/terms/"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>Movimientos de Inventario</dc:title>
+  <dc:creator>App Inventario</dc:creator>
+  <dcterms:created xsi:type="dcterms:W3CDTF">$ahora</dcterms:created>
+  <dcterms:modified xsi:type="dcterms:W3CDTF">$ahora</dcterms:modified>
+</cp:coreProperties>''';
+
+    const appProps = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">
+  <Application>App Inventario</Application>
+</Properties>''';
 
     void addFile(String path, String content) {
       final data = Uint8List.fromList(utf8.encode(content));
@@ -381,9 +468,15 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     addFile('[Content_Types].xml', contentTypes);
     addFile('_rels/.rels', rels);
     addFile('word/document.xml', documentXml);
+    addFile('word/_rels/document.xml.rels', documentRels);
+    addFile('docProps/core.xml', coreProps);
+    addFile('docProps/app.xml', appProps);
 
     final zipData = ZipEncoder().encode(archive);
-    return Uint8List.fromList(zipData!);
+    if (zipData == null) {
+      throw Exception('No se pudo comprimir el archivo .docx.');
+    }
+    return Uint8List.fromList(zipData);
   }
 
   // =====================================================
@@ -436,73 +529,8 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // Filtros y búsqueda
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      children: [
-                        TextField(
-                          controller: _busquedaCtrl,
-                          onChanged: (_) => setState(() {}),
-                          decoration: InputDecoration(
-                            hintText: 'Buscar por producto o usuario...',
-                            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                            prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
-                            filled: true,
-                            fillColor: AppColors.fondo,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide.none,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: const BorderSide(color: AppColors.dorado),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            _chipTipo('Todos', 'todos'),
-                            _chipTipo('Entrada', 'entrada'),
-                            _chipTipo('Salida', 'salida'),
-                            TextButton.icon(
-                              onPressed: _limpiarFiltros,
-                              icon: const Icon(Icons.close, size: 14),
-                              label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.textoMuted,
-                                padding: EdgeInsets.zero,
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                _panelFiltros(),
+
                 const SizedBox(height: 16),
 
                 // Historial de movimientos
@@ -749,23 +777,202 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     );
   }
 
+  // =======================================================================
+  // PANEL DE FILTROS — diseño tomado de la versión navy/gold: tarjeta blanca
+  // con borde sutil (en vez de sombra), acentos dorados y texto en navy.
+  // =======================================================================
+  Widget _panelFiltros() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.cardBorder,
+          width: 0.6,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _filtrosAbiertos = !_filtrosAbiertos;
+                });
+              },
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.filter_alt_outlined,
+                    size: 18,
+                    color: AppColors.gold,
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Filtros y Búsqueda',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: AppColors.navy,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _filtrosAbiertos
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: AppColors.goldDark,
+                  ),
+                ],
+              ),
+            ),
+
+            if (_filtrosAbiertos) ...[
+              const SizedBox(height: 12),
+
+              TextField(
+                controller: _busquedaCtrl,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(
+                  color: AppColors.navy,
+                  fontSize: 13,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por producto o usuario...',
+                  hintStyle: TextStyle(
+                    color: AppColors.navy.withValues(alpha: 0.45),
+                    fontSize: 13,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20,
+                    color: AppColors.navy.withValues(alpha: 0.45),
+                  ),
+                  filled: true,
+                  fillColor: Color.lerp(
+                    AppColors.inputBg,
+                    Colors.white,
+                    0.6,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: AppColors.gold),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _chipTipo('Todos', 'todos'),
+                  _chipTipo('Entrada', 'entrada'),
+                  _chipTipo('Salida', 'salida'),
+                  _selectorUsuario(),
+                  TextButton.icon(
+                    onPressed: _limpiarFiltros,
+                    icon: const Icon(Icons.close, size: 14),
+                    label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.olive,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _selectorUsuario() {
+    final usuarios = _usuariosDisponibles;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: AppColors.iconBg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _filtroUsuario,
+          isDense: true,
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            size: 16,
+            color: AppColors.navy,
+          ),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppColors.navy,
+          ),
+          dropdownColor: Colors.white,
+          items: [
+            const DropdownMenuItem(
+              value: 'todos',
+              child: Text('Usuario: Todos'),
+            ),
+            ...usuarios.map(
+              (u) => DropdownMenuItem(
+                value: u,
+                child: Text(u),
+              ),
+            ),
+          ],
+          onChanged: (valor) {
+            if (valor == null) return;
+            setState(() {
+              _filtroUsuario = valor;
+            });
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _chipTipo(String label, String valor) {
     final activo = _filtroTipo == valor;
+
     return ChoiceChip(
       label: Text(label),
       selected: activo,
-      onSelected: (_) => setState(() => _filtroTipo = valor),
+      onSelected: (_) {
+        setState(() {
+          _filtroTipo = valor;
+        });
+      },
       selectedColor: Colors.white,
       backgroundColor: Colors.white,
       showCheckmark: false,
       labelStyle: TextStyle(
-        color: activo ? AppColors.dorado : Colors.grey.shade500,
+        color: activo ? AppColors.gold : AppColors.olive,
         fontWeight: FontWeight.w700,
         fontSize: 12,
       ),
       shape: StadiumBorder(
         side: BorderSide(
-          color: activo ? AppColors.dorado : Colors.grey.shade200,
+          color: activo ? AppColors.gold : AppColors.cardBorder,
           width: activo ? 1.4 : 1,
         ),
       ),

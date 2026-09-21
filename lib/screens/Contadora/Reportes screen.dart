@@ -9,28 +9,18 @@
 //
 // Luego corre: flutter pub get
 // ============================================================================
- 
+
 import 'dart:convert';
 import 'dart:typed_data';
- 
+
 import 'package:flutter/material.dart';
 import 'package:excel/excel.dart' as xlsx;
 import 'package:archive/archive.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
- 
-// import '../services/reportes_service.dart'; // ← conéctalo cuando pases de mock a datos reales
-// Endpoint sugerido ya existente en tu backend: GET /reportes/financiero/balance
- 
-// ============================================================================
-// PALETA DE COLORES
-// ----------------------------------------------------------------------------
-// Si ya tienes una clase AppColors en tu proyecto (por ejemplo la que usa tu
-// ReportesScreen de Admin), BORRA este bloque completo y en su lugar importa
-// ese archivo: import '../../shared/app_colors.dart';
-// Los valores de aquí son idénticos a los que ya usas, para que se vea igual.
-// ============================================================================
+
+
 class AppColors {
   static const dorado = Color(0xFFD4A743);
   static const doradoOscuro = Color(0xFF8C6B3F);
@@ -50,26 +40,26 @@ class AppColors {
   static const textoMuted = Color(0xFF6B7280);
   static const subtitulo = Color(0xFF8FA3C4);
 }
- 
+
 // ============================================================================
 // MODELOS
 // ============================================================================
- 
+
 /// Un renglón del balance mensual (ingreso vs egreso).
 class BalancePeriodo {
   final String periodo; // Ej: "2026-09"
   final double ingreso;
   final double egreso;
- 
+
   const BalancePeriodo({
     required this.periodo,
     required this.ingreso,
     required this.egreso,
   });
- 
+
   double get neto => ingreso - egreso;
 }
- 
+
 /// Resumen financiero mostrado en la pestaña "Financiero" de Contadora.
 class ResumenFinancieroContadora {
   final int movimientos;
@@ -77,7 +67,7 @@ class ResumenFinancieroContadora {
   final int proveedores;
   final int sucursales;
   final List<BalancePeriodo> balancePorPeriodo;
- 
+
   const ResumenFinancieroContadora({
     required this.movimientos,
     required this.totalIngresos,
@@ -86,35 +76,35 @@ class ResumenFinancieroContadora {
     required this.balancePorPeriodo,
   });
 }
- 
+
 // ============================================================================
 // PANTALLA: Centro de Reportes (Contadora)
 // ============================================================================
 class ReportesContadoraScreen extends StatefulWidget {
   final Map<String, dynamic>? usuario;
- 
+
   const ReportesContadoraScreen({super.key, this.usuario});
- 
+
   @override
   State<ReportesContadoraScreen> createState() =>
       _ReportesContadoraScreenState();
 }
- 
+
 class _ReportesContadoraScreenState extends State<ReportesContadoraScreen> {
   bool _cargando = false;
   bool _exportando = false;
- 
+
   // 0 = Financiero, 1 = Productos
   int _tabSeleccionada = 0;
- 
+
   ResumenFinancieroContadora? _resumen;
- 
+
   @override
   void initState() {
     super.initState();
     _cargarDatos();
   }
- 
+
   /// Por ahora carga datos de ejemplo (mock). Cuando conectes el backend,
   /// reemplaza el contenido por algo como:
   ///
@@ -123,7 +113,7 @@ class _ReportesContadoraScreenState extends State<ReportesContadoraScreen> {
   Future<void> _cargarDatos() async {
     setState(() => _cargando = true);
     await Future.delayed(const Duration(milliseconds: 300));
- 
+
     setState(() {
       _resumen = const ResumenFinancieroContadora(
         movimientos: 15,
@@ -138,7 +128,7 @@ class _ReportesContadoraScreenState extends State<ReportesContadoraScreen> {
       );
       _cargando = false;
     });
- 
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -148,13 +138,13 @@ class _ReportesContadoraScreenState extends State<ReportesContadoraScreen> {
       );
     }
   }
- 
+
   void _mostrarProximamente(String accion) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$accion: próximamente')),
     );
   }
- 
+
   String _formatoMiles(num numero) {
     final esNegativo = numero < 0;
     final texto = numero.abs().toStringAsFixed(0);
@@ -166,11 +156,11 @@ class _ReportesContadoraScreenState extends State<ReportesContadoraScreen> {
     }
     return '${esNegativo ? '-' : ''}${buffer.toString()}';
   }
- 
+
   // --------------------------------------------------------------------
   // EXPORTACIÓN: Excel / Word / PDF
   // --------------------------------------------------------------------
- 
+
   Future<void> _exportar(String tipo) async {
     final r = _resumen;
     if (r == null) {
@@ -179,13 +169,13 @@ class _ReportesContadoraScreenState extends State<ReportesContadoraScreen> {
       );
       return;
     }
- 
+
     setState(() => _exportando = true);
     try {
       late Uint8List bytes;
       late String nombre;
       late String mime;
- 
+
       switch (tipo) {
         case 'excel':
           bytes = _generarExcelBytes(r);
@@ -208,7 +198,7 @@ class _ReportesContadoraScreenState extends State<ReportesContadoraScreen> {
           setState(() => _exportando = false);
           return;
       }
- 
+
       await Share.shareXFiles(
         [XFile.fromData(bytes, name: nombre, mimeType: mime)],
         text: 'Reporte financiero - Centro de Reportes',
@@ -223,18 +213,18 @@ class _ReportesContadoraScreenState extends State<ReportesContadoraScreen> {
       if (mounted) setState(() => _exportando = false);
     }
   }
- 
+
   /// Genera un archivo .xlsx real con el resumen financiero y el balance
   /// por periodo, usando el paquete `excel`.
   Uint8List _generarExcelBytes(ResumenFinancieroContadora r) {
     final libro = xlsx.Excel.createExcel();
     final hoja = libro['Reporte'];
     libro.delete('Sheet1');
- 
+
     hoja.appendRow([xlsx.TextCellValue('Centro de Reportes - Contadora')]);
     hoja.appendRow([xlsx.TextCellValue('Finanzas y productos del taller')]);
     hoja.appendRow([xlsx.TextCellValue('')]);
- 
+
     hoja.appendRow([
       xlsx.TextCellValue('Métrica'),
       xlsx.TextCellValue('Valor'),
@@ -256,7 +246,7 @@ class _ReportesContadoraScreenState extends State<ReportesContadoraScreen> {
       xlsx.IntCellValue(r.sucursales),
     ]);
     hoja.appendRow([xlsx.TextCellValue('')]);
- 
+
     hoja.appendRow([xlsx.TextCellValue('Balance por periodo')]);
     hoja.appendRow([
       xlsx.TextCellValue('Periodo'),
@@ -272,11 +262,11 @@ class _ReportesContadoraScreenState extends State<ReportesContadoraScreen> {
         xlsx.DoubleCellValue(b.neto),
       ]);
     }
- 
+
     final bytes = libro.encode();
     return Uint8List.fromList(bytes!);
   }
- 
+
   /// Genera un archivo .docx real (Word) construyendo manualmente el paquete
   /// OOXML mínimo (zip con document.xml), sin depender de un template.
   Uint8List _generarWordBytes(ResumenFinancieroContadora r) {
@@ -288,7 +278,7 @@ class _ReportesContadoraScreenState extends State<ReportesContadoraScreen> {
         ${_celdaDocx('\$${_formatoMiles(b.neto)}')}
       </w:tr>
     ''').join();
- 
+
     final documentXml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
 <w:body>
@@ -326,36 +316,36 @@ ${_parrafoDocx('')}
 <w:sectPr/>
 </w:body>
 </w:document>''';
- 
+
     final archivo = Archive();
     void agregar(String ruta, String contenido) {
       final data = Uint8List.fromList(utf8.encode(contenido));
       archivo.addFile(ArchiveFile(ruta, data.length, data));
     }
- 
+
     agregar('[Content_Types].xml', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
 </Types>''');
- 
+
     agregar('_rels/.rels', '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 </Relationships>''');
- 
+
     agregar('word/document.xml', documentXml);
- 
+
     final bytesZip = ZipEncoder().encode(archivo);
     return Uint8List.fromList(bytesZip!);
   }
- 
+
   /// Genera un archivo .pdf real con el resumen financiero y el balance
   /// por periodo, usando el paquete `pdf`.
   Future<Uint8List> _generarPdfBytes(ResumenFinancieroContadora r) async {
     final documento = pw.Document();
- 
+
     documento.addPage(
       pw.MultiPage(
         build: (context) => [
@@ -402,16 +392,16 @@ ${_parrafoDocx('')}
         ],
       ),
     );
- 
+
     return documento.save();
   }
- 
+
   @override
   Widget build(BuildContext context) {
     final r = _resumen;
     final rolCrudo =
         (widget.usuario?['rol'] ?? 'contadora').toString().toUpperCase();
- 
+
     return Container(
       color: AppColors.fondo,
       child: RefreshIndicator(
@@ -436,7 +426,7 @@ ${_parrafoDocx('')}
       ),
     );
   }
- 
+
   // --------------------------------------------------------------------
   // ENCABEZADO OSCURO (mismo estilo navy/dorado del resto de la app)
   // --------------------------------------------------------------------
@@ -504,7 +494,7 @@ ${_parrafoDocx('')}
       ),
     );
   }
- 
+
   // --------------------------------------------------------------------
   // BARRA DE ACCIONES: Actualizar / Exportar
   // --------------------------------------------------------------------
@@ -526,7 +516,7 @@ ${_parrafoDocx('')}
           label: const Text('Actualizar'),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.doradoOscuro,
-            side: const BorderSide(color: AppColors.doradoClaro),
+            side: BorderSide(color: Colors.grey.shade300),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
@@ -579,7 +569,7 @@ ${_parrafoDocx('')}
       ],
     );
   }
- 
+
   PopupMenuItem<String> _itemExportar(
       String valor, IconData icono, Color color, String texto) {
     return PopupMenuItem<String>(
@@ -593,7 +583,7 @@ ${_parrafoDocx('')}
       ),
     );
   }
- 
+
   // --------------------------------------------------------------------
   // SELECTOR DE PESTAÑAS (Financiero / Productos)
   // --------------------------------------------------------------------
@@ -603,7 +593,6 @@ ${_parrafoDocx('')}
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.doradoClaro),
       ),
       child: Row(
         children: [
@@ -618,7 +607,7 @@ ${_parrafoDocx('')}
       ),
     );
   }
- 
+
   Widget _botonTab(String texto, IconData icono, int indice) {
     final seleccionado = _tabSeleccionada == indice;
     return InkWell(
@@ -659,7 +648,7 @@ ${_parrafoDocx('')}
       ),
     );
   }
- 
+
   // --------------------------------------------------------------------
   // PESTAÑA: FINANCIERO
   // --------------------------------------------------------------------
@@ -712,7 +701,7 @@ ${_parrafoDocx('')}
       _tarjetaBalancePorPeriodo(r.balancePorPeriodo),
     ];
   }
- 
+
   Widget _tarjetaStat({
     required String titulo,
     required String valor,
@@ -723,7 +712,6 @@ ${_parrafoDocx('')}
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.doradoClaro.withValues(alpha: 0.6)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -777,14 +765,13 @@ ${_parrafoDocx('')}
       ),
     );
   }
- 
+
   Widget _tarjetaBalancePorPeriodo(List<BalancePeriodo> lista) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.doradoClaro),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -814,19 +801,18 @@ ${_parrafoDocx('')}
       ),
     );
   }
- 
+
   Widget _filaBalance(BalancePeriodo b) {
     final neto = b.neto;
     final esPositivo = neto >= 0;
     final colorNeto = esPositivo ? AppColors.verde : AppColors.rojo;
- 
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.fondo,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.doradoClaro.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -895,7 +881,7 @@ ${_parrafoDocx('')}
       ),
     );
   }
- 
+
   // --------------------------------------------------------------------
   // PESTAÑA: PRODUCTOS (placeholder — dime qué debe mostrar y lo armo)
   // --------------------------------------------------------------------
@@ -907,7 +893,6 @@ ${_parrafoDocx('')}
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.doradoClaro),
         ),
         child: Column(
           children: [
@@ -934,25 +919,25 @@ ${_parrafoDocx('')}
     ];
   }
 }
- 
+
 // ============================================================================
 // HELPERS OOXML (Word) — construyen el XML mínimo necesario para un .docx
 // ============================================================================
- 
+
 String _escaparXml(String texto) => texto
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&apos;');
- 
+
 String _parrafoDocx(String texto, {bool negrita = false, int tamano = 22}) {
   final propiedades = negrita
       ? '<w:rPr><w:b/><w:sz w:val="$tamano"/></w:rPr>'
       : '<w:rPr><w:sz w:val="$tamano"/></w:rPr>';
   return '<w:p><w:r>$propiedades<w:t xml:space="preserve">${_escaparXml(texto)}</w:t></w:r></w:p>';
 }
- 
+
 String _celdaDocx(String texto, {bool negrita = false}) {
   return '<w:tc><w:tcPr><w:tcW w:w="2400" w:type="dxa"/></w:tcPr>${_parrafoDocx(texto, negrita: negrita, tamano: 20)}</w:tc>';
 }

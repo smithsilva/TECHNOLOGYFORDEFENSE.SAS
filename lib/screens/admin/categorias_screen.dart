@@ -16,6 +16,15 @@ class AppColors {
   static const rojo = Color(0xFFC0392B);
   static const rojoFondo = Color(0xFFFBE2DF);
   static const textoMuted = Color(0xFF6B7280);
+
+  // ---- Añadidos para el panel de filtros (diseño navy/gold) ----
+  static const navy = Color(0xFF101B33);
+  static const gold = Color(0xFFC9A24A);
+  static const goldDark = Color(0xFF8A6D1F);
+  static const olive = Color(0xFF8B7920);
+  static const inputBg = Color(0xFFEFE4CB);
+  static const iconBg = Color(0xFFF0E3BE);
+  static const cardBorder = Color(0xFFECE0BD);
 }
 
 class CategoriasScreen extends StatefulWidget {
@@ -38,6 +47,10 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
 
   // ids de categorías cuyo toggle está en proceso (para deshabilitar el switch mientras responde el servidor)
   final Set<int> _actualizandoEstado = {};
+
+  // ─── Estado del panel de filtros ───
+  bool _filtrosAbiertos = true;
+  String _filtroEstado = 'todos'; // todos | activa | inactiva
 
   int? get _idRol => widget.usuario?['id_rol'] as int?;
   bool get _esAdmin => _idRol == 1;
@@ -92,16 +105,27 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
 
   List<CategoriaBlindaje> get _filtradas {
     final texto = _normalizar(_busquedaCtrl.text);
-    if (texto.isEmpty) return _categorias;
     return _categorias.where((c) {
-      return _normalizar(c.nombre).contains(texto) ||
+      final matchTexto = texto.isEmpty ||
+          _normalizar(c.nombre).contains(texto) ||
           _normalizar(c.descripcion).contains(texto) ||
           _normalizar(c.codigo).contains(texto);
+      final matchEstado = _filtroEstado == 'todos' ||
+          (_filtroEstado == 'activa' && c.activa) ||
+          (_filtroEstado == 'inactiva' && !c.activa);
+      return matchTexto && matchEstado;
     }).toList();
   }
 
   int get _totalActivas => _categorias.where((c) => c.activa).length;
   int get _totalInactivas => _categorias.where((c) => !c.activa).length;
+
+  void _limpiarFiltros() {
+    setState(() {
+      _busquedaCtrl.clear();
+      _filtroEstado = 'todos';
+    });
+  }
 
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -595,11 +619,13 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             _buildHeader(),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             _buildStats(),
             const SizedBox(height: 14),
-            _buildBuscador(),
-            const SizedBox(height: 10),
+
+            _panelFiltros(),
+
+            const SizedBox(height: 16),
             Row(
               children: [
                 const Text(
@@ -802,28 +828,148 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     );
   }
 
-  Widget _buildBuscador() {
-    return TextField(
-      controller: _busquedaCtrl,
-      onChanged: (_) => setState(() {}),
-      decoration: InputDecoration(
-        hintText: 'Buscar categoría...',
-        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-        prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.grey.shade200),
+  // =======================================================================
+  // PANEL DE FILTROS — diseño navy/gold: tarjeta blanca colapsable con
+  // borde sutil (en vez de sombra), acentos dorados, texto en navy, chips
+  // de estado (Todas/Activas/Inactivas) y botón "Limpiar". Mismo diseño
+  // que Inventario / Movimientos / Usuarios.
+  // =======================================================================
+  Widget _panelFiltros() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.cardBorder,
+          width: 0.6,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.filter_alt_outlined,
+                    size: 18,
+                    color: AppColors.gold,
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Filtros y Búsqueda',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: AppColors.navy,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: AppColors.goldDark,
+                  ),
+                ],
+              ),
+            ),
+            if (_filtrosAbiertos) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _busquedaCtrl,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(
+                  color: AppColors.navy,
+                  fontSize: 13,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Buscar categoría...',
+                  hintStyle: TextStyle(
+                    color: AppColors.navy.withValues(alpha: 0.45),
+                    fontSize: 13,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20,
+                    color: AppColors.navy.withValues(alpha: 0.45),
+                  ),
+                  filled: true,
+                  fillColor: Color.lerp(
+                    AppColors.inputBg,
+                    Colors.white,
+                    0.6,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: AppColors.gold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _chipEstado('Todas', 'todos'),
+                  _chipEstado('Activas', 'activa'),
+                  _chipEstado('Inactivas', 'inactiva'),
+                  TextButton.icon(
+                    onPressed: _limpiarFiltros,
+                    icon: const Icon(Icons.close, size: 14),
+                    label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.olive,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: AppColors.dorado),
+      ),
+    );
+  }
+
+  Widget _chipEstado(String label, String valor) {
+    final activo = _filtroEstado == valor;
+    final colorActivo = switch (valor) {
+      'activa' => AppColors.verde,
+      'inactiva' => AppColors.rojo,
+      _ => AppColors.gold,
+    };
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: activo,
+      onSelected: (_) => setState(() => _filtroEstado = valor),
+      selectedColor: Colors.white,
+      backgroundColor: Colors.white,
+      showCheckmark: false,
+      labelStyle: TextStyle(
+        color: activo ? colorActivo : AppColors.olive,
+        fontWeight: FontWeight.w700,
+        fontSize: 12,
+      ),
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: activo ? colorActivo : AppColors.cardBorder,
+          width: activo ? 1.4 : 1,
         ),
       ),
     );
