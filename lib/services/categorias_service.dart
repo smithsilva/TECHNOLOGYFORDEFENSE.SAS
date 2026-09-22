@@ -3,8 +3,7 @@ import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 import '../models/categoria.dart';
 
-/// Servicio para consumir la API de categorías de blindaje.
-/// Misma URL base, API key y token JWT que el resto de servicios.
+
 class CategoriasService {
   static const String _baseUrl = AuthService.apiUrl;
   static const String _apiKey = AuthService.apiKey;

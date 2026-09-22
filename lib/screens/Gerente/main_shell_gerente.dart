@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../screens/admin/inventario_screen.dart' hide AppColors;
 import '../../screens/admin/notificaciones_screen.dart' hide AppColors;
+import 'perfil_screen.dart' hide AppColors;
 import '../../widgets/t4d_sidebar.dart';
 import '../../widgets/gerente/gerente_appbar.dart';
 import '../../widgets/admin/notificaciones_bottom_sheet.dart';
@@ -115,6 +116,33 @@ class _MainShellGerenteState extends State<MainShellGerente> {
     );
   }
 
+  // Abre el perfil del Gerente (mismo PerfilScreen genérico que usa
+  // el resto de la app, ya que toma nombre/rol/correo de widget.usuario).
+  void _abrirPerfil() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          body: SafeArea(
+            child: PerfilScreen(
+              usuario: widget.usuario,
+              onCerrarSesion: () {
+                Navigator.of(context).pop();
+                _cerrarSesion();
+              },
+              onGuardar: (datos) async {
+                // TODO: conectar aquí tu servicio real de actualización de
+                // perfil (ej. UsuariosService().actualizarPerfil(token, datos)).
+                // Por ahora solo simula el guardado para no romper el flujo.
+                await Future<void>.delayed(const Duration(milliseconds: 400));
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final nombre = widget.usuario?['username'] ?? widget.usuario?['nombre'] ?? 'Gerente';
@@ -218,6 +246,7 @@ class _MainShellGerenteState extends State<MainShellGerente> {
               context,
               onVerTodas: _abrirNotificacionesCompleto,
             ),
+            onProfileTap: _abrirPerfil,
           ),
           drawer: Drawer(
             backgroundColor: Colors.transparent,

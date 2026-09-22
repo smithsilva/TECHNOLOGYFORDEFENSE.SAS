@@ -41,6 +41,13 @@ class _TareasColors {
   static const orangeBg = Color(0xFFFDF3DA);
 
   static const navy = encabezado;
+
+  // ---- Añadidos para el panel de filtros (diseño navy/gold) ----
+  static const goldDark = doradoOscuro;
+  static const olive = Color(0xFF8B7920);
+  static const inputBg = Color(0xFFEFE4CB);
+  static const iconBg = Color(0xFFF0E3BE);
+  static const cardBorder = Color(0xFFECE0BD);
 }
 
 // ============================================================
@@ -221,6 +228,9 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
   String _busqueda = '';
   String _filtroEstado = ''; // '' = Todos
 
+  // ─── Estado del panel de filtros ───
+  bool _filtrosAbiertos = true;
+
   static const _tabsEstado = ['Todos', 'Pendiente', 'En proceso', 'Finalizada'];
 
   RealtimeChannel? _canalAsignaciones;
@@ -248,6 +258,14 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
   int get _pendientes => _asignaciones.where((a) => a.estado == 'Pendiente').length;
   int get _enProceso => _asignaciones.where((a) => a.estado == 'En proceso').length;
   int get _finalizadas => _asignaciones.where((a) => a.estado == 'Finalizada').length;
+
+  void _limpiarFiltros() {
+    setState(() {
+      _searchController.clear();
+      _busqueda = '';
+      _filtroEstado = '';
+    });
+  }
 
   @override
   void initState() {
@@ -357,6 +375,25 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
   }
 
   // ── Aceptar tarea (equivalente a aceptarTarea en React) ──────
+  //
+  // FIX: antes se hacía un INSERT directo en `mantenimiento` con
+  // `id_asignacion: a.idAsignacion`. Si por cualquier motivo (doble
+  // ejecución, hot restart a mitad de la petición, reintento tras un
+  // fallo del segundo `update`, etc.) ya existía una fila de
+  // `mantenimiento` para esa asignación, Postgres rechazaba el insert
+  // por la restricción UNIQUE sobre `id_asignacion`
+  // (uniq_movimiento_creacion_por_asignacion /
+  // mantenimiento_id_asignacion_key), y eso es exactamente el error
+  // que veías en consola.
+  //
+  // La corrección tiene dos partes:
+  //   1. Si la asignación YA tiene `id_mantenimiento` (viene del modelo
+  //      `Asignacion`), no se vuelve a crear nada: solo se actualiza el
+  //      estado.
+  //   2. Si no lo tiene, se usa `upsert(..., onConflict: 'id_asignacion')`
+  //      en vez de `insert(...)`. Así, si por una condición de carrera ya
+  //      existiera una fila con ese `id_asignacion`, Supabase la
+  //      actualiza en lugar de lanzar el error de clave duplicada.
   Future<void> _aceptarTarea(Asignacion a) async {
     if (_procesando.contains(a.idAsignacion)) return;
     setState(() => _procesando.add(a.idAsignacion));
@@ -366,33 +403,40 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
           .from('asignaciones_tareas')
           .update({'estado': 'En proceso'}).eq('id_asignacion', a.idAsignacion);
 
-      final total = a.costo;
-      final subtotal = double.parse((total / 1.19).toStringAsFixed(2));
-      final iva = double.parse((total - subtotal).toStringAsFixed(2));
+      // Si ya existe un mantenimiento vinculado a esta asignación,
+      // no hace falta crear/duplicar nada más.
+      if (a.idMantenimiento == null) {
+        final total = a.costo;
+        final subtotal = double.parse((total / 1.19).toStringAsFixed(2));
+        final iva = double.parse((total - subtotal).toStringAsFixed(2));
 
-      final mant = await supabase
-          .from('mantenimiento')
-          .insert({
-            'fecha_hora': DateTime.now().toIso8601String(),
-            'tipo_de_mantenimiento':
-                (a.metodoPago?.permiteOnline ?? false) ? 'Online' : 'Fisica',
-            'estado': 'Pendiente',
-            'id_sucursal': a.idSucursal,
-            'id_cliente': a.idCliente,
-            'id_empleado_cajero': null,
-            'subtotal': subtotal,
-            'iva': iva,
-            'total': total,
-            'id_metodo_pago': a.idMetodoPago,
-            'id_asignacion': a.idAsignacion,
-          })
-          .select('id_mantenimiento')
-          .single();
+        final mant = await supabase
+            .from('mantenimiento')
+            .upsert(
+              {
+                'fecha_hora': DateTime.now().toIso8601String(),
+                'tipo_de_mantenimiento':
+                    (a.metodoPago?.permiteOnline ?? false) ? 'Online' : 'Fisica',
+                'estado': 'Pendiente',
+                'id_sucursal': a.idSucursal,
+                'id_cliente': a.idCliente,
+                'id_empleado_cajero': null,
+                'subtotal': subtotal,
+                'iva': iva,
+                'total': total,
+                'id_metodo_pago': a.idMetodoPago,
+                'id_asignacion': a.idAsignacion,
+              },
+              onConflict: 'id_asignacion',
+            )
+            .select('id_mantenimiento')
+            .single();
 
-      await supabase
-          .from('asignaciones_tareas')
-          .update({'id_mantenimiento': mant['id_mantenimiento']}).eq(
-              'id_asignacion', a.idAsignacion);
+        await supabase
+            .from('asignaciones_tareas')
+            .update({'id_mantenimiento': mant['id_mantenimiento']}).eq(
+                'id_asignacion', a.idAsignacion);
+      }
 
       await _cargarAsignaciones();
       _mostrarMensaje('Tarea aceptada, se agregó a tus mantenimientos.');
@@ -458,16 +502,9 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
                       total: _asignaciones.length,
                     ),
                     const SizedBox(height: 14),
-                    _SearchBar(
-                      controller: _searchController,
-                      onChanged: (v) => setState(() => _busqueda = v),
-                    ),
-                    const SizedBox(height: 12),
-                    _FilterTabs(
-                      tabs: _tabsEstado,
-                      seleccionado: _filtroEstado.isEmpty ? 'Todos' : _filtroEstado,
-                      onSelected: (t) => setState(() => _filtroEstado = t == 'Todos' ? '' : t),
-                    ),
+
+                    _panelFiltros(),
+
                     const SizedBox(height: 14),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -502,6 +539,148 @@ class _MantenimientosScreenState extends State<MantenimientosScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // =======================================================================
+  // PANEL DE FILTROS — diseño navy/gold: tarjeta blanca colapsable con
+  // borde sutil, acentos dorados, texto en navy, chips de estado
+  // (Todos/Pendiente/En proceso/Finalizada) y botón "Limpiar". Mismo
+  // diseño que Inventario / Movimientos / Usuarios / Categorías.
+  // =======================================================================
+  Widget _panelFiltros() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _TareasColors.cardBorder,
+          width: 0.6,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.filter_alt_outlined,
+                    size: 18,
+                    color: _TareasColors.gold,
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Filtros y Búsqueda',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: _TareasColors.navy,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: _TareasColors.goldDark,
+                  ),
+                ],
+              ),
+            ),
+            if (_filtrosAbiertos) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _searchController,
+                onChanged: (v) => setState(() => _busqueda = v),
+                style: const TextStyle(
+                  color: _TareasColors.navy,
+                  fontSize: 13,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Buscar vehículo, tipo o cliente...',
+                  hintStyle: TextStyle(
+                    color: _TareasColors.navy.withValues(alpha: 0.45),
+                    fontSize: 13,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20,
+                    color: _TareasColors.navy.withValues(alpha: 0.45),
+                  ),
+                  filled: true,
+                  fillColor: Color.lerp(
+                    _TareasColors.inputBg,
+                    Colors.white,
+                    0.6,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: _TareasColors.gold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  ..._tabsEstado.map((t) => _chipEstadoTarea(t)),
+                  TextButton.icon(
+                    onPressed: _limpiarFiltros,
+                    icon: const Icon(Icons.close, size: 14),
+                    label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: _TareasColors.olive,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chipEstadoTarea(String label) {
+    final valor = label == 'Todos' ? '' : label;
+    final activo = _filtroEstado == valor;
+    final colorActivo = label == 'Todos' ? _TareasColors.gold : _colorEstado(label);
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: activo,
+      onSelected: (_) => setState(() => _filtroEstado = valor),
+      selectedColor: Colors.white,
+      backgroundColor: Colors.white,
+      showCheckmark: false,
+      labelStyle: TextStyle(
+        color: activo ? colorActivo : _TareasColors.olive,
+        fontWeight: FontWeight.w700,
+        fontSize: 12,
+      ),
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: activo ? colorActivo : _TareasColors.cardBorder,
+          width: activo ? 1.4 : 1,
         ),
       ),
     );
@@ -748,7 +927,7 @@ class _PageHeaderCard extends StatelessWidget {
 }
 
 // ============================================================
-// FILA DE ESTADÍSTICAS COMPACTAS
+// FILA DE ESTADÍSTICAS — tarjetas con borde de color (como Inventario)
 // ============================================================
 class _StatsRow extends StatelessWidget {
   final int pendientes;
@@ -767,19 +946,44 @@ class _StatsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget box(String valor, String label, Color color) => Expanded(
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE9E1D0)),
+              // Un solo color de borde: con `borderRadius`, Flutter exige que
+              // todos los lados del Border tengan el MISMO color (si no,
+              // lanza "A borderRadius can only be given on borders with
+              // uniform colors" y el widget deja de renderizar).
+              border: Border.all(color: _TareasColors.cardBorder, width: 0.6),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(valor, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: color)),
-                const SizedBox(height: 2),
-                Text(label,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 10, color: _TareasColors.grayText)),
+                // Barra de color arriba (reemplaza al borde superior de color).
+                Container(height: 3, color: color),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 4),
+                  child: Column(
+                    children: [
+                      Text(valor,
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: color)),
+                      const SizedBox(height: 2),
+                      Text(label,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              fontSize: 10.5,
+                              color: _TareasColors.grayText,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -795,88 +999,6 @@ class _StatsRow extends StatelessWidget {
         const SizedBox(width: 8),
         box('$total', 'Total', _TareasColors.doradoOscuro),
       ],
-    );
-  }
-}
-
-// ============================================================
-// BARRA DE BÚSQUEDA
-// ============================================================
-class _SearchBar extends StatelessWidget {
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  const _SearchBar({required this.controller, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      onChanged: onChanged,
-      style: const TextStyle(fontSize: 13),
-      decoration: InputDecoration(
-        hintText: 'Buscar vehículo, tipo o cliente...',
-        hintStyle: const TextStyle(fontSize: 12.5, color: _TareasColors.grayText),
-        prefixIcon: const Icon(Icons.search_rounded, size: 18, color: _TareasColors.grayText),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: Color(0xFFE9E1D0)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: Color(0xFFE9E1D0)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: _TareasColors.dorado),
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================
-// PASTILLAS DE FILTRO
-// ============================================================
-class _FilterTabs extends StatelessWidget {
-  final List<String> tabs;
-  final String seleccionado;
-  final ValueChanged<String> onSelected;
-  const _FilterTabs({required this.tabs, required this.seleccionado, required this.onSelected});
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: tabs.map((t) {
-          final activo = t == seleccionado;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () => onSelected(t),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: activo ? _TareasColors.dorado : const Color(0xFFE9E1D0), width: 1.4),
-                ),
-                child: Text(
-                  t,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: activo ? FontWeight.w700 : FontWeight.w500,
-                    color: activo ? _TareasColors.doradoOscuro : _TareasColors.grayText,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
     );
   }
 }

@@ -45,7 +45,7 @@ class _MainShellState extends State<MainShell> {
     MovimientosScreen(usuario: widget.usuario),
     HistorialPreciosScreen(usuario: widget.usuario),
     NotificacionesScreen(usuario: widget.usuario),
-    ReportesScreen(usuario: widget.usuario),
+   ReportesContadoraScreen(usuario: widget.usuario),
     UsuariosScreen(usuario: widget.usuario),
     RegistroScreen(usuario: widget.usuario),
   ];

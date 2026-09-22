@@ -15,39 +15,20 @@ class HistorialPreciosService {
       };
 
   // =====================================
-  // PRODUCTOS
+  // PRODUCTOS (solo lectura + actualizar precio)
+  //
+  // La creación y eliminación de productos vive en InventarioService.
+  // Este servicio solo puede leer y actualizar el precio.
   // =====================================
 
-  /// Devuelve los productos usando tu modelo `Producto` de inventario.
-  /// Útil para selects/formularios donde necesitas id, nombre y precio.
   Future<List<Producto>> obtenerProductos(String token) async {
     final raw = await _fetchProductosRaw(token);
     return raw.map((e) => Producto.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  /// Crea un producto nuevo. El backend registra automáticamente el precio
-  /// inicial en el historial. `motivo` es opcional (por defecto "Creación de producto").
-  Future<Producto> crearProducto(
-    String token, {
-    required String nombreProducto,
-    required double precioInicial,
-    String? motivo,
-  }) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/productos'),
-      headers: _headers(token),
-      body: jsonEncode({
-        'nombre_producto': nombreProducto,
-        'precio_inicial': precioInicial,
-        if (motivo != null) 'motivo': motivo,
-      }),
-    );
-    _validar(response);
-    return Producto.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
-  }
-
-  /// Edita nombre y/o precio de un producto. Si cambia el precio, el backend
-  /// exige `motivo` (400 si falta) y registra el cambio en el historial.
+  /// Actualiza nombre y/o precio de un producto existente. Si cambia el
+  /// precio, el backend exige `motivo` (400 si falta) y registra el cambio
+  /// en el historial.
   Future<Producto> editarProducto(
     String token,
     int id, {
@@ -78,28 +59,10 @@ class HistorialPreciosService {
     return Producto.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
-  /// Puede lanzar una excepción con el mensaje 409 del backend cuando el
-  /// producto tiene historial asociado; en ese caso conviene ofrecer
-  /// `cambiarEstadoProducto(token, id, false)` como alternativa (desactivar),
-  /// igual que hace el `window.confirm` en tu versión React.
-  Future<void> eliminarProducto(String token, int id) async {
-    final response = await http.delete(
-      Uri.parse('$_baseUrl/productos/$id'),
-      headers: _headers(token),
-    );
-    _validar(response);
-  }
-
   // =====================================
-  // HISTORIAL (combinado con datos del producto)
+  // HISTORIAL (solo lectura)
   // =====================================
 
-  /// Trae el historial y lo combina con los datos de producto (nombre,
-  /// precio actual, activo) para devolverte directamente `List<HistorialPrecio>`
-  /// tal como la espera tu `HistorialPreciosScreen` — equivalente al
-  /// `productosMap` que se arma en la versión React.
-  ///
-  /// `idProducto` es opcional: si se pasa, filtra el historial de un solo producto.
   Future<List<HistorialPrecio>> obtenerHistorial(String token, {int? idProducto}) async {
     final resultados = await Future.wait([
       _fetchHistorialRaw(token, idProducto: idProducto),
@@ -121,7 +84,6 @@ class HistorialPreciosService {
       return HistorialPrecio(
         id: h['id_historial'] as int? ?? 0,
         idProducto: idProd,
-        // Si el producto fue eliminado después, evitamos un null y avisamos.
         nombreProducto: prod?['nombre_producto']?.toString() ?? 'Producto eliminado',
         precioActual: prod != null
             ? (prod['precio_actual'] as num?)?.toDouble() ?? 0
@@ -129,13 +91,6 @@ class HistorialPreciosService {
         activo: prod?['activo'] as bool? ?? false,
         precioAnterior: (h['precio_anterior'] as num?)?.toDouble() ?? 0,
         precioNuevo: precioNuevo,
-        // FIX: antes esto era `DateTime.parse(h['fecha_cambio'] as String)`.
-        // Si el backend mandaba `fecha_cambio: null` en algún registro, el
-        // cast `as String` explotaba con
-        // "TypeError: null: type 'Null' is not a subtype of type 'String'"
-        // y tumbaba toda la pantalla (ninguna tarjeta llegaba a pintarse).
-        // Ahora se tolera null o un formato de fecha inválido, cayendo en
-        // DateTime.now() como valor de respaldo en vez de crashear.
         fecha: h['fecha_cambio'] != null
             ? DateTime.tryParse(h['fecha_cambio'].toString()) ?? DateTime.now()
             : DateTime.now(),
@@ -144,16 +99,8 @@ class HistorialPreciosService {
     }).toList();
   }
 
-  Future<void> eliminarHistorial(String token, int id) async {
-    final response = await http.delete(
-      Uri.parse('$_baseUrl/$id'),
-      headers: _headers(token),
-    );
-    _validar(response);
-  }
-
   // =====================================
-  // Helpers privados (fetch crudo, sin mapear a modelo todavía)
+  // Helpers privados
   // =====================================
 
   Future<List<Map<String, dynamic>>> _fetchProductosRaw(String token) async {

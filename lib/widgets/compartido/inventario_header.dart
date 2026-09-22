@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../screens/admin/perfil_screen.dart.dart';
+import '../../screens/admin/perfil_screen.dart.dart' hide AppColors;
 
 class AppColors {
   static const navy = Color(0xFF13202E);

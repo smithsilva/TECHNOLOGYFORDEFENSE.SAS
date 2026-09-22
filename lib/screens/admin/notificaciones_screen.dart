@@ -130,77 +130,233 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Nuevo mensaje'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+        builder: (ctx, setDialogState) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              color: Colors.white,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ---------- HEADER OSCURO ----------
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [AppColors.headerOscuro, AppColors.headerOscuro2],
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.dorado.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.campaign_outlined,
+                              color: AppColors.dorado, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Nuevo mensaje',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 17,
+                                ),
+                              ),
+                              SizedBox(height: 3),
+                              Text(
+                                'Le llegará a todos los roles del sistema',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ---------- CONTENIDO ----------
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _campoEtiquetado(
+                          label: 'Asunto',
+                          icono: Icons.short_text,
+                          controller: tituloCtrl,
+                        ),
+                        const SizedBox(height: 16),
+                        _campoEtiquetado(
+                          label: 'Mensaje',
+                          icono: Icons.notes,
+                          controller: descripcionCtrl,
+                          maxLines: 3,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ---------- BOTONES ----------
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: enviando ? null : () => Navigator.pop(ctx),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                side: BorderSide(color: Colors.grey.shade300),
+                              ),
+                            ),
+                            child: const Text(
+                              'Cancelar',
+                              style: TextStyle(
+                                color: AppColors.textoMuted,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.dorado,
+                              foregroundColor: Colors.black87,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                            onPressed: enviando
+                                ? null
+                                : () async {
+                                    final titulo = tituloCtrl.text.trim();
+                                    final descripcion = descripcionCtrl.text.trim();
+                                    if (titulo.isEmpty || descripcion.isEmpty) {
+                                      _mostrarSnack('Completa asunto y mensaje',
+                                          color: AppColors.rojo);
+                                      return;
+                                    }
+                                    final token = await _obtenerToken();
+                                    if (token == null) return;
+
+                                    setDialogState(() => enviando = true);
+                                    try {
+                                      await _service.enviarATodos(
+                                        token,
+                                        titulo: titulo,
+                                        descripcion: descripcion,
+                                      );
+                                      if (ctx.mounted) Navigator.pop(ctx);
+                                      _mostrarSnack('Notificación enviada',
+                                          color: AppColors.verde);
+                                      _cargarNotificaciones();
+                                    } catch (e) {
+                                      setDialogState(() => enviando = false);
+                                      _mostrarSnack('No se pudo enviar: $e',
+                                          color: AppColors.rojo);
+                                    }
+                                  },
+                            child: enviando
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.black87,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Enviar',
+                                    style: TextStyle(fontWeight: FontWeight.w700),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------- CAMPO CON ETIQUETA E ÍCONO (estilo "Editar producto") ----------
+  Widget _campoEtiquetado({
+    required String label,
+    required IconData icono,
+    required TextEditingController controller,
+    int maxLines = 1,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textoMuted,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.fondo,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.doradoClaro.withValues(alpha: 0.6)),
+          ),
+          child: Row(
+            crossAxisAlignment:
+                maxLines > 1 ? CrossAxisAlignment.start : CrossAxisAlignment.center,
             children: [
-              const Text(
-                '📢 Esta notificación le llegará a todos los roles del sistema.',
-                style: TextStyle(fontSize: 12, color: AppColors.textoMuted),
+              Padding(
+                padding: EdgeInsets.only(left: 12, top: maxLines > 1 ? 14 : 0),
+                child: Icon(icono, size: 18, color: AppColors.doradoOscuro),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: tituloCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Asunto',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descripcionCtrl,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Mensaje',
-                  border: OutlineInputBorder(),
-                  isDense: true,
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  maxLines: maxLines,
+                  style: const TextStyle(fontSize: 13.5),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                  ),
                 ),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: enviando ? null : () => Navigator.pop(ctx),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.dorado),
-              onPressed: enviando
-                  ? null
-                  : () async {
-                      final titulo = tituloCtrl.text.trim();
-                      final descripcion = descripcionCtrl.text.trim();
-                      if (titulo.isEmpty || descripcion.isEmpty) {
-                        _mostrarSnack('Completa asunto y mensaje', color: AppColors.rojo);
-                        return;
-                      }
-                      final token = await _obtenerToken();
-                      if (token == null) return;
-
-                      setDialogState(() => enviando = true);
-                      try {
-                        await _service.enviarATodos(
-                          token,
-                          titulo: titulo,
-                          descripcion: descripcion,
-                        );
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        _mostrarSnack('Notificación enviada', color: AppColors.verde);
-                        _cargarNotificaciones();
-                      } catch (e) {
-                        setDialogState(() => enviando = false);
-                        _mostrarSnack('No se pudo enviar: $e', color: AppColors.rojo);
-                      }
-                    },
-              child: Text(enviando ? 'Enviando...' : 'Enviar'),
-            ),
-          ],
         ),
-      ),
+      ],
     );
   }
 

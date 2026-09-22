@@ -16,6 +16,15 @@ class AppColors {
   static const rojo = Color(0xFFC0392B);
   static const rojoFondo = Color(0xFFFBE2DF);
   static const textoMuted = Color(0xFF6B7280);
+
+  // ---- Añadidos para el panel de filtros (diseño navy/gold) ----
+  static const navy = Color(0xFF101B33);
+  static const gold = Color(0xFFC9A24A);
+  static const goldDark = Color(0xFF8A6D1F);
+  static const olive = Color(0xFF8B7920);
+  static const inputBg = Color(0xFFEFE4CB);
+  static const iconBg = Color(0xFFF0E3BE);
+  static const cardBorder = Color(0xFFECE0BD);
 }
 
 class CategoriasScreen extends StatefulWidget {
@@ -35,6 +44,16 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   String? _error;
   List<CategoriaBlindaje> _categorias = [];
   String? _token;
+
+  // ids de categorías cuyo toggle está en proceso (para deshabilitar el switch mientras responde el servidor)
+  final Set<int> _actualizandoEstado = {};
+
+  // ─── Estado del panel de filtros ───
+  bool _filtrosAbiertos = true;
+  String _filtroEstado = 'todos'; // todos | activa | inactiva
+
+  int? get _idRol => widget.usuario?['id_rol'] as int?;
+  bool get _esAdmin => _idRol == 1;
 
   @override
   void initState() {
@@ -86,19 +105,72 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
 
   List<CategoriaBlindaje> get _filtradas {
     final texto = _normalizar(_busquedaCtrl.text);
-    if (texto.isEmpty) return _categorias;
     return _categorias.where((c) {
-      return _normalizar(c.nombre).contains(texto) ||
+      final matchTexto = texto.isEmpty ||
+          _normalizar(c.nombre).contains(texto) ||
           _normalizar(c.descripcion).contains(texto) ||
           _normalizar(c.codigo).contains(texto);
+      final matchEstado = _filtroEstado == 'todos' ||
+          (_filtroEstado == 'activa' && c.activa) ||
+          (_filtroEstado == 'inactiva' && !c.activa);
+      return matchTexto && matchEstado;
     }).toList();
   }
 
   int get _totalActivas => _categorias.where((c) => c.activa).length;
   int get _totalInactivas => _categorias.where((c) => !c.activa).length;
 
+  void _limpiarFiltros() {
+    setState(() {
+      _busquedaCtrl.clear();
+      _filtroEstado = 'todos';
+    });
+  }
+
+  void _mostrarError(String mensaje) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensaje), backgroundColor: AppColors.rojo),
+    );
+  }
+
+  void _mostrarExito(String mensaje) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensaje), backgroundColor: AppColors.verde),
+    );
+  }
+
+  // =====================================
+  // ACTIVAR / INHABILITAR (toggle rápido, sin abrir formulario)
+  // =====================================
+  Future<void> _toggleActiva(CategoriaBlindaje c) async {
+    setState(() => _actualizandoEstado.add(c.id));
+
+    final nuevoEstado = !c.activa;
+    try {
+      final token = await _obtenerToken();
+      if (token == null) throw Exception('Sesión expirada, vuelve a iniciar sesión');
+
+      // ⚠️ La columna real en Supabase se llama "activo", no "activa"
+      await _categoriasService.actualizarParcial(token, c.id, {'activo': nuevoEstado});
+
+      setState(() {
+        final index = _categorias.indexWhere((x) => x.id == c.id);
+        if (index != -1) {
+          _categorias[index] = c.copyWith(activa: nuevoEstado);
+        }
+      });
+
+      _mostrarExito(nuevoEstado ? 'Categoría activada' : 'Categoría inhabilitada');
+    } catch (e) {
+      _mostrarError(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _actualizandoEstado.remove(c.id));
+    }
+  }
+
   // ══════════════════════════════════════════════════════════════════════
-  // ─── HELPERS DE DISEÑO COMPARTIDOS PARA EL MODAL DE DETALLE ────────────
+  // ─── HELPERS DE DISEÑO COMPARTIDOS PARA LOS MODALES ────────────────────
+  // (header navy con ícono, contenedor base, campos, footer de botones)
   // ══════════════════════════════════════════════════════════════════════
 
   Future<T?> _mostrarDialogoBase<T>({required Widget child}) {
@@ -172,6 +244,83 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     );
   }
 
+  Widget _campoTexto({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    int maxLines = 1,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextField(
+        controller: controller,
+        maxLines: maxLines,
+        style: const TextStyle(fontSize: 14),
+        decoration: InputDecoration(
+          hintText: label,
+          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+          prefixIcon: Icon(icon, size: 18, color: AppColors.doradoOscuro),
+          filled: true,
+          fillColor: AppColors.fondo,
+          contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: AppColors.dorado, width: 1.4),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _footerBotones({
+    required String textoConfirmar,
+    required VoidCallback onConfirmar,
+    required VoidCallback onCancelar,
+    String textoCancelar = 'Cancelar',
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 6, 20, 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: onCancelar,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                side: BorderSide(color: Colors.grey.shade300),
+              ),
+              child: Text(textoCancelar,
+                  style: const TextStyle(color: AppColors.textoMuted, fontWeight: FontWeight.w600)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: onConfirmar,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.dorado,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              child: Text(textoConfirmar, style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _filaDetalleIcono(IconData icon, String label, String valor) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -228,7 +377,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // ─── VER DETALLE (solo lectura) ─────────────────────────────────────
+  // ─── VER DETALLE ────────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════
   void _verDetalle(CategoriaBlindaje c) {
     _mostrarDialogoBase(
@@ -287,19 +436,173 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  side: BorderSide(color: Colors.grey.shade300),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    child: const Text('Cerrar',
+                        style: TextStyle(color: AppColors.textoMuted, fontWeight: FontWeight.w600)),
+                  ),
                 ),
-                child: const Text('Cerrar',
-                    style: TextStyle(color: AppColors.textoMuted, fontWeight: FontWeight.w600)),
+                if (_esAdmin) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _abrirFormulario(categoria: c);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.dorado,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: const Text('Editar', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ─── CREAR / EDITAR ─────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════
+  Future<void> _abrirFormulario({CategoriaBlindaje? categoria}) async {
+    final nombreCtrl = TextEditingController(text: categoria?.nombre ?? '');
+    final descCtrl = TextEditingController(text: categoria?.descripcion ?? '');
+    bool activa = categoria?.activa ?? true;
+    final esEdicion = categoria != null;
+
+    final resultado = await _mostrarDialogoBase<bool>(
+      child: StatefulBuilder(
+        builder: (ctx, setDialogState) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _headerDialogo(
+              icon: esEdicion ? Icons.edit_outlined : Icons.add,
+              titulo: esEdicion ? 'Editar categoría' : 'Nueva categoría',
+              subtitulo: esEdicion
+                  ? 'Actualiza los datos de la categoría'
+                  : 'Agrega una categoría de blindaje',
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+              child: Column(
+                children: [
+                  _campoTexto(
+                    controller: nombreCtrl,
+                    label: 'Nombre de la categoría',
+                    icon: Icons.shield_outlined,
+                  ),
+                  _campoTexto(
+                    controller: descCtrl,
+                    label: 'Descripción',
+                    icon: Icons.notes_outlined,
+                    maxLines: 3,
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.fondo,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: AppColors.dorado,
+                      title: const Text('Categoría activa',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      value: activa,
+                      onChanged: (v) => setDialogState(() => activa = v),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                ],
               ),
             ),
+            _footerBotones(
+              textoConfirmar: esEdicion ? 'Guardar cambios' : 'Crear categoría',
+              onCancelar: () => Navigator.of(ctx).pop(false),
+              onConfirmar: () => Navigator.of(ctx).pop(true),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (resultado != true) return;
+
+    if (nombreCtrl.text.trim().isEmpty) {
+      _mostrarError('El nombre es obligatorio');
+      return;
+    }
+
+    try {
+      final token = await _obtenerToken();
+      if (token == null) throw Exception('Sesión expirada, vuelve a iniciar sesión');
+
+      final nuevaCategoria = CategoriaBlindaje(
+        id: categoria?.id ?? 0,
+        nombre: nombreCtrl.text.trim(),
+        descripcion: descCtrl.text.trim(),
+        activa: activa,
+        categoriaPadre: categoria?.categoriaPadre,
+      );
+
+      if (esEdicion) {
+        await _categoriasService.editarCategoria(token, categoria.id, nuevaCategoria);
+        _mostrarExito('Categoría actualizada');
+      } else {
+        await _categoriasService.crearCategoria(token, nuevaCategoria);
+        _mostrarExito('Categoría creada');
+      }
+
+      await _cargarCategorias();
+    } catch (e) {
+      _mostrarError(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  void _confirmarEliminar(CategoriaBlindaje c) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Eliminar categoría'),
+        content: Text(
+          '¿Seguro que deseas eliminar "${c.nombre}"? Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              try {
+                final token = await _obtenerToken();
+                if (token == null) throw Exception('Sesión expirada, vuelve a iniciar sesión');
+                await _categoriasService.eliminarCategoria(token, c.id);
+                _mostrarExito('Categoría eliminada');
+                await _cargarCategorias();
+              } catch (e) {
+                _mostrarError(e.toString().replaceFirst('Exception: ', ''));
+              }
+            },
+            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -316,11 +619,13 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             _buildHeader(),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             _buildStats(),
             const SizedBox(height: 14),
-            _buildBuscador(),
-            const SizedBox(height: 10),
+
+            _panelFiltros(),
+
+            const SizedBox(height: 16),
             Row(
               children: [
                 const Text(
@@ -427,6 +732,21 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
               ],
             ),
           ),
+          if (_esAdmin) ...[
+            const SizedBox(width: 10),
+            ElevatedButton.icon(
+              onPressed: () => _abrirFormulario(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.dorado,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: const StadiumBorder(),
+                elevation: 0,
+              ),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Nueva', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
         ],
       ),
     );
@@ -508,34 +828,156 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     );
   }
 
-  Widget _buildBuscador() {
-    return TextField(
-      controller: _busquedaCtrl,
-      onChanged: (_) => setState(() {}),
-      decoration: InputDecoration(
-        hintText: 'Buscar categoría...',
-        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-        prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.grey.shade200),
+  // =======================================================================
+  // PANEL DE FILTROS — diseño navy/gold: tarjeta blanca colapsable con
+  // borde sutil (en vez de sombra), acentos dorados, texto en navy, chips
+  // de estado (Todas/Activas/Inactivas) y botón "Limpiar". Mismo diseño
+  // que Inventario / Movimientos / Usuarios.
+  // =======================================================================
+  Widget _panelFiltros() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.cardBorder,
+          width: 0.6,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _filtrosAbiertos = !_filtrosAbiertos),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.filter_alt_outlined,
+                    size: 18,
+                    color: AppColors.gold,
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Filtros y Búsqueda',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: AppColors.navy,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _filtrosAbiertos ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: AppColors.goldDark,
+                  ),
+                ],
+              ),
+            ),
+            if (_filtrosAbiertos) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _busquedaCtrl,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(
+                  color: AppColors.navy,
+                  fontSize: 13,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Buscar categoría...',
+                  hintStyle: TextStyle(
+                    color: AppColors.navy.withValues(alpha: 0.45),
+                    fontSize: 13,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20,
+                    color: AppColors.navy.withValues(alpha: 0.45),
+                  ),
+                  filled: true,
+                  fillColor: Color.lerp(
+                    AppColors.inputBg,
+                    Colors.white,
+                    0.6,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: const BorderSide(color: AppColors.gold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _chipEstado('Todas', 'todos'),
+                  _chipEstado('Activas', 'activa'),
+                  _chipEstado('Inactivas', 'inactiva'),
+                  TextButton.icon(
+                    onPressed: _limpiarFiltros,
+                    icon: const Icon(Icons.close, size: 14),
+                    label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.olive,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: AppColors.dorado),
+      ),
+    );
+  }
+
+  Widget _chipEstado(String label, String valor) {
+    final activo = _filtroEstado == valor;
+    final colorActivo = switch (valor) {
+      'activa' => AppColors.verde,
+      'inactiva' => AppColors.rojo,
+      _ => AppColors.gold,
+    };
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: activo,
+      onSelected: (_) => setState(() => _filtroEstado = valor),
+      selectedColor: Colors.white,
+      backgroundColor: Colors.white,
+      showCheckmark: false,
+      labelStyle: TextStyle(
+        color: activo ? colorActivo : AppColors.olive,
+        fontWeight: FontWeight.w700,
+        fontSize: 12,
+      ),
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: activo ? colorActivo : AppColors.cardBorder,
+          width: activo ? 1.4 : 1,
         ),
       ),
     );
   }
 
   Widget _tarjetaCategoria(CategoriaBlindaje c) {
+    final actualizando = _actualizandoEstado.contains(c.id);
+
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: () => _verDetalle(c),
@@ -569,33 +1011,48 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                   ),
                 ),
                 const Spacer(),
-                // ─── Badge de estado (solo informativo, sin toggle) ───
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: c.activa ? AppColors.verdeFondo : AppColors.rojoFondo,
+                // ─── Badge + toggle activar/inhabilitar ───
+                if (actualizando)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  InkWell(
                     borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        c.activa ? Icons.check_circle : Icons.cancel,
-                        size: 11,
-                        color: c.activa ? AppColors.verde : AppColors.rojo,
+                    onTap: _esAdmin ? () => _toggleActiva(c) : null,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: c.activa ? AppColors.verdeFondo : AppColors.rojoFondo,
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        c.activa ? 'Activa' : 'Inactiva',
-                        style: TextStyle(
-                          color: c.activa ? AppColors.verde : AppColors.rojo,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 11,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            c.activa ? Icons.check_circle : Icons.cancel,
+                            size: 11,
+                            color: c.activa ? AppColors.verde : AppColors.rojo,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            c.activa ? 'Activa' : 'Inactiva',
+                            style: TextStyle(
+                              color: c.activa ? AppColors.verde : AppColors.rojo,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
+                          ),
+                          if (_esAdmin) ...[
+                            const SizedBox(width: 4),
+                            Icon(Icons.sync_alt, size: 11, color: c.activa ? AppColors.verde : AppColors.rojo),
+                          ],
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -629,12 +1086,57 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 6),
-                Icon(Icons.chevron_right, size: 20, color: Colors.grey.shade400),
               ],
             ),
+            if (_esAdmin) ...[
+              const SizedBox(height: 10),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+              // ─── Acciones: mismo estilo cuadrado con ícono que usa
+              // ProductoCard (Inventario) — fondo dorado claro para Editar,
+              // fondo rojo claro para Eliminar, sin texto.
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  _accionBoton(
+                    Icons.remove_red_eye_outlined,
+                    AppColors.doradoOscuro,
+                    const Color(0xFFFBF1DD),
+                    () => _verDetalle(c),
+                  ),
+                  const SizedBox(width: 8),
+                  _accionBoton(
+                    Icons.edit_outlined,
+                    AppColors.doradoOscuro,
+                    const Color(0xFFFBF1DD),
+                    () => _abrirFormulario(categoria: c),
+                  ),
+                  const SizedBox(width: 8),
+                  _accionBoton(
+                    Icons.delete_outline,
+                    const Color(0xFFD64545),
+                    const Color(0xFFFBE3E3),
+                    () => _confirmarEliminar(c),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  // Mismo helper que usa ProductoCard: botón cuadrado, ícono solo,
+  // fondo de color suave, sin texto.
+  Widget _accionBoton(IconData icon, Color color, Color fondo, VoidCallback? onTap) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: fondo, borderRadius: BorderRadius.circular(10)),
+        child: Icon(icon, size: 17, color: color),
       ),
     );
   }

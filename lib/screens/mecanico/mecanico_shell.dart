@@ -68,7 +68,6 @@ class _MecanicoShellState extends State<MecanicoShell> {
           context,
           onVerTodas: _abrirNotificacionesCompleto,
         ),
-        // onPerfil: se conecta cuando exista la pantalla de Perfil.
       ),
       drawer: MecanicoDrawer(
         usuario: widget.usuario,

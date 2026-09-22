@@ -36,13 +36,11 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   DateTime? _fechaFiltro;
   bool _cargando = false;
   bool _filtrosAbiertos = true;
+  bool _actualizando = false;
   String? _error;
 
   List<HistorialPrecio> _registros = [];
 
-  /// El token se guarda por separado en SharedPreferences durante el login
-  /// (ver login_screen.dart: prefs.setString('token', token)), NO dentro
-  /// del mapa `usuario`. Por eso se obtiene aquí de forma asíncrona.
   Future<String?> _obtenerToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('token');
@@ -60,7 +58,6 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     super.dispose();
   }
 
-  /// Carga el historial real desde el backend.
   Future<void> _cargarRegistros() async {
     final token = await _obtenerToken();
 
@@ -69,7 +66,6 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
         _error = 'No se encontró el token de sesión. Vuelve a iniciar sesión.';
         _cargando = false;
       });
-      debugPrint('>>> HistorialPrecios: token nulo o vacío en widget.usuario');
       return;
     }
 
@@ -80,15 +76,12 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
 
     try {
       final data = await _service.obtenerHistorial(token);
-      debugPrint('>>> HistorialPrecios: ${data.length} registros recibidos');
-
       if (!mounted) return;
       setState(() {
         _registros = data;
         _cargando = false;
       });
     } catch (e) {
-      debugPrint('>>> HistorialPrecios: error al cargar -> $e');
       if (!mounted) return;
       setState(() {
         _error = 'Error al cargar el historial: $e';
@@ -130,26 +123,6 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
       _registros.where((r) => r.tipoVariacion == 'reduccion').length;
   int get _totalSinCambio =>
       _registros.where((r) => r.tipoVariacion == 'sin_cambio').length;
-
-  /// Catálogo derivado de los registros: último precio conocido por producto.
-  /// Se usa para autocompletar "precio anterior" al crear un registro nuevo.
-  List<Map<String, dynamic>> get _catalogoProductos {
-    final mapa = <int, Map<String, dynamic>>{};
-    for (final r in _registros) {
-      final actual = mapa[r.idProducto];
-      if (actual == null || r.fecha.isAfter(actual['fecha'] as DateTime)) {
-        mapa[r.idProducto] = {
-          'id': r.idProducto,
-          'nombre': r.nombreProducto,
-          'precioActual': r.precioNuevo,
-          'fecha': r.fecha,
-        };
-      }
-    }
-    final lista = mapa.values.toList()
-      ..sort((a, b) => (a['nombre'] as String).compareTo(b['nombre'] as String));
-    return lista;
-  }
 
   void _limpiarFiltros() {
     setState(() {
@@ -201,27 +174,219 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   }
 
   // =======================================================================
-  // ELIMINAR (llamada real al backend)
+  // ACTUALIZAR PRECIO (reemplaza a "eliminar"; requiere motivo, como exige
+  // el backend cuando el precio cambia)
   // =======================================================================
 
-  Future<void> _eliminar(HistorialPrecio r) async {
+  Future<void> _abrirActualizarPrecio(HistorialPrecio r) async {
+    final precioCtrl = TextEditingController(text: r.precioActual.toStringAsFixed(0));
+    final motivoCtrl = TextEditingController();
+    String? errorLocal;
+
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header oscuro con icono, mismo estilo que "Editar producto"
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [AppColors.navyOscuro, AppColors.navyClaro],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.edit_outlined, color: AppColors.dorado, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Actualizar precio',
+                                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                r.nombreProducto,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: AppColors.doradoClaro, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Precio actual: \$${_formatoMiles(r.precioActual)}',
+                          style: const TextStyle(fontSize: 12, color: AppColors.textoMuted),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: precioCtrl,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            labelText: 'Precio nuevo',
+                            labelStyle: const TextStyle(fontSize: 13, color: AppColors.textoMuted),
+                            prefixIcon: const Icon(Icons.attach_money, size: 19, color: AppColors.doradoOscuro),
+                            filled: true,
+                            fillColor: AppColors.fondo.withValues(alpha: 0.6),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey.shade200),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey.shade200),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: AppColors.dorado, width: 1.4),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: motivoCtrl,
+                          maxLines: 2,
+                          style: const TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            labelText: 'Motivo del cambio',
+                            hintText: 'Obligatorio si cambia el precio',
+                            hintStyle: const TextStyle(fontSize: 12),
+                            labelStyle: const TextStyle(fontSize: 13, color: AppColors.textoMuted),
+                            prefixIcon: const Icon(Icons.notes_outlined, size: 19, color: AppColors.doradoOscuro),
+                            filled: true,
+                            fillColor: AppColors.fondo.withValues(alpha: 0.6),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey.shade200),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey.shade200),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: AppColors.dorado, width: 1.4),
+                            ),
+                          ),
+                        ),
+                        if (errorLocal != null) ...[
+                          const SizedBox(height: 10),
+                          Text(errorLocal!, style: const TextStyle(color: AppColors.rojo, fontSize: 12)),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              side: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('Cancelar', style: TextStyle(color: AppColors.textoMuted)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.dorado,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            onPressed: () {
+                              final nuevoPrecio = double.tryParse(precioCtrl.text.trim());
+                              if (nuevoPrecio == null || nuevoPrecio <= 0) {
+                                setDialogState(() => errorLocal = 'Ingresa un precio válido mayor a 0');
+                                return;
+                              }
+                              final cambia = nuevoPrecio != r.precioActual;
+                              if (cambia && motivoCtrl.text.trim().isEmpty) {
+                                setDialogState(
+                                    () => errorLocal = 'El motivo es obligatorio cuando cambia el precio');
+                                return;
+                              }
+                              Navigator.pop(ctx, true);
+                            },
+                            child: const Text('Guardar cambios', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (confirmado != true) return;
+
     final token = await _obtenerToken();
     if (token == null) return;
 
+    setState(() => _actualizando = true);
     try {
-      await _service.eliminarHistorial(token, r.id);
-      if (!mounted) return;
-      setState(() => _registros.removeWhere((x) => x.id == r.id));
-      _mostrarSnack('Registro eliminado', color: AppColors.rojo);
+      await _service.editarProducto(
+        token,
+        r.idProducto,
+        precioNuevo: double.parse(precioCtrl.text.trim()),
+        motivo: motivoCtrl.text.trim().isEmpty ? null : motivoCtrl.text.trim(),
+      );
+      _mostrarSnack('Precio actualizado', color: AppColors.verde);
+      await _cargarRegistros();
     } catch (e) {
-      _mostrarSnack('No se pudo eliminar: $e', color: AppColors.rojo);
+      _mostrarSnack('No se pudo actualizar: $e', color: AppColors.rojo);
+    } finally {
+      if (mounted) setState(() => _actualizando = false);
     }
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // ─── HELPERS DE DISEÑO COMPARTIDOS PARA EL MODAL (mismo estilo que
-  // Inventario / Categorías / Usuarios: header navy con ícono, campos
-  // redondeados, cajitas de stats y footer con botón dorado) ─────────────
+  // HELPERS DE DISEÑO COMPARTIDOS PARA EL MODAL DE DETALLE
   // ══════════════════════════════════════════════════════════════════════
 
   Future<T?> _mostrarDialogoBase<T>({required Widget child}) {
@@ -357,9 +522,9 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   }
 
   // =======================================================================
-  // DIÁLOGO: VER DETALLE
+  // DIÁLOGO: VER DETALLE (acción: solo "Actualizar precio", ya no "Eliminar")
   // =======================================================================
-  void _verDetalle(HistorialPrecio r, bool esSoloLectura) {
+  void _verDetalle(HistorialPrecio r, bool puedeEditar) {
     final tipo = r.tipoVariacion;
     Color colorVariacion;
     Color fondoVariacion;
@@ -468,22 +633,22 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                         style: TextStyle(color: AppColors.textoMuted, fontWeight: FontWeight.w600)),
                   ),
                 ),
-                if (!esSoloLectura) ...[
+                if (puedeEditar) ...[
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.of(context).pop();
-                        _confirmarEliminar(r);
+                        _abrirActualizarPrecio(r);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.rojo,
+                        backgroundColor: AppColors.dorado,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),
-                      child: const Text('Eliminar', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Text('Actualizar precio', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
@@ -495,124 +660,107 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     );
   }
 
-  // =======================================================================
-  // DIÁLOGO: ELIMINAR (confirmación)
-  // =======================================================================
-  void _confirmarEliminar(HistorialPrecio r) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('¿Eliminar registro?'),
-        content: Text(
-          'Se eliminará el registro #${r.id} de "${r.nombreProducto}". Esta acción no se puede deshacer.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.rojo),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _eliminar(r);
-            },
-            child: const Text('Eliminar'),
+  @override
+  Widget build(BuildContext context) {
+    final rolCrudo = (widget.usuario?['rol'] ?? '').toString().toLowerCase();
+    // Misma convención que el resto de la app: todos los roles pueden
+    // actualizar el precio, EXCEPTO 'contadora' (solo consulta).
+    // Ojo: el backend (PUT /historial-precios/productos/:id) exige rol 1
+    // o 2 (admin/gerente) — si algún otro rol necesita editar desde aquí,
+    // hay que ampliar también el verificarRol([1, 2]) en las rutas.
+    final puedeEditar = rolCrudo != 'contadora';
+
+    return Container(
+      color: AppColors.fondo,
+      child: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: _cargarRegistros,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _encabezado(rolCrudo),
+                const SizedBox(height: 14),
+
+                if (_error != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.rojoFondo,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: AppColors.rojo, fontSize: 13),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: _tarjetaResumen('Total', '${_registros.length}', AppColors.dorado),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _tarjetaResumen('Aumentos', '$_totalAumentos', AppColors.rojo),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _tarjetaResumen('Reduc.', '$_totalReducciones', AppColors.verde),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _tarjetaResumen('Sin cambio', '$_totalSinCambio', AppColors.gris),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                _panelFiltros(),
+
+                const SizedBox(height: 16),
+
+                _separadorConteo(_filtrados.length),
+                const SizedBox(height: 12),
+
+                if (_cargando)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (_filtrados.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.history, size: 40, color: Colors.grey.shade400),
+                          const SizedBox(height: 8),
+                          Text('No se encontraron registros',
+                              style: TextStyle(color: Colors.grey.shade600)),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ..._filtrados.map((r) => _tarjetaRegistro(r, puedeEditar)),
+              ],
+            ),
           ),
+          if (_actualizando)
+            Container(
+              color: Colors.black.withValues(alpha: 0.15),
+              child: const Center(child: CircularProgressIndicator()),
+            ),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final rolCrudo = (widget.usuario?['rol'] ?? '').toString().toLowerCase();
-    final esSoloLectura = rolCrudo == 'contadora';
-
-    return Container(
-      color: AppColors.fondo,
-      child: RefreshIndicator(
-        onRefresh: _cargarRegistros,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _encabezado(rolCrudo, esSoloLectura),
-            const SizedBox(height: 14),
-
-            if (_error != null) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.rojoFondo,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  _error!,
-                  style: const TextStyle(color: AppColors.rojo, fontSize: 13),
-                ),
-              ),
-              const SizedBox(height: 14),
-            ],
-
-            // Tarjetas de resumen (4 en fila)
-            Row(
-              children: [
-                Expanded(
-                  child: _tarjetaResumen('Total', '${_registros.length}', AppColors.dorado),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _tarjetaResumen('Aumentos', '$_totalAumentos', AppColors.rojo),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _tarjetaResumen('Reduc.', '$_totalReducciones', AppColors.verde),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _tarjetaResumen('Sin cambio', '$_totalSinCambio', AppColors.gris),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-
-            _panelFiltros(),
-
-            const SizedBox(height: 16),
-
-            _separadorConteo(_filtrados.length),
-            const SizedBox(height: 12),
-
-            if (_cargando)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (_filtrados.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(Icons.history, size: 40, color: Colors.grey.shade400),
-                      const SizedBox(height: 8),
-                      Text('No se encontraron registros',
-                          style: TextStyle(color: Colors.grey.shade600)),
-                    ],
-                  ),
-                ),
-              )
-            else
-              ..._filtrados.map((r) => _tarjetaRegistro(r, esSoloLectura)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------
-  // ENCABEZADO
-  // ---------------------------------------------------------------------
-  Widget _encabezado(String rolCrudo, bool esSoloLectura) {
+  Widget _encabezado(String rolCrudo) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -646,7 +794,7 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Registro de cambios de precio por producto',
+                  'Consulta y actualización de precios por producto',
                   style: TextStyle(color: Color(0xFF8FA3C4), fontSize: 12),
                 ),
               ],
@@ -657,12 +805,6 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     );
   }
 
-  // =======================================================================
-  // PANEL DE FILTROS — tarjeta blanca colapsable con ícono, buscador,
-  // chips de variación, filtro de fecha y botón "Limpiar".
-  // (Mismo diseño que Inventario / Movimientos, adaptado a Historial de
-  // Precios: en vez de categoría/usuario, el selector extra es la fecha.)
-  // =======================================================================
   Widget _panelFiltros() {
     return Container(
       decoration: BoxDecoration(
@@ -836,13 +978,6 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     );
   }
 
-  // ---------------------------------------------------------------------
-  // TARJETA DE RESUMEN
-  //
-  // Mismo estilo que usa Inventario (_statCard): borde superior de 3px
-  // con el color del dato, sombra suave, y el número grande centrado
-  // arriba de la etiqueta.
-  // ---------------------------------------------------------------------
   Widget _tarjetaResumen(String titulo, String valor, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -868,9 +1003,6 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
     );
   }
 
-  // ---------------------------------------------------------------------
-  // SEPARADOR
-  // ---------------------------------------------------------------------
   Widget _separadorConteo(int cantidad) {
     return Row(
       children: [
@@ -893,20 +1025,10 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
   }
 
   // ---------------------------------------------------------------------
-  // TARJETA DE REGISTRO
+  // TARJETA DE REGISTRO — acción de "Eliminar" reemplazada por "Actualizar
+  // precio". Si el rol no puede editar, solo se muestra el ícono de ver.
   // ---------------------------------------------------------------------
-  //
-  // NOTA DEL FIX: antes esta tarjeta usaba un solo Container con
-  // BoxDecoration(borderRadius: ..., border: Border(left: colorVariacion,
-  // top/right/bottom: gris)). Flutter NO permite un borderRadius sobre un
-  // Border con colores distintos por lado ("A borderRadius can only be
-  // given on borders with uniform colors."), y lanzaba esa excepción en
-  // cada frame, dejando las tarjetas en blanco/rotas. La solución es
-  // separar la franja de color izquierda en su propio widget (un
-  // Container angosto dentro de un Row), y dejar el borderRadius solo
-  // sobre un borde de un único color uniforme (gris claro).
-  // ---------------------------------------------------------------------
-  Widget _tarjetaRegistro(HistorialPrecio r, bool esSoloLectura) {
+  Widget _tarjetaRegistro(HistorialPrecio r, bool puedeEditar) {
     final tipo = r.tipoVariacion;
     Color colorVariacion;
     Color fondoVariacion;
@@ -932,214 +1054,208 @@ class _HistorialPreciosScreenState extends State<HistorialPreciosScreen> {
 
     return InkWell(
       borderRadius: BorderRadius.circular(14),
-      onTap: () => _verDetalle(r, esSoloLectura),
+      onTap: () => _verDetalle(r, puedeEditar),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: Colors.white,
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(13),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-            // Franja de color izquierda, separada del borde del contenedor.
-            Container(width: 4, color: colorVariacion),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: Colors.white,
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(13),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(width: 4, color: colorVariacion),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: RichText(
-                            text: TextSpan(
-                              style: const TextStyle(fontSize: 14, color: Colors.black),
-                              children: [
-                                TextSpan(
-                                  text: '#${r.id}  ',
-                                  style: const TextStyle(
-                                    color: AppColors.doradoOscuro,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: r.nombreProducto,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        // ─── Acciones: mismo estilo cuadrado con ícono que
-                        // usa ProductoCard/Categorías/Usuarios — sin borde,
-                        // fondo sólido de color suave.
-                        _accionBoton(
-                          Icons.remove_red_eye_outlined,
-                          AppColors.doradoOscuro,
-                          const Color(0xFFFBF1DD),
-                          () => _verDetalle(r, esSoloLectura),
-                        ),
-                        if (!esSoloLectura) ...[
-                          const SizedBox(width: 8),
-                          _accionBoton(
-                            Icons.delete_outline,
-                            const Color(0xFFD64545),
-                            const Color(0xFFFBE3E3),
-                            () => _confirmarEliminar(r),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          'ID: ${r.idProducto} · Actual: \$${_formatoMiles(r.precioActual)}  ',
-                          style: const TextStyle(fontSize: 12, color: AppColors.textoMuted),
-                        ),
-                        if (r.activo)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.verdeFondo,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              'Activo',
-                              style: TextStyle(
-                                  color: AppColors.verde, fontWeight: FontWeight.w600, fontSize: 10),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    const Divider(height: 1),
-                    const SizedBox(height: 10),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Precio Anterior',
-                                  style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
-                              Text(
-                                '\$${_formatoMiles(r.precioAnterior)}',
-                                style: const TextStyle(
-                                    fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.dorado),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.arrow_forward, size: 16, color: AppColors.textoMuted),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Precio Nuevo',
-                                  style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
-                              Text(
-                                '\$${_formatoMiles(r.precioNuevo)}',
-                                style: const TextStyle(
-                                    fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.verde),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Variación',
-                                style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
-                            const SizedBox(height: 2),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: fondoVariacion,
-                                borderRadius: BorderRadius.circular(20),
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: const TextStyle(fontSize: 14, color: Colors.black),
+                                  children: [
+                                    TextSpan(
+                                      text: '#${r.id}  ',
+                                      style: const TextStyle(
+                                        color: AppColors.doradoOscuro,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: r.nombreProducto,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 15,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
+                            ),
+                            _accionBoton(
+                              Icons.remove_red_eye_outlined,
+                              AppColors.doradoOscuro,
+                              const Color(0xFFFBF1DD),
+                              () => _verDetalle(r, puedeEditar),
+                            ),
+                            if (puedeEditar) ...[
+                              const SizedBox(width: 8),
+                              _accionBoton(
+                                Icons.edit_outlined,
+                                AppColors.verde,
+                                AppColors.verdeFondo,
+                                () => _abrirActualizarPrecio(r),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              'ID: ${r.idProducto} · Actual: \$${_formatoMiles(r.precioActual)}  ',
+                              style: const TextStyle(fontSize: 12, color: AppColors.textoMuted),
+                            ),
+                            if (r.activo)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.verdeFondo,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  'Activo',
+                                  style: TextStyle(
+                                      color: AppColors.verde, fontWeight: FontWeight.w600, fontSize: 10),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const Divider(height: 1),
+                        const SizedBox(height: 10),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (iconoVariacion != null)
-                                    Icon(iconoVariacion, size: 11, color: colorVariacion),
-                                  if (iconoVariacion != null) const SizedBox(width: 2),
+                                  const Text('Precio Anterior',
+                                      style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
                                   Text(
-                                    textoVariacion,
-                                    style: TextStyle(
-                                        color: colorVariacion,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 11),
+                                    '\$${_formatoMiles(r.precioAnterior)}',
+                                    style: const TextStyle(
+                                        fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.dorado),
                                   ),
                                 ],
                               ),
                             ),
-                            if (tipo != 'sin_cambio')
-                              Text(
-                                '${r.variacionAbsoluta > 0 ? '+' : ''}\$${_formatoMiles(r.variacionAbsoluta)}',
-                                style: const TextStyle(fontSize: 10, color: AppColors.textoMuted),
+                            const Icon(Icons.arrow_forward, size: 16, color: AppColors.textoMuted),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Precio Nuevo',
+                                      style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
+                                  Text(
+                                    '\$${_formatoMiles(r.precioNuevo)}',
+                                    style: const TextStyle(
+                                        fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.verde),
+                                  ),
+                                ],
                               ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                const Text('Variación',
+                                    style: TextStyle(fontSize: 10, color: AppColors.textoMuted)),
+                                const SizedBox(height: 2),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: fondoVariacion,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (iconoVariacion != null)
+                                        Icon(iconoVariacion, size: 11, color: colorVariacion),
+                                      if (iconoVariacion != null) const SizedBox(width: 2),
+                                      Text(
+                                        textoVariacion,
+                                        style: TextStyle(
+                                            color: colorVariacion,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (tipo != 'sin_cambio')
+                                  Text(
+                                    '${r.variacionAbsoluta > 0 ? '+' : ''}\$${_formatoMiles(r.variacionAbsoluta)}',
+                                    style: const TextStyle(fontSize: 10, color: AppColors.textoMuted),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Text(
+                              _formatoFechaLarga(r.fecha),
+                              style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
+                            ),
+                            const Spacer(),
+                            Flexible(
+                              child: Text(
+                                r.motivo,
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textoMuted,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Text(
-                          _formatoFechaLarga(r.fecha),
-                          style: const TextStyle(fontSize: 11, color: AppColors.textoMuted),
-                        ),
-                        const Spacer(),
-                        Flexible(
-                          child: Text(
-                            r.motivo,
-                            textAlign: TextAlign.right,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textoMuted,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
           ),
         ),
-      ),
       ),
     );
   }
 
-  // Mismo helper que usa ProductoCard, Categorías y Usuarios: botón
-  // cuadrado, ícono solo, fondo de color suave, sin texto ni borde.
   Widget _accionBoton(IconData icon, Color color, Color fondo, VoidCallback? onTap) {
     return InkWell(
       borderRadius: BorderRadius.circular(10),
